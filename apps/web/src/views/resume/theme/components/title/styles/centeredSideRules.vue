@@ -1,0 +1,28 @@
+<script setup>
+import TitleText from "../titleText.vue";
+import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";
+
+defineProps({
+  title: {
+    type: String,
+    default: "",
+  },
+});
+// 线条色：统一由主题色推导
+const {
+  theme: { themeColorLine },
+} = useResumePreviewContext();
+</script>
+
+<template>
+  <!-- 居中夹线：标题居中，两侧各延伸一条细线 -->
+  <div class="flex items-center gap-3">
+    <div class="h-px min-w-0 flex-1" :style="{ background: themeColorLine }"></div>
+    <h2 class="max-w-full min-w-0 font-bold tracking-wide break-words">
+      <TitleText :title="title" />
+    </h2>
+    <div class="h-px min-w-0 flex-1" :style="{ background: themeColorLine }"></div>
+  </div>
+</template>
+
+<style lang="scss" scoped></style>

@@ -1,0 +1,126 @@
+<template>
+  <el-form ref="dynamicForm" :model="data" label-width="auto" class="flex w-full flex-col" @mouseenter.capture="handleInputMouseEnter">
+    <!-- 字段各自等待异步内容，普通字段不等待整张表单。 -->
+    <FormRenderer v-model:items="form" />
+  </el-form>
+</template>
+<script setup lang="ts">
+import { getCurrentInstance, inject, provide, unref, watch } from "vue";
+import { initializeFormData } from "./code/schemaData";
+import { createFormReadyContext, FORM_READY } from "./code/formReady";
+import eventBus from "@/utils/modules/eventBus";
+import FormRenderer from "./components/formRenderer.vue";
+import DataProxy from "./code/dataProxy";
+import { createAddItem } from "./code/addItem";
+import { addFieldData, getFieldDataKey, hasFieldData, removeFieldData } from "./code/fieldData";
+import {
+  DF_CONTEXT,
+  DF_CURRENT_FORM,
+  DF_CURRENT_LENGTH,
+  DF_CURRENT_PATH_CONTEXT,
+  DF_CURRENT_TYPE,
+  DF_MODULE_SELECT,
+  DF_REMOVE,
+  DF_ROOT_DATA,
+  DF_USE_RULES,
+  INSTANCE_COMPONENTS,
+} from "./code/injectionKeys";
+
+defineOptions({ name: "SfDynamicForm" });
+type DynamicFormProps = {
+  components?: Record<string, any>;
+  // 外部选项字典：raw 绑定从这里取值
+  options?: Record<string, any>;
+  /** 是否将字段规则用于表单项校验提示 */
+  useRules?: boolean;
+};
+const props = withDefaults(defineProps<DynamicFormProps>(), {
+  components: () => ({}),
+  options: () => ({}),
+  useRules: true,
+});
+
+// 触屏设备不让输入框通过鼠标悬停提前显示清除按钮，保留聚焦后的清除功能。
+const handleInputMouseEnter = (event: MouseEvent) => {
+  if (!window.matchMedia("(hover: none)").matches) return;
+  if (event.target instanceof Element && event.target.matches(".el-input")) event.stopPropagation();
+};
+
+const instance = getCurrentInstance();
+const emit = instance?.emit;
+// 表单配置直接使用 defineModel 返回的响应式引用
+const form = defineModel<any>("form");
+// 定义数据模型
+const data = defineModel<any>("data");
+// 数据初始化先于子字段渲染；仅整体切换配置或数据时补齐，不监听后续输入。
+const readiness = createFormReadyContext(() => emit?.("ready", data.value));
+provide(FORM_READY, readiness.context);
+watch([form, data], () => {
+  if (!form.value || !data.value) return;
+  initializeFormData(data.value, form.value.fields ?? []);
+  readiness.restart();
+  emit?.("initialized", data.value);
+}, { immediate: true, flush: "sync" });
+onMounted(readiness.mount);
+onBeforeUnmount(readiness.stop);
+const dataProxy = new DataProxy(data, emit, props.options);
+
+// 注入实例组件库
+provide(INSTANCE_COMPONENTS, props.components);
+// 注入根数据
+provide(DF_ROOT_DATA, dataProxy);
+// 动态表单可保留规则供外部检查，同时关闭表单项错误提示。
+provide(DF_USE_RULES, () => props.useRules);
+// 模块选中能力：外部调用 selectModule(key, index) 触发选中，选中后边框持续闪烁，鼠标经过恢复
+const selectedKey = ref<string | null>(null);
+// 记录级选中下标：与模块标识组合，用于选中数组模块中的某条记录
+const selectedIndex = ref<number | null>(null);
+const selectModule = (key: string | null, index: number | null = null) => {
+  selectedKey.value = key;
+  selectedIndex.value = index;
+};
+// 事件总线未类型化：载荷既支持模块标识字符串，也支持带记录下标的定位对象
+const handleSelectModuleEvent = (payload: unknown) => {
+  if (typeof payload === "string") {
+    selectModule(payload);
+    return;
+  }
+  if (!payload || typeof payload !== "object") return;
+  const { key, index } = payload as { key?: unknown; index?: unknown };
+  selectModule(typeof key === "string" ? key : null, typeof index === "number" ? index : null);
+};
+provide(DF_MODULE_SELECT, { selectedKey, selectedIndex, selectModule });
+// 监听全局事件：外部（如完成度"去填写"）触发选中模块时联动边框闪烁
+onMounted(() => {
+  eventBus.on("df-select-module", handleSelectModuleEvent);
+});
+onUnmounted(() => {
+  eventBus.off("df-select-module", handleSelectModuleEvent);
+});
+
+// 对外上下文读取器：根组件统一提供，业务组件调用时基于自身实例解析最近容器的能力，无需容器聚合
+const getContext = () => {
+  const currentForm = inject(DF_CURRENT_FORM);
+  const pathContext = unref(inject(DF_CURRENT_PATH_CONTEXT, undefined));
+  return {
+    currentForm,
+    currentType: inject(DF_CURRENT_TYPE),
+    // 容器能力按容器类型选择性提供，缺失时注入默认值避免 Vue 告警
+    currentLength: inject(DF_CURRENT_LENGTH, undefined),
+    // 当前节点删除能力已由所在容器绑定目标，调用方无需传递索引
+    removeCurrent: inject(DF_REMOVE, undefined),
+    addItem: createAddItem(currentForm, dataProxy, pathContext),
+    // 可添加字段统一通过引擎读写真实数据，业务组件只负责选择字段
+    hasFieldData: (field: any) => hasFieldData(dataProxy.data, field, pathContext),
+    addField: (field: any) =>
+      field?.addable === true && addFieldData(dataProxy.data, field, pathContext),
+    // 清空可添加字段的数据：字段模板保留，便于后续重新添加
+    removeField: (field: any) => removeFieldData(dataProxy.data, field, pathContext),
+    getFieldDataKey: (field: any) => getFieldDataKey(field, pathContext),
+  };
+};
+// 注入对外上下文契约
+provide(DF_CONTEXT, getContext);
+</script>
+
+<style scoped></style>

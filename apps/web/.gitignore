@@ -1,0 +1,40 @@
+# 日志文件
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 依赖和构建产物
+node_modules
+.DS_Store
+dist
+dist-ssr
+coverage
+*.local
+# 环境变量：仅提交 .env.example 空模板，实际数据文件不入库
+.env
+.env.development
+.env.production
+test
+.pnpm-store
+# 测试产物
+/cypress/videos/
+/cypress/screenshots/
+.trae/documents
+# 编辑器文件
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# TypeScript
+*.tsbuildinfo
+/src/types/components.d.ts
+
+# HTML 文件
+stats.html

@@ -1,0 +1,35 @@
+{
+  "core": {
+    "router": {
+    "resume": "轻舟简历",
+    "resumeDesc": "免费在线制作简历，免注册导出",
+    "resumeEditor": "云帆编辑器",
+    "resumeEditorDesc": "借势而行 直济沧海",
+    "resumeAI": "小舟",
+    "resumeAIDesc": "北斗引航 终抵群星",
+    "resumeStatistics": "简历情况统计"
+    },
+    "load": "逆转时空的公式就是珍惜现在",
+    "theme": {
+    "system": "跟随系统",
+    "dark": "暗黑模式",
+    "light": "白天模式",
+    "eyeCare": "护眼模式"
+    },
+    "donation": {
+    "supportProject": "支持项目",
+    "otherWays": "其他支持方式",
+    "otherWaysDescription": "除了资金赞助，您还可以通过以下方式支持项目：",
+    "githubStars": "在 GitHub 上给项目点",
+    "recommendProject": "向朋友和同事推荐",
+    "thanks": "感谢您的支持！",
+    "donationDescription": "如果您也喜欢我的项目，一份捐赠就是对项目最大的物质支持与精神鼓励。",
+    "donationImpact": "您的每一份支持都将帮助项目持续发展和改进。",
+    "alipay": "支付宝",
+    "wechatPay": "微信支付",
+    "go": "前往"
+    },
+    "copyright": "版权所有",
+    "allRightsReserved": "保留所有权利"
+  }
+}

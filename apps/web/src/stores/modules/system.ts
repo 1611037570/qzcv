@@ -1,0 +1,122 @@
+import { config } from "@/configs";
+import dayjs from "dayjs";
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
+import { useMediaQuery } from "@vueuse/core";
+import version from "@/configs/modules/version";
+const start = "2020-09-03";
+const MOBILE_WIDTH = 768;
+export const useSystemStore = defineStore(
+  "system",
+  () => {
+    // 项目运行时间
+    const runTime = ref<number>(dayjs().diff(dayjs(start), "day"));
+    // 性能监控
+    const monitorWatch = ref<boolean>(false);
+    // 性能模式
+    const performanceMode = ref<boolean>(false);
+    // 粘贴时默认清除富文本格式
+    const pastePlainText = ref<boolean>(true);
+    // 调试模式
+    const debugMode = ref<boolean>(false);
+    // 窗口大小
+    const windowSize = ref<{
+      width: number | unknown;
+      height: number | unknown;
+    }>({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+    // 按 Tailwind 默认中等屏幕断点记录移动端状态。
+    const isMobile = computed(() => Number(windowSize.value.width) < MOBILE_WIDTH);
+    // 浏览器信息
+    const browserInfo = ref();
+    // 当前版本
+    const currentVersion = ref(version);
+    // 服务器连接状态
+    const isConnected = ref<boolean>(false);
+    // 记录主要输入设备是否支持悬停。
+    const canHover = useMediaQuery("(hover: hover)");
+
+    /**
+     * 获取最新版本号
+     * @returns Promise<string> 最新版本号
+     */
+    const getVersion = async (): Promise<string> => {
+      try {
+        const timestamp = new Date().getTime();
+        const res = await fetch(`${config.app.assetBaseUrl}version.json?t=${timestamp}`);
+        const data = await res.json();
+        return data.version;
+      } catch (error) {
+        console.error("获取版本号失败:", error);
+        throw error;
+      }
+    };
+
+    /**
+     * 检测版本更新
+     * 当最新版本与当前版本不匹配时，刷新页面
+     */
+    const checkVersionUpdate = async () => {
+      // 非生产环境跳过版本检测，dev 无需请求 version.json
+      if (!config.app.prod) return;
+      try {
+        // 使用新的getVersion方法获取版本号
+        const newVersion = await getVersion();
+
+        // 版本不一致，执行强制刷新
+        if (newVersion !== currentVersion.value) {
+          console.log("版本不一致，执行强制刷新");
+          currentVersion.value = newVersion;
+          window.location.reload();
+          return;
+        }
+      } catch {}
+    };
+
+    /**
+     * 初始化版本号
+     * 在系统启动时获取初始版本号
+     */
+    // 版本初始化逻辑已注释，与启动调用保持一致
+    // const initVersion = async () => {
+    //   // 非生产环境跳过版本检测，dev 无需请求 version.json
+    //   if (!import.meta.env.PROD) return;
+    //   try {
+    //     const version = await getVersion();
+    //     currentVersion.value = version;
+    //     console.log("版本号初始化完成:", version);
+    //   } catch (error) {
+    //     console.error("版本号初始化失败:", error);
+    //   }
+    // };
+
+    // 系统启动时初始化版本号
+    // 版本初始化已注释，避免启动时请求 version.json
+    // initVersion();
+
+    return {
+      runTime,
+      monitorWatch,
+      debugMode,
+      windowSize,
+      isMobile,
+      browserInfo,
+      currentVersion,
+      performanceMode,
+      pastePlainText,
+      isConnected,
+      canHover,
+      getVersion,
+      checkVersionUpdate,
+      // initVersion,
+    };
+  },
+  {
+    persist: {
+      storage: localStorage,
+      pick: ["monitorWatch", "currentVersion", "performanceMode", "pastePlainText"],
+    },
+  },
+);

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="<%= defaultLang %>">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="<%= siteMetadata.favicon %>" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <style>
+      /* 移动端锁定页面缩放：布局按视口高度铺满，页面被缩放后会出现露底与错位 */
+      html,
+      body {
+        /* 只保留滚动与平移，禁用双指、双击缩放 */
+        touch-action: pan-x pan-y;
+      }
+    </style>
+    <script>
+      // 旧版 iOS 会忽略 viewport 的 user-scalable=no，手势缩放再靠拦截 gesture 事件兜底
+      ["gesturestart", "gesturechange", "gestureend"].forEach((name) => {
+        document.addEventListener(name, (event) => event.preventDefault());
+      });
+    </script>
+    <!-- 搜索信息统一由页面配置生成，独立网页复用相同模板。 -->
+    <%- seoHead %>
+    <!-- 百度统计：所有路由共用同一份 HTML，装在 head 末尾即可全站生效 -->
+    <script>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?65283163761e236f6daaa88d85824bce";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- 静态兜底内容：无执行能力的抓取程序可直接读取标题与描述 -->
+    <noscript>
+      <div style="max-width: 720px; margin: 0 auto; padding: 24px; line-height: 1.8">
+        <h1><%= siteMetadata.title %></h1>
+        <p><%= siteMetadata.description %></p>
+        <p>该页面的在线编辑与导出能力需要启用 JavaScript 后使用。</p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

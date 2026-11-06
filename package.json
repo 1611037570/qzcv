@@ -1,0 +1,32 @@
+{
+  "name": "snowflake",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "dev": "turbo run dev --filter=@snowflake/web --filter=@snowflake/server",
+    "dev:web": "pnpm --filter @snowflake/web dev",
+    "dev:server": "pnpm --filter @snowflake/server dev",
+    "build": "turbo run build",
+    "build:web": "pnpm --filter @snowflake/web build-only",
+    "build:server": "pnpm --filter @snowflake/server build",
+    "seo": "node apps/web/scripts/submit-search-urls.mjs",
+    "prompt:size": "node scripts/prompt-size.mjs",
+    "format": "turbo run format",
+    "commit": "git-cz",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "20.1.0",
+    "@commitlint/config-conventional": "20.0.0",
+    "commitizen": "4.3.1",
+    "commitlint": "20.1.0",
+    "cz-git": "1.12.0",
+    "husky": "9.1.7",
+    "turbo": "^2.10.9"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git"
+    }
+  }
+}

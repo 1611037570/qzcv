@@ -1,0 +1,198 @@
+import { normalizeResumeTags } from "@/domain/resume/resumeTags";
+import { getUUID } from "@/utils";
+import { merge } from "lodash-es";
+import { compactResumeUi, resolveResumeUi } from "@/domain/resume/theme/resumeUi";
+import {
+  createResumeListItem,
+  removeAiChatSummaries,
+  removeResumeListItem,
+  setResumeDeletedAt,
+  type AiChatSummary,
+  type ResumeListItem,
+  upsertAiChatSummary,
+} from "./resumeCatalog";
+
+type ResumeLifecycleOptions = {
+  list: { value: ResumeListItem[] };
+  resumeRecords: { value: any[] };
+  resumeList: { value: any[] };
+  trashList: { value: any[] };
+  currentIndex: { value: number };
+  maxCount: number;
+  maxTrashCount: number;
+  trashRetentionMs: number;
+  defaultResumeItem: any;
+  initializeBlankResumeData: (data: Record<string, any>) => void;
+  getResumeStorage: (id: string, initialValue?: any, writeDefaults?: boolean) => any;
+  removeResumeStorage: (id: string) => Promise<void>;
+  setConfigModules: (item: any, modules: any[]) => void;
+  deepClone: (value: any) => any;
+  clearCurrentAssistantChat: (resumeId: string) => void;
+  removeAssistantChats: (resumeId: string) => Promise<void>;
+  onResumeLimit: () => void;
+  onTrashLimit: () => void;
+  onRestoreLimit: () => void;
+  navigateToEditor: (resumeId: string) => void;
+};
+
+export const createResumeLifecycle = (options: ResumeLifecycleOptions) => {
+  const {
+    list,
+    resumeRecords,
+    resumeList,
+    trashList,
+    currentIndex,
+    maxCount,
+    maxTrashCount,
+    trashRetentionMs,
+    defaultResumeItem,
+    initializeBlankResumeData,
+    getResumeStorage,
+    removeResumeStorage,
+    setConfigModules,
+    deepClone,
+    clearCurrentAssistantChat,
+    removeAssistantChats,
+    onResumeLimit,
+    onTrashLimit,
+    onRestoreLimit,
+    navigateToEditor,
+  } = options;
+
+  const mergeResumeItem = (item: any) => merge(structuredClone(defaultResumeItem), item);
+  const createBlankResumeItem = () => {
+    const resume = structuredClone(defaultResumeItem);
+    // 空白简历仅在首次创建时按表单声明初始化默认添加字段
+    initializeBlankResumeData(resume.data);
+    return resume;
+  };
+  const addResume = (config: any, jump = true, select = true) => {
+    if (list.value.filter((item) => item.deletedAt === null).length >= maxCount) {
+      onResumeLimit();
+      return false;
+    }
+    const resume = config ? mergeResumeItem(config) : createBlankResumeItem();
+    // 新建、复制和完整备份导入共用标签归一规则。
+    resume.usage.tags = normalizeResumeTags(resume.usage.tags);
+    // 新建与导入只按当前主题展开，不从简历默认对象继承其他主题参数。
+    resume.ui = resolveResumeUi(compactResumeUi(config?.ui));
+    // 新建时间按本次创建计算，导入的备份时间仍保持原值
+    const now = Date.now();
+    if (config?.usage?.createTime === undefined) resume.usage.createTime = now;
+    if (config?.usage?.lastUseTime === undefined) resume.usage.lastUseTime = now;
+    setConfigModules(resume, resume.config.modules);
+    resume.id = getUUID().slice(0, 6);
+    const storage = getResumeStorage(resume.id, resume, true);
+    resumeRecords.value.push(storage.data.value);
+    list.value.unshift(createResumeListItem(resume.id));
+    if (select) {
+      currentIndex.value = resumeList.value.length - 1;
+      if (jump) navigateToEditor(resume.id);
+    }
+    return true;
+  };
+  const duplicateResume = (item?: any) => {
+    const source = item ?? resumeList.value[currentIndex.value];
+    if (!source) return false;
+    const copy = deepClone(source);
+    const now = Date.now();
+    copy.usage = { ...copy.usage, createTime: now, lastUseTime: now };
+    const currentCount = resumeList.value.length;
+    if (!addResume(copy, false, false)) return "";
+    return resumeList.value[currentCount]?.id || "";
+  };
+  const deleteResume = () => {
+    if (currentIndex.value === -1) return;
+    // 上限按目录里的软删除条目统计：回收站正文是懒加载的，用 trashList 会在刷新后漏算导致突破上限
+    const trashCount = list.value.filter((item) => item.deletedAt !== null).length;
+    if (trashCount >= maxTrashCount) {
+      onTrashLimit();
+      return;
+    }
+    const deletedItem = resumeList.value[currentIndex.value];
+    const entry = list.value.find((item) => item.id === deletedItem?.id);
+    if (!entry) return;
+    list.value[list.value.indexOf(entry)] = setResumeDeletedAt(entry, Date.now());
+    clearCurrentAssistantChat(deletedItem.id);
+    currentIndex.value = -1;
+  };
+  const restoreResume = (trashIndex: number) => {
+    if (trashIndex < 0 || trashIndex >= trashList.value.length) return;
+    if (resumeList.value.length >= maxCount) {
+      onRestoreLimit();
+      return;
+    }
+    const item = trashList.value[trashIndex];
+    const entry = list.value.find((value) => value.id === item?.id);
+    const resume = resumeRecords.value.find((value) => value.id === item?.id);
+    if (!entry || !resume) return;
+    // 恢复较早的记录会改变活动列表下标，保持当前编辑对象不变
+    const selectedId = resumeList.value[currentIndex.value]?.id;
+    list.value[list.value.indexOf(entry)] = setResumeDeletedAt(entry, null);
+    if (selectedId) currentIndex.value = resumeList.value.findIndex((value) => value.id === selectedId);
+  };
+  const permanentlyDeleteResume = async (trashIndex: number) => {
+    if (trashIndex < 0 || trashIndex >= trashList.value.length) return;
+    const item = trashList.value[trashIndex];
+    await removeAssistantChats(item.id);
+    list.value = removeResumeListItem(list.value, item.id);
+    resumeRecords.value = resumeRecords.value.filter((resume) => resume.id !== item.id);
+    await removeResumeStorage(item.id);
+  };
+  const clearTrash = async () => {
+    const ids = trashList.value.map((item) => item.id);
+    for (const id of ids) {
+      await removeAssistantChats(id);
+      await removeResumeStorage(id);
+    }
+    list.value = list.value.filter((entry) => !ids.includes(entry.id));
+    resumeRecords.value = resumeRecords.value.filter((item) => !ids.includes(item.id));
+  };
+  const cleanExpiredTrash = async () => {
+    const now = Date.now();
+    const expiredIds = list.value
+      .filter((item) => item.deletedAt !== null && now - item.deletedAt >= trashRetentionMs)
+      .map((item) => item.id);
+    for (const id of expiredIds) {
+      await removeAssistantChats(id);
+      await removeResumeStorage(id);
+    }
+    if (!expiredIds.length) return;
+    list.value = list.value.filter((item) => !expiredIds.includes(item.id));
+    resumeRecords.value = resumeRecords.value.filter((item) => !expiredIds.includes(item.id));
+  };
+  const getTrashRemainingDays = (item: any) => {
+    const deletedAt = item?._deletedAt || 0;
+    if (!deletedAt) return 0;
+    const remaining = trashRetentionMs - (Date.now() - deletedAt);
+    return remaining <= 0 ? 0 : Math.ceil(remaining / (24 * 60 * 60 * 1000));
+  };
+  const updateResumeAiChatSummary = async (resumeId: string, summary: AiChatSummary) => {
+    const index = list.value.findIndex((item) => item.id === resumeId);
+    const item = list.value[index];
+    if (!item || item.deletedAt !== null) return false;
+    list.value[index] = upsertAiChatSummary(item, summary);
+    return true;
+  };
+  const clearResumeAiChatSummaries = async (resumeId: string) => {
+    const index = list.value.findIndex((item) => item.id === resumeId);
+    const item = list.value[index];
+    if (!item) return [] as string[];
+    const ids = item.ai.map((chat) => chat.id);
+    list.value[index] = removeAiChatSummaries(item);
+    return ids;
+  };
+
+  return {
+    addResume,
+    duplicateResume,
+    deleteResume,
+    restoreResume,
+    permanentlyDeleteResume,
+    clearTrash,
+    cleanExpiredTrash,
+    getTrashRemainingDays,
+    updateResumeAiChatSummary,
+    clearResumeAiChatSummaries,
+  };
+};

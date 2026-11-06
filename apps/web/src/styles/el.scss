@@ -1,0 +1,151 @@
+/* Element Plus 全局样式定制：主题变量与交互优化 */
+@use "element-plus/theme-chalk/src/dark/css-vars.scss";
+:root {
+  /* 映射项目主题色到 Element Plus 主色 */
+  --el-color-primary: var(--sf-theme);
+}
+
+/* 下拉弹层背景色：与项目主题保持一致 */
+.el-dropdown__popper.el-popper {
+  background: var(--sf-primary) !important;
+  // border: none !important;
+  border-radius: 999px !important;
+}
+// 用于修改 tooltip 组件的样式 开始
+.el-popper {
+  border-radius: 16px !important;
+  background-color: var(--sf-primary) !important;
+  color: var(--sf-base) !important;
+  border: 1px solid var(--sf-border) !important;
+}
+.el-popper__arrow:before {
+  border: 1px solid var(--sf-border) !important;
+  background-color: var(--sf-primary) !important;
+}
+
+.el-popper__arrow:before {
+  background-color: var(--sf-primary) !important;
+  border: 1px solid var(--sf-border) !important;
+}
+// 用于修改 tooltip 组件的箭头样式 结束
+// 用于修改下拉弹层的箭头样式 开始
+.el-dropdown__popper.el-popper .el-popper__arrow:before {
+  border: 1px solid var(--sf-border) !important;
+  background-color: var(--sf-primary) !important;
+}
+// 用于修改下拉弹层的箭头样式 结束
+.el-popper__arrow {
+  // --el-bg-color-overlay: var(--sf-page) !important;
+  // --el-text-color-primary: var(--sf-page) !important;
+  // border: 1px solid var(--sf-border) !important;
+}
+
+/* 取消 Anchor 组件链接的内边距，避免点击区域偏移 */
+.el-anchor__link {
+  padding: 0 !important;
+}
+
+// .el-select-dropdown__item {
+
+.el-select-dropdown__item {
+  margin: 0 3px;
+}
+.el-select-dropdown__item.is-hovering {
+  background: var(--sf-page) !important;
+}
+
+/* Anchor 组件背景：透明，避免遮挡内容或产生多余底色 */
+.el-anchor {
+  --el-anchor-bg-color: transparent !important;
+}
+
+// 日期组件开始
+.el-date-editor {
+  --el-date-editor-width: 100% !important;
+}
+.el-input__wrapper,
+.el-textarea__inner {
+  box-shadow: none !important;
+  background: transparent;
+  &:hover {
+    box-shadow: none !important;
+  }
+}
+
+// 日期组件结束
+// 选择组件开始
+.el-select {
+  --el-select-width: 100%;
+  border-radius: 12px;
+}
+.el-select__wrapper {
+  box-shadow: none !important;
+}
+// 选择组件结束
+
+// 折叠组件开始
+.el-collapse-item__header {
+  background-color: transparent !important;
+  color: var(--sf-base) !important;
+}
+.el-collapse-item__wrap {
+  background: none !important;
+}
+// 折叠组件结束
+// 分割线组件开始
+.el-splitter-bar__dragger {
+  &::before {
+    background-color: var(--color-sf-theme-2) !important;
+    width: 2px !important;
+  }
+  /* 选中时 */
+  &:hover::before {
+    background-color: var(--color-sf-theme) !important;
+    width: 4px !important;
+  }
+  &:active::before {
+    background-color: var(--color-sf-theme) !important;
+    width: 4px !important;
+  }
+}
+
+.el-collapse-item__content {
+  padding: 0 !important;
+  padding-bottom: 12px !important;
+}
+// 分割线组件结束
+// 表单组件开始
+.el-form-item {
+  margin-bottom: 0 !important;
+}
+// 表单组件结束
+// 日期输入组件开始
+.el-input__wrapper {
+  border-radius: 12px;
+}
+// 日期输入组件结束
+// 选择输入组件开始
+.el-select__wrapper {
+  border-radius: 12px !important;
+}
+// 选择输入组件结束
+// 表单项标签开始
+.el-form-item__label {
+  margin-bottom: 0 !important;
+}
+// 表单项标签结束
+
+.el-drawer {
+  background-color: var(--sf-primary) !important;
+}
+
+// .el-dropdown-menu {
+//   padding: 0 !important;
+//   border: 0px solid none !important;
+//   background-color: transparent !important;
+// }
+
+.el-dropdown__popper.el-popper {
+  border: none !important;
+  box-shadow: none !important;
+}

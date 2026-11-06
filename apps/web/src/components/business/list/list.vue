@@ -1,0 +1,123 @@
+<template>
+  <div class="flex flex-col rounded-3xl border border-sf-b bg-sf-primary p-1.5" v-if="list.length">
+    <template v-for="(item, index) in list" :key="index">
+      <!-- 显式分割线项：仅渲染分割线，不可点击 -->
+      <div class="mx-auto my-1 h-[0.5px] w-[95%] bg-sf-bg-3 px-4" v-if="item.divider"></div>
+      <template v-else>
+        <!-- 分隔线 -->
+        <div
+          class="mx-auto my-1 h-[0.5px] w-[95%] bg-sf-bg-3 px-4"
+          v-if="index > 0 && border && !list[index - 1]?.divider"
+        ></div>
+        <div
+          v-if="showItem(item)"
+          @mousedown="handleClick($event, item, index)"
+          :class="[activeClass(item), hoverClass(item)]"
+          class="relative flex h-8 w-full items-center justify-between rounded-3xl px-3"
+        >
+          <slot :item="item">
+            <div class="flex flex-1 items-center gap-1">
+              <!-- 左侧图标 -->
+              <SfIcon size="4" :icon="item.icon" class="mr-1" v-if="item.icon" />
+              <!-- 文本 -->
+              <span>
+                {{ item.name }}
+              </span>
+            </div>
+          </slot>
+          <SfIcon size="4" v-if="item.active" icon="lucide:check" />
+          <!-- 右侧图标 -->
+          <SfIcon size="4" :icon="item.rightIcon" v-if="item.rightIcon" />
+        </div>
+      </template>
+    </template>
+    <!-- 列表底部扩展内容 -->
+    <slot name="footer"></slot>
+  </div>
+</template>
+
+<script setup>
+import { inject } from "vue";
+
+defineOptions({
+  name: "SfList",
+});
+const props = defineProps({
+  list: {
+    type: Array,
+    default: () => [],
+  },
+  /**
+   * 激活项的键名
+   */
+  activeKey: {
+    type: String,
+    default: "",
+  },
+  /**
+   * 激活项的值
+   */
+  activeValue: {},
+  /**
+   * 是否开启边框
+   */
+  border: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * 点击列表项后是否自动关闭宿主下拉
+   */
+  autoClose: {
+    type: Boolean,
+    default: true,
+  },
+});
+const emit = defineEmits(["onClick"]);
+const closeDropdown = inject("sfDropdownClose", null);
+function handleClick(event, item, index) {
+  // 下拉菜单中的列表项点击后先关闭宿主下拉，避免动作执行后菜单残留。
+  if (props.autoClose) closeDropdown?.();
+  if (item.fn) item.fn();
+  event.stopPropagation();
+  event.preventDefault();
+  emit("onClick", item, index);
+}
+/**
+ * 激活项的类名
+ */
+function activeClass(item) {
+  const name = "text-sf-theme";
+  if (item.active) {
+    return name;
+  }
+  if (props.activeKey && item[props.activeKey] == props.activeValue) {
+    return name;
+  }
+  return "text-sf-base";
+}
+/**
+ * 悬停项的类名
+ */
+function hoverClass(item) {
+  const className = "hover:bg-sf-theme-2 cursor-pointer hover:text-sf-theme-text";
+  // 当item传入disabled属性时
+  if (typeof item.disabled == "boolean") {
+    // 如果disabled为true，返回空字符串
+    return item.disabled ? "cursor-not-allowed hover:bg-sf-transparent text-sf-text-3" : className;
+  }
+  return className;
+}
+
+/**
+ * 显示项
+ */
+function showItem(item) {
+  if (typeof item.hidden == "boolean") {
+    return item.hidden ? true : false;
+  }
+  return true;
+}
+</script>
+
+<style scoped></style>

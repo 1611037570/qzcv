@@ -1,0 +1,115 @@
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  /* font-family: 'Alibaba PuHuiTi Regular', 'Alibaba PuHuiTi Medium', 'Alibaba PuHuiTi Bold'; */
+  color: var(--color-sf-text);
+  overscroll-behavior-y: none;
+}
+body {
+  font-size: 16px;
+  user-select: none;
+}
+$transition-duration: 0.3s;
+
+:focus-visible {
+  outline: none;
+}
+@for $i from 1 through 50 {
+  $target-value: $i + 0.5;
+
+  .text-#{$i} {
+    font-size: calc(var(--spacing) * #{$i});
+  }
+  .text-#{$i}\.5 {
+    font-size: calc(var(--spacing) * #{$target-value});
+  }
+  // sm 断点：40rem (640px) ~ 48rem (768px)
+  .sm\:text-#{$i} {
+    @media (min-width: 40rem) and (max-width: calc(48rem - 1px)) {
+      font-size: calc(var(--spacing) * #{$i});
+    }
+  }
+  .sm\:text-#{$i}\.5 {
+    @media (min-width: 40rem) and (max-width: calc(48rem - 1px)) {
+      font-size: calc(var(--spacing) * #{$target-value});
+    }
+  }
+
+  // md 断点：48rem (768px) ~ 64rem (1024px)
+  .md\:text-#{$i} {
+    @media (min-width: 48rem) and (max-width: calc(64rem - 1px)) {
+      font-size: calc(var(--spacing) * #{$i});
+    }
+  }
+  .md\:text-#{$i}\.5 {
+    @media (min-width: 48rem) and (max-width: calc(64rem - 1px)) {
+      font-size: calc(var(--spacing) * #{$target-value});
+    }
+  }
+
+  // lg 断点：64rem (1024px) 及以上
+  .lg\:text-#{$i} {
+    @media (min-width: 64rem) {
+      font-size: calc(var(--spacing) * #{$i});
+    }
+  }
+  .lg\:text-#{$i}\.5 {
+    @media (min-width: 64rem) {
+      font-size: calc(var(--spacing) * #{$target-value});
+    }
+  }
+}
+/* ========== 全局滚动条（所有页面） ========== */
+/* 1. 滚动条整体（宽/高决定滚动条大小） */
+::-webkit-scrollbar {
+  width: 8px; /* 垂直滚动条宽度 */
+  height: 8px; /* 水平滚动条高度 */
+}
+
+/* 2. 滚动条轨道 */
+::-webkit-scrollbar-track {
+  background: var(--sf-background-3); /* 轨道底色 */
+  border-radius: 4px; /* 轨道圆角 */
+}
+/* 5. 滚动条角落（垂直+水平滚动条交汇区） */
+::-webkit-scrollbar-corner {
+  background: var(--sf-background-3); /* 和轨道底色一致 */
+}
+
+/* 3. 滚动条滑块 */
+::-webkit-scrollbar-thumb {
+  background: var(--sf-theme-3); /* 滑块默认颜色 */
+  border-radius: 4px; /* 滑块圆角（和轨道一致更美观） */
+  transition: background 0.2s; /* hover 过渡 */
+}
+
+/* 4. 滑块 hover/active 状态 */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sf-theme); /* hover 加深 */
+}
+::-webkit-scrollbar-thumb:active {
+  background: var(--sf-theme); /* 点击加深 */
+}
+
+// @use 'sass:math'; // 引入math模块
+// :root {
+//   $colors: (
+//     'primary': #409eff,
+//     'success': #67c23a,
+//     'warn': #e6a23c,
+//     'danger': #f56c6c,
+//     'info': #909399
+//   );
+//   @each $key, $val in $colors {
+//     --sl-color-#{$key}: #{$val};
+
+//     @for $i from 1 through 9 {
+//       @if $i % 2 != 0 {
+//         $alpha: math.div($i, 10);
+//         $light-color: rgba($val, $alpha);
+//         --sl-color-#{$key}-#{$i}: #{$light-color};
+//       }
+//     }
+//   }

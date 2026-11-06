@@ -1,0 +1,332 @@
+import {
+  addArrayRecord,
+  createDataPathContext,
+  getFieldDataPath,
+  moveArrayRecord,
+  removeArrayRecord,
+  walkFormFields,
+} from "@/components/business/dynamicForm/api";
+import { computed, ref, toRaw, watch, type ComputedRef } from "vue";
+import {
+  ALL_MODULE_KEY,
+  DEFAULT_MODULE_NAMES,
+} from "./config/defaultConfig";
+import {
+  bindCollapsedDefault,
+  buildRuntimeConfig,
+  compactConfigModules,
+} from "./hooks/useConfigTemplate";
+import { isEqual } from "lodash-es";
+import { executeResumeOperations, type ResumeWriteOp, type ResumeOperationObserver } from "./resumeOperations";
+import i18n from "@/locales";
+import { compactResumeUi, resolveResumeUi } from "@/domain/resume/theme/resumeUi";
+import { moveToJobIntent, moveFromJobIntent } from "./hooks/useJobIntent";
+
+type ResumeEditorOptions = {
+  currentItem: ComputedRef<any>;
+  currentData: ComputedRef<any>;
+  itemDefaultCollapsed: ComputedRef<string[]>;
+};
+
+export const createResumeEditor = ({
+  currentItem,
+  currentData,
+  itemDefaultCollapsed,
+}: ResumeEditorOptions) => {
+  const currentConfig = computed({
+    get() {
+      const item = currentItem.value;
+      return item ? item.config : undefined;
+    },
+    set(newConfig: any) {
+      const item = currentItem.value;
+      if (item) item.config = newConfig;
+    },
+  });
+  // 编辑器会话配置：从持久化 key 展开，完整 schema 只存在于运行时
+  const runtimeConfig = ref<any>(null);
+  const runtimeFields = computed(() => runtimeConfig.value?.fields || []);
+  const refreshRuntime = () => {
+    const item = currentItem.value;
+    if (!item) {
+      runtimeConfig.value = null;
+      return;
+    }
+    const runtime = buildRuntimeConfig(item.config, item.data);
+    // 技能编辑字段按简历级布局显示，切换时保留另一种布局已有内容。
+    const skillField = runtime.fields.find((field: any) => field?.key === "skill");
+    if (skillField) skillField.fields = skillField.fields.filter((field: any) =>
+      item.ui?.skill?.layout === "text" ? field.type !== "array" : field.type === "array",
+    );
+    // 记录折叠默认值按系统设置读取，仅影响新增记录
+    bindCollapsedDefault(runtime.fields, () => itemDefaultCollapsed.value);
+    runtimeConfig.value = runtime;
+  };
+  // 切简历、切换语言或技能布局时按最新模板重建运行时配置。
+  watch(
+    [currentItem, () => (i18n.global.locale as any).value ?? i18n.global.locale, () => currentItem.value?.ui?.skill?.layout],
+    refreshRuntime,
+    { immediate: true },
+  );
+  // 持久化模块结构写入：内容一致时跳过，避免无谓变更
+  const setConfigModules = (item: any, modules: any[]) => {
+    if (!item) return;
+    const config = item.config && typeof item.config === "object" ? item.config : {};
+    if (isEqual(config.modules || [], modules)) return;
+    config.modules = structuredClone(modules);
+  };
+  // 新增预设模块只写入模块顺序，统一由运行时配置展开并选择当前布局字段。
+  const addModule = (moduleKey: string): boolean => {
+    const item = currentItem.value;
+    const fields = runtimeConfig.value?.fields;
+    if (!item || !fields || fields.some((field: any) => field?.key === moduleKey)) return false;
+    // 添加独立模块前迁移已有求职资料。
+    if (moduleKey === "jobIntent") moveToJobIntent(item);
+    setConfigModules(item, [...compactConfigModules(fields), { key: moduleKey }]);
+    refreshRuntime();
+    return true;
+  };
+  // 模块与内部字段排序只改运行时 fields，变化后压缩回简历模块顺序
+  watch(
+    () => compactConfigModules(runtimeConfig.value?.fields || []),
+    (modules) => setConfigModules(currentItem.value, modules),
+  );
+  // 整体恢复配置：AI 撤回等场景使用，结构变化时同步重建运行时配置
+  const restoreConfig = (config: any) => {
+    const item = currentItem.value;
+    if (!item) return;
+    const next = config && typeof config === "object" ? structuredClone(toRaw(config)) : {};
+    // 仅结构变化才重建运行时配置，避免无关恢复触发表单整表重建
+    const configChanged = !isEqual(toRaw(item.config), next);
+    item.config = next;
+    if (configChanged) refreshRuntime();
+  };
+  const currentUI = computed({
+    get() {
+      const item = currentItem.value;
+      return item ? item.ui : undefined;
+    },
+    set(newUI: any) {
+      const item = currentItem.value;
+      // 整体替换时统一清除主题固定字段，补齐当前主题运行时参数。
+      if (item) item.ui = resolveResumeUi(compactResumeUi(newUI));
+    },
+  });
+  const currentUsage = computed(() => {
+    const item = currentItem.value;
+    return item ? item.usage : undefined;
+  });
+  // 选中模块的名称列表
+  const selectedModule = ref<any[]>([]);
+  const getModel = (key: string): any => {
+    if (!key) return;
+    // 模块展示标题统一读取 ui.title
+    const moduleTitle = currentData.value?.[key]?.ui?.title;
+    const found = DEFAULT_MODULE_NAMES.find((item) => item.key === key);
+    if (moduleTitle) return { key, name: moduleTitle };
+    return found ? { key: found.key, name: found.name } : undefined;
+  };
+  const selectModule = (key: string) => {
+    const model = getModel(key);
+    if (!model?.key) return;
+    if (!selectedModule.value.some((item) => item.key === key)) {
+      selectedModule.value.push(model);
+    }
+  };
+  const unselectModule = (key: string) => {
+    if (key === ALL_MODULE_KEY) return;
+    selectedModule.value = selectedModule.value.filter((item) => item.key !== key);
+  };
+  const clearSelectedModules = () => {
+    selectedModule.value = [];
+  };
+  const setSelectedModules = (modules: any[]) => {
+    selectedModule.value = modules;
+  };
+  const resolveModuleRecords = (module: any): any[] | null => {
+    if (!module || typeof module !== "object") return null;
+    if (Array.isArray(module.list)) return module.list;
+    return null;
+  };
+  const findModuleArrayField = (fields: any[] | undefined, moduleKey: string) => {
+    const moduleField = fields?.find((field: any) => field?.key === moduleKey);
+    const field = moduleField?.fields?.find((item: any) => item?.type === "array");
+    if (!field || !Array.isArray(moduleField?.context)) return;
+    return { field, context: createDataPathContext(moduleField.context) };
+  };
+  const findAddableModuleField = (
+    fields: any[] | undefined,
+    moduleKey: string,
+    field: string,
+  ) => {
+    const moduleField = fields?.find((item: any) => item?.key === moduleKey);
+    let result: any;
+    walkFormFields(moduleField, (item) => {
+      if (result || item.addable !== true) return;
+      const source = getFieldDataPath(item);
+      if (source?.length === 2 && source[0] === "data" && source[1] === field) {
+        result = item;
+      }
+    });
+    return result;
+  };
+  function addDataRecord(moduleKey: string): number {
+    const target = findModuleArrayField(runtimeConfig.value?.fields, moduleKey);
+    if (!target) return -1;
+    return addArrayRecord(currentData.value, target.field, target.context);
+  }
+  function removeDataRecord(moduleKey: string, index: number): boolean {
+    const target = findModuleArrayField(runtimeConfig.value?.fields, moduleKey);
+    if (!target) return false;
+    return removeArrayRecord(currentData.value, target.field, index, target.context);
+  }
+  function moveDataRecord(moduleKey: string, from: number, to: number): boolean {
+    const target = findModuleArrayField(runtimeConfig.value?.fields, moduleKey);
+    if (!target) return false;
+    return moveArrayRecord(currentData.value, target.field, from, to, target.context);
+  }
+  function updateModuleField(moduleKey: string, field: string, value: unknown): boolean {
+    const module = currentData.value?.[moduleKey];
+    if (
+      !module ||
+      !module.data ||
+      typeof module.data !== "object" ||
+      Array.isArray(module.data)
+    ) {
+      return false;
+    }
+    const hasField = Object.prototype.hasOwnProperty.call(module.data, field);
+    if (!hasField && !findAddableModuleField(runtimeConfig.value?.fields, moduleKey, field)) {
+      return false;
+    }
+    module.data[field] = value;
+    return true;
+  }
+  function updateModuleTitle(moduleKey: string, title: string): boolean {
+    const module = currentData.value?.[moduleKey];
+    const value = title.trim();
+    if (!module || typeof module !== "object" || !value) return false;
+    module.ui ||= {};
+    module.ui.title = value;
+    return true;
+  }
+  const findModuleField = (moduleKey: string) =>
+    runtimeConfig.value?.fields?.find((field: any) => field?.key === moduleKey);
+  function setModuleHidden(moduleKey: string, hidden: boolean): boolean {
+    const field = findModuleField(moduleKey);
+    if (!field) return false;
+    const module = currentData.value?.[moduleKey];
+    if (!module || typeof module !== "object") return false;
+    // 隐藏状态由业务直接读写数据节点，不再经动态表单的 checks 协议
+    module.ui ||= {};
+    module.ui.hidden = hidden;
+    return true;
+  }
+  function removeModule(moduleKey: string): boolean {
+    const fields = runtimeConfig.value?.fields;
+    const index = fields?.findIndex((field: any) => field?.key === moduleKey) ?? -1;
+    if (index < 0) return false;
+    // 删除求职意向时先回迁内容，并按最新模块结构恢复个人字段。
+    if (moduleKey === "jobIntent") {
+      const modules = compactConfigModules(fields).filter((field: any) => field.key !== moduleKey);
+      moveFromJobIntent(currentItem.value, modules);
+      delete currentData.value.jobIntent;
+      setConfigModules(currentItem.value, modules);
+      unselectModule(moduleKey);
+      refreshRuntime();
+      return true;
+    }
+    fields.splice(index, 1);
+    if (currentData.value) delete currentData.value[moduleKey];
+    unselectModule(moduleKey);
+    return true;
+  }
+  function setLayoutColumns(columns: { left: string[]; right: string[] } | null): boolean {
+    if (!currentUI.value) return false;
+    currentUI.value.layout.columns = columns ? JSON.parse(JSON.stringify(columns)) : null;
+    return true;
+  }
+  function swapModuleOrder(firstKey: string, secondKey: string): boolean {
+    const fields = runtimeConfig.value?.fields;
+    if (!Array.isArray(fields)) return false;
+    if (firstKey === "user" || secondKey === "user") return false;
+    const firstIndex = fields.findIndex((field: any) => field?.key === firstKey);
+    const secondIndex = fields.findIndex((field: any) => field?.key === secondKey);
+    if (firstIndex < 0 || secondIndex < 0) return false;
+    const [first] = fields.splice(firstIndex, 1);
+    fields.splice(secondIndex, 0, first);
+    return true;
+  }
+  function updateRecordField(
+    moduleKey: string,
+    index: number,
+    field: string,
+    value: unknown,
+  ): boolean {
+    const records = resolveModuleRecords(currentData.value?.[moduleKey]);
+    const record = records?.[index];
+    if (!record?.data || typeof record.data !== "object") return false;
+    // 读取副本会裁掉空的可选字段，字段契约声明可添加时允许首次补填
+    if (
+      !(field in record.data) &&
+      !findAddableModuleField(runtimeConfig.value?.fields, moduleKey, field)
+    ) {
+      return false;
+    }
+    record.data[field] = value;
+    return true;
+  }
+  // 逐项校验写操作是否真的改变数据，供执行结果区分成功与同值提交
+  const readModuleField = (moduleKey: string, field: string) => {
+    const data = currentData.value?.[moduleKey]?.data;
+    if (!data || typeof data !== "object" || Array.isArray(data)) return undefined;
+    return data[field];
+  };
+  const readRecordField = (moduleKey: string, index: number, field: string) => {
+    const records = resolveModuleRecords(currentData.value?.[moduleKey]);
+    return records?.[index]?.data?.[field];
+  };
+  const readModuleTitle = (moduleKey: string) => currentData.value?.[moduleKey]?.ui?.title;
+  function applyResumeOperations(operations: ResumeWriteOp[], observe?: ResumeOperationObserver) {
+    return executeResumeOperations(operations, {
+      addDataRecord,
+      removeDataRecord,
+      moveDataRecord,
+      updateModuleField,
+      updateModuleTitle,
+      updateRecordField,
+      readModuleField,
+      readRecordField,
+      readModuleTitle,
+    }, observe);
+  }
+
+  return {
+    currentConfig,
+    runtimeConfig,
+    runtimeFields,
+    refreshRuntime,
+    setConfigModules,
+    addModule,
+    restoreConfig,
+    currentUI,
+    currentUsage,
+    selectedModule,
+    getModel,
+    selectModule,
+    unselectModule,
+    clearSelectedModules,
+    setSelectedModules,
+    addDataRecord,
+    removeDataRecord,
+    moveDataRecord,
+    updateModuleField,
+    updateModuleTitle,
+    setModuleHidden,
+    removeModule,
+    setLayoutColumns,
+    swapModuleOrder,
+    updateRecordField,
+    applyResumeOperations,
+  };
+};

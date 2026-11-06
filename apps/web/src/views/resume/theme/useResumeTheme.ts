@@ -1,0 +1,217 @@
+/**
+ * useResumeTheme —— 简历主题样式注入
+ *
+ * 根据 item.ui 计算主题样式（内边距、字号、行高、主题色、风格模板），
+ * 由预览上下文提供给模块子组件使用。
+ */
+import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
+import { loadFont } from "@/utils";
+import {
+  defaultAvatarPosition,
+  defaultDatePosition,
+  defaultDateStyle,
+  defaultFontSize,
+  defaultInfoPosition,
+  defaultInfoSeparator,
+  defaultLinkUnderline,
+  defaultLineHeight,
+  defaultSubtitleCenter,
+  defaultPaddingHorizontal,
+  defaultPaddingVertical,
+  defaultThemeColor,
+  defaultTextAlign,
+  defaultTitleFontSize,
+  defaultTitleIconMode,
+  defaultUserInfoLayout,
+  defaultUserInfoMode,
+} from "@/domain/resume/theme/uiConfig";
+import { getResumeThemeUiPreset } from "@/domain/resume/theme/styles";
+import { resolveTitleStyleId } from "@/views/resume/theme/components/title/styles";
+
+/** 简历主题配置（item.ui） */
+type ResumeUi = Record<string, any>;
+
+/** 按背景色亮度返回可读的深色或浅色文字。 */
+export const getContrastTextColor = (color: string) => {
+  const hex = String(color ?? "").replace("#", "");
+  const normalized = hex.length === 3 ? hex.split("").map((value) => `${value}${value}`).join("") : hex;
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return "#1f2937";
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#1f2937" : "#ffffff";
+};
+
+/** 返回的主题样式值集合 */
+export interface ResumeTheme {
+  paddingStyle: ComputedRef<Record<string, string>>;
+  fontStyle: ComputedRef<Record<string, string>>;
+  titleFontStyle: ComputedRef<Record<string, string>>;
+  lineHeightStyle: ComputedRef<Record<string, string>>;
+  paragraphSpacingStyle: ComputedRef<Record<string, string>>;
+  innerSpacingStyle: ComputedRef<Record<string, string>>;
+  fontReadyVersion: Ref<number>;
+  fontValue: ComputedRef<(offset?: number) => Record<string, string>>;
+  lineHeightValue: ComputedRef<() => Record<string, string>>;
+  themeColor: ComputedRef<string | undefined>;
+  themeColorSoft: ComputedRef<string>;
+  themeColorLine: ComputedRef<string>;
+  themeColorContrast: ComputedRef<string>;
+  themeTemplate: ComputedRef<string>; // 当前主题编号，供各外观组件查找自身实现
+  titleTemplate: ComputedRef<string>; // 标题样式编号，已按主题默认归一
+  userInfoMode: ComputedRef<string>;
+  userInfoLayout: ComputedRef<string>;
+  avatarPosition: ComputedRef<string>;
+  infoPosition: ComputedRef<string>;
+  dateStyle: ComputedRef<string>;
+  datePosition: ComputedRef<string>;
+  textAlign: ComputedRef<string>;
+  titleIconMode: ComputedRef<string>;
+  linkUnderline: ComputedRef<boolean>;
+  infoSeparator: ComputedRef<string>;
+  subtitleCenter: ComputedRef<boolean>; // 副标题是否居中展示
+}
+
+/**
+ * 注入简历主题样式
+ * @param ui - item.ui 的响应式引用
+ */
+export const useResumeTheme = (ui: ComputedRef<ResumeUi>): ResumeTheme => {
+  const toNumber = (value: unknown, fallback: number) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  };
+  const paddingVertical = computed(() =>
+    toNumber(ui.value.page?.padding?.vertical, defaultPaddingVertical),
+  );
+  const paddingHorizontal = computed(() =>
+    toNumber(ui.value.page?.padding?.horizontal, defaultPaddingHorizontal),
+  );
+  const fontSize = computed(() => toNumber(ui.value.font?.size, defaultFontSize));
+  const lineHeight = computed(() => toNumber(ui.value.font?.lineHeight, defaultLineHeight));
+  const paragraphSpacing = computed(() => Number(ui.value.page?.spacing?.paragraph));
+  const fontReadyVersion = ref(0);
+  let fontRequestId = 0;
+
+  // 字体加载完成后递增版本号，通知分页测量使用已生效的字体重新计算
+  watch(
+    () => ui.value.font?.family,
+    async (fontKey) => {
+      const requestId = ++fontRequestId;
+      try {
+        await loadFont(fontKey);
+      } catch {
+        // 加载失败时继续使用浏览器回退字体，并触发一次测量
+      }
+      if (requestId === fontRequestId) fontReadyVersion.value += 1;
+    },
+    { immediate: true },
+  );
+
+  // 页面级基础样式对象固定复用，避免模板每次渲染都重新创建相同样式
+  // 上下边距对称：顶部与底部各留一份，页尾落在底部留白之内
+  const paddingStyle = computed(() => ({
+    paddingTop: `${paddingVertical.value}px`,
+    paddingBottom: `${paddingVertical.value}px`,
+    paddingLeft: `${paddingHorizontal.value}px`,
+    paddingRight: `${paddingHorizontal.value}px`,
+  }));
+  const fontStyle = computed(() => ({
+    fontSize: `${fontSize.value}px`,
+  }));
+  // 模块标题字号：缺失时回退默认值
+  const titleFontSize = computed(() => toNumber(ui.value.font?.titleSize, defaultTitleFontSize));
+  // 模块标题样式：独立字号，并在配置值基础上增加 1px
+  const titleFontStyle = computed(() => ({
+    fontSize: `${titleFontSize.value + 1}px`,
+  }));
+  const lineHeightStyle = computed(() => ({
+    lineHeight: `${lineHeight.value}`,
+  }));
+  // 模块段落间距作为独立占位高度使用
+  const paragraphSpacingStyle = computed(() => ({
+    height: `${paragraphSpacing.value}px`,
+  }));
+  // 条目内部纵向间距固定为 4px，与模块段落间距分开控制
+  const innerSpacingStyle = computed(() => ({
+    marginTop: "4px",
+  }));
+
+  const fontValue = computed(() => {
+    const base = fontStyle.value;
+    return (offset = 0) => (offset === 0 ? base : { fontSize: `${fontSize.value + offset}px` });
+  });
+  // 行高使用无单位倍数，随各字段字号自动缩放
+  const lineHeightValue = computed(() => {
+    const base = lineHeightStyle.value;
+    return () => base;
+  });
+  // 主题色统一读取 ui 的 themeColor，缺失时回退默认值
+  const themeColor = computed(() => ui.value.theme?.color ?? defaultThemeColor);
+  // 主题色派生色：统一由主题色推导，避免各风格主题各自拼接透明度导致难以管理
+  // 浅底色：色块底托，主题色 10% 透明度
+  const themeColorSoft = computed(() => `${themeColor.value}1a`);
+  // 线条色：分隔线、描边，主题色 40% 透明度
+  const themeColorLine = computed(() => `${themeColor.value}66`);
+  // 对比文字色：主题色块上的文字按亮度自动取深色或白色
+  const themeColorContrast = computed(() => getContrastTextColor(themeColor.value));
+  // 各外观组件只读取统一的主题编号。
+  const themeTemplate = computed<string>(() => ui.value.theme?.template || "default");
+  // 标题样式独立选择：auto 表示跟随主题，取当前主题预设声明的标题样式，其余按标题样式编号解析。
+  const titleTemplate = computed<string>(() => {
+    const selected = ui.value.theme?.titleTemplate;
+    if (selected && selected !== "auto") return resolveTitleStyleId(selected);
+    return resolveTitleStyleId(getResumeThemeUiPreset(themeTemplate.value).theme.titleTemplate);
+  });
+  // 个人信息展示模式（图标/文字/隐藏），缺失时回退默认值
+  const userInfoMode = computed(() => ui.value.user?.infoMode ?? defaultUserInfoMode);
+  // 个人信息布局（网格/弹性），缺失时回退默认值
+  const userInfoLayout = computed(() => ui.value.user?.infoLayout ?? defaultUserInfoLayout);
+  // 头像位置（左/居中/右），缺失时回退默认值
+  const avatarPosition = computed(() => ui.value.user?.avatarPosition ?? defaultAvatarPosition);
+  // 信息位置（左/居中/右），独立于头像位置，缺失时回退默认值
+  const infoPosition = computed(() => ui.value.user?.infoPosition ?? defaultInfoPosition);
+  // 日期样式（2026.9 / 2026年9月），缺失时回退默认值
+  const dateStyle = computed(() => ui.value.content?.dateStyle ?? defaultDateStyle);
+  // 日期位置（左/右），缺失时回退默认值
+  const datePosition = computed(() => ui.value.content?.datePosition ?? defaultDatePosition);
+  // 文本对齐（系统/两端），缺失时回退默认值
+  const textAlign = computed(() => ui.value.content?.textAlign ?? defaultTextAlign);
+  // 模块标题图标模式，缺失时回退默认值
+  const titleIconMode = computed(() => ui.value.theme?.titleIconMode ?? defaultTitleIconMode);
+  // 链接下划线开关，缺失时回退默认值
+  const linkUnderline = computed(() => ui.value.content?.linkUnderline ?? defaultLinkUnderline);
+  // 并列信息分隔符，缺失时保留默认留白样式。
+  const infoSeparator = computed(() => ui.value.content?.infoSeparator ?? defaultInfoSeparator);
+  // 副标题居中开关，缺失时回退默认值
+  const subtitleCenter = computed(() => ui.value.content?.subtitleCenter ?? defaultSubtitleCenter);
+
+  return {
+    paddingStyle,
+    fontStyle,
+    titleFontStyle,
+    lineHeightStyle,
+    paragraphSpacingStyle,
+    innerSpacingStyle,
+    fontReadyVersion,
+    fontValue,
+    lineHeightValue,
+    themeColor,
+    themeColorSoft,
+    themeColorLine,
+    themeColorContrast,
+    themeTemplate,
+    titleTemplate,
+    userInfoMode,
+    userInfoLayout,
+    avatarPosition,
+    infoPosition,
+    dateStyle,
+    datePosition,
+    textAlign,
+    titleIconMode,
+    linkUnderline,
+    infoSeparator,
+    subtitleCenter,
+  };
+};

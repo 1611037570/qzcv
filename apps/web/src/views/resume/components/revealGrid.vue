@@ -1,0 +1,115 @@
+<script setup>
+// 逐个揭示网格：响应式列数(由 Tailwind 断点决定) + 逐项淡入入场
+// 调用方仅通过 #default 插槽决定每项渲染内容（含新建入口等常驻项也走此插槽参与动画），#empty 提供空状态
+import { computed, onMounted, onUnmounted, ref, useSlots, watch } from "vue";
+
+defineOptions({ name: "RevealGrid" });
+
+const props = defineProps({
+  // 待揭示的列表，项需含 keyField 指定的唯一字段
+  items: { type: Array, required: true },
+  // 每项揭示间隔(ms)
+  interval: { type: Number, default: 120 },
+  // 列表项唯一键字段名，用于 TransitionGroup 稳定 key
+  keyField: { type: String, default: "id" },
+  // 是否逐项揭示：关闭后一次性展示全部项，避免列表高度在揭示期间持续增长
+  reveal: { type: Boolean, default: true },
+  size: { type: String, default: "default" },
+});
+
+const slots = useSlots();
+const rootRef = ref(null);
+
+// 已揭示数量：从 0 递增到 items.length，驱动逐项淡入
+const visibleCount = ref(0);
+const visibleItems = computed(() => props.items.slice(0, visibleCount.value));
+
+let timer = null;
+let mounted = false;
+
+// 列表增删后重新同步揭示进度，避免新增卡片被首次加载时的数量上限隐藏。
+const syncReveal = () => {
+  // 关闭揭示时直接铺满列表，不再逐项递增
+  if (!props.reveal) {
+    if (timer) clearInterval(timer);
+    timer = null;
+    visibleCount.value = props.items.length;
+    return;
+  }
+  visibleCount.value = Math.min(visibleCount.value, props.items.length);
+  if (visibleCount.value >= props.items.length) {
+    if (timer) clearInterval(timer);
+    timer = null;
+    return;
+  }
+  if (!mounted || timer) return;
+  timer = setInterval(() => {
+    visibleCount.value += 1;
+    if (visibleCount.value >= props.items.length) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }, props.interval);
+};
+
+watch(() => props.items.length, syncReveal, { flush: "post" });
+
+onMounted(() => {
+  mounted = true;
+  syncReveal();
+});
+
+onUnmounted(() => {
+  mounted = false;
+  if (timer) clearInterval(timer);
+});
+
+// 稳定 key：优先取 keyField 字段，缺省回退下标
+const getKey = (item, index) => item?.[props.keyField] ?? index;
+
+// 列数跟随可用宽度自动增减：列宽不低于卡片最小宽度，宽屏继续加列而不拉宽卡片
+const gridClass = computed(() => {
+  if (props.size === "default") {
+    return "grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
+  } else if (props.size === "small") {
+    return "grid-cols-[repeat(auto-fill,minmax(384px,1fr))]";
+  }
+  return "";
+});
+</script>
+
+<template>
+  <!--   -->
+  <div ref="rootRef" :class="gridClass" class="grid gap-3">
+    <TransitionGroup name="sf-reveal">
+      <!-- 包裹项 flex justify-center 让卡片在列宽内居中（列宽 > 卡片宽时不再靠左） -->
+      <div
+        v-for="(item, index) in visibleItems"
+        :key="getKey(item, index)"
+        class="flex items-center justify-center"
+      >
+        <slot name="default" :item="item" :index="index" />
+      </div>
+      <!-- 空状态：列表为空时占满整行 -->
+      <div v-if="!items.length && slots.empty" key="__sf-empty" class="col-span-full">
+        <slot name="empty" />
+      </div>
+    </TransitionGroup>
+  </div>
+</template>
+
+<style>
+/* 逐项入场 + 增删位移过渡，供 TransitionGroup 复用 */
+.sf-reveal-enter-active {
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sf-reveal-enter-from {
+  opacity: 0;
+  transform: translateY(28px) scale(0.94);
+}
+.sf-reveal-move {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+</style>

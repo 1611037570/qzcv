@@ -1,0 +1,78 @@
+import type { InterviewAction, InterviewTaskInput } from "@snowflake/interview-agent";
+import { INTERVIEW_INTRO_PHASE, INTERVIEW_INTRO_SECONDS, isInterviewComplete, isPreparationMode } from "./config";
+import type { InterviewSession } from "./types";
+
+export const isInterviewHelperAction = (action: InterviewAction | null): action is "hint" | "reference" =>
+  action === "hint" || action === "reference";
+
+// 请求、暂停与界面展示始终定位同一份输出。
+export const getInterviewOutput = (session: InterviewSession, action: InterviewAction, turnId?: string) => {
+  if (action === "preparation") return session.preparation;
+  if (action === "report") return session.report;
+  if (action === "clarification") return session.turns.at(-1)?.clarifications?.at(-1)?.reply;
+  const turn = isInterviewHelperAction(action) ? session.turns.find((item) => item.id === turnId) : session.turns.at(-1);
+  return action === "question" ? turn?.question : turn?.[action];
+};
+
+// 所有操作权限从持久化记录派生，不再额外维护容易失步的生成状态。
+export const getInterviewSessionState = (session: InterviewSession) => {
+  const latestTurn = session.turns.at(-1);
+  const submittedTurns = session.turns.filter((turn) => turn.submitted);
+  const preparation = isPreparationMode(session.config.mode);
+  const reviewing = session.pendingAction === "report" || session.report.status !== "empty";
+  const introduction = latestTurn?.phase === INTERVIEW_INTRO_PHASE;
+  const generating = session.pendingAction !== null && getInterviewOutput(session, session.pendingAction)?.status === "generating";
+  const answerReady = !preparation && !reviewing && !!latestTurn && !latestTurn.submitted && latestTurn.question.status === "complete";
+  const remainingSeconds = Math.max(0, Math.ceil(INTERVIEW_INTRO_SECONDS - (latestTurn?.durationSeconds || 0)));
+  const canSubmit = session.status === "active" && answerReady && !generating && session.pendingAction === null;
+  const canAnswer = canSubmit && (!introduction || remainingSeconds > 0);
+  // 推进与请求权限使用同一份状态，避免操作入口再次遍历历史并重复判断。
+  const nextAction: InterviewAction | null = session.status === "completed" ? null
+    : preparation ? "preparation"
+    : reviewing || isInterviewComplete(session.config, submittedTurns) ? "report"
+    : session.pendingAction === "clarification" ? "clarification"
+    : answerReady ? null : "question";
+  return {
+    latestTurn, // 当前待完成或最近提交的轮次。
+    submittedTurns, // 唯一允许进入模型历史的已提交轮次。
+    preparation, // 当前分类是否只生成准备材料。
+    reviewing, // 是否已进入复盘，进入后不能回到出题或作答。
+    introduction, // 当前轮次是否为独立开场。
+    generating, // 当前待办对应的输出是否正在生成。
+    answerReady, // 当前是否存在已出题但未提交的回答位置。
+    remainingSeconds, // 开场剩余秒数，暂停后沿用累计用时。
+    canSubmit, // 是否允许确认提交或明确跳过，到时后仍可提交。
+    canAnswer, // 是否允许文字或语音继续写入草稿。
+    canReviewAnswers: !preparation && session.status === "completed" && session.report.status === "complete", // 复盘完成后才开放逐题思路与参考回答。
+    nextAction, // 开始、提交、恢复共用的下一步动作，已就绪题目直接作答。
+  };
+};
+
+// 只提交实际完成的历史，未提交题目与草稿不混入复盘或能力评价。
+export const createInterviewTaskInput = (session: InterviewSession, action: InterviewAction, turnId?: string): InterviewTaskInput => {
+  const state = getInterviewSessionState(session);
+  // 回看明确选择的题目，不能默认使用最后一题或把未提交题纳入评价。
+  const reviewTurn = isInterviewHelperAction(action) ? session.turns.find((turn) => turn.id === turnId) : action === "clarification" ? state.latestTurn : undefined;
+  // 思路与澄清不需要候选人简历；逐题任务仅携带当前题，不发送整场历史。
+  const history = reviewTurn ? [reviewTurn] : state.submittedTurns;
+  return {
+    config: session.config, // 本场固定的岗位、年限与训练设置。
+    resume: action === "hint" || action === "clarification" ? {} : session.resumeSnapshot, // 通用思路与题意澄清不加载个人资料。
+    turns: history.map((turn) => ({
+      phase: turn.phase, // 本轮实际所属阶段。
+      question: turn.question.content, // 本轮实际提出的题目。
+      answer: turn.answer, // 用户确认提交的回答。
+      skipped: turn.skipped, // 是否主动跳过。
+      clarifications: turn.clarifications?.filter((item) => item.reply.status === "complete").map((item) => ({
+        request: item.request, // 已解释过的题意疑问。
+        explanation: item.reply.content, // 仅作理解上下文，不是用户作答。
+      })), // 失败或停止的说明不作为已经澄清的内容。
+      durationSeconds: Math.round(turn.durationSeconds), // 实际作答秒数。
+    })), // 正式历史可包含开场，逐题任务不包含其他轮次。
+    question: reviewTurn?.question.content || "", // 回看只提供选中题目的题面。
+    clarificationRequest: action === "clarification" ? reviewTurn?.clarifications?.at(-1)?.request || "" : "", // 本次请求的题意疑问与正式作答分开。
+    previousReference: action === "reference" ? reviewTurn?.reference.content || "" : "", // 更换所选题目的参考表达时提供上一版。
+    phase: action === "report" ? state.submittedTurns.at(-1)?.phase || "尚未作答" : reviewTurn?.phase || state.latestTurn?.phase || "面试准备", // 回看沿用所选题型，复盘只采用已提交阶段。
+    endedEarly: session.endedEarly, // 是否未达到本类规定轮次便结束。
+  };
+};

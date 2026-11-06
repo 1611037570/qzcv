@@ -1,0 +1,51 @@
+<script setup>
+import { computed, inject } from "vue";
+import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";
+
+// 标题文本：按模块标题图标模式在文字前展示图标，各风格主题统一复用
+defineProps({
+  title: {
+    type: String,
+    default: "",
+  },
+});
+// 模块图标与尺寸由标题入口注入，无图标模式时图标为空
+const icon = inject(
+  "moduleIcon",
+  computed(() => ""),
+);
+const iconSize = inject(
+  "titleIconSize",
+  computed(() => 0),
+);
+// 标题文字直接使用模块标题字号，避免被正文字号覆盖
+const {
+  theme: { titleFontStyle, titleIconMode, themeColor, themeColorContrast },
+} = useResumePreviewContext();
+// 图标底色与形状由同一处计算，底色比图标每边各多出四像素。
+const iconContainerStyle = computed(() => {
+  if (titleIconMode.value !== "square" && titleIconMode.value !== "circle") return undefined;
+  return {
+    backgroundColor: themeColor.value,
+    color: themeColorContrast.value,
+    padding: "4px",
+    borderRadius: titleIconMode.value === "circle" ? "9999px" : "4px",
+  };
+});
+</script>
+
+<template>
+  <!-- 图标独立于文字排版，不参与标题换行；背景模式使用主题色填充 -->
+  <div class="flex shrink-0 items-center">
+    <span
+      v-if="icon"
+      class="mr-3 inline-flex items-center justify-center rounded"
+      :style="iconContainerStyle"
+    >
+      <SfIcon :icon="icon" :size="iconSize" />
+    </span>
+    <span :style="[titleFontStyle]">{{ title }}</span>
+  </div>
+</template>
+
+<style lang="scss" scoped></style>

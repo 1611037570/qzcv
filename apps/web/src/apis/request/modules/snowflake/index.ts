@@ -1,0 +1,35 @@
+import { config } from "@/configs";
+import XyRequest from "../../request";
+import axios from "axios";
+// 简历使用统计相关接口
+export * from "./stats";
+const request = new XyRequest({
+  baseURL: config.api.baseUrl,
+});
+
+// 雪花服务Ping
+export const snowflakePing = async () => {
+  const response = await request.get({
+    url: "/",
+  });
+
+  // 请求拦截器会返回错误对象，这里统一转为拒绝以便准确记录连接状态。
+  if (response instanceof Error || response?.isAxiosError) throw response;
+
+  return response;
+};
+
+export const createResumePdf = async (item: any, system?: any, signal?: AbortSignal) => {
+  // 将打印取消信号传递给服务端导出请求
+  const response = await axios.post<Blob>(
+    `${config.api.baseUrl}/resume/pdf`,
+    { item, system },
+    {
+      responseType: "blob",
+      signal,
+      timeout: 120000,
+      headers: { "Content-Type": "application/json;charset=UTF-8" },
+    },
+  );
+  return response.data;
+};

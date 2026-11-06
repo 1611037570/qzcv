@@ -1,0 +1,246 @@
+import { getRegionContentHeight } from "../layout/regionHeights";
+import { resolveRegionGap } from "../layout/regionFlows";
+import type { PageLayoutConfig, RegionConfig } from "../pageLayoutTypes";
+import type { FlowFragmentKind, FlowPage, FlowPageItem } from "./paginateFlow";
+import type { LayoutNode } from "../types";
+import type { MeasuredNode } from "../measure/types";
+import { validateFragmentCoverage } from "./validateFragmentCoverage";
+
+/** 分页计划的状态。 */
+export type PagePlanStatus = "ready" | "invalid" | "overflow";
+
+/** 分页布局过程中的问题。 */
+export interface LayoutWarning {
+  /** 问题类型。 */
+  code: "missingRegion" | "missingColumn" | "overflow" | "invalidLayout" | "contentMissing" | "contentOverlap" | "contentOutOfBounds";
+  /** 面向开发者的详细说明。 */
+  message: string;
+  /** 产生问题的节点编号。 */
+  nodeId?: string;
+}
+
+/** 页面中的内容分片。 */
+export interface FragmentPlan {
+  /** 当前分片唯一编号。 */
+  fragmentId: string;
+  /** 来源节点编号。 */
+  sourceNodeId: string;
+  /** 来源模块 key。 */
+  sourceModuleKey: string;
+  /** 当前分片在节点中的位置。 */
+  fragment: FlowFragmentKind;
+  /** 当前分片内容。 */
+  payload: unknown;
+  /** 当前分片实际使用的高度。 */
+  height: number;
+  /** 后续页的实际内容起点，忽略前置零高度分片 */
+  leadingOnPage?: boolean;
+  /** 当前分片对应的内容范围。 */
+  contentRange?: { start: number; end: number };
+  /** 分片覆盖的块区间，缺省表示全部块。 */
+  blockRange?: { start: number; end: number };
+  /** 由分片位置推导出的视觉装饰类型。 */
+  decoration: "full" | "top" | "middle" | "bottom";
+}
+
+/** 分页计划中的栏。 */
+export interface ColumnPlan {
+  /** 对应布局配置中的栏编号。 */
+  columnId: string;
+  /** 当前栏可用高度。 */
+  availableHeight: number;
+  /** 当前栏已经使用的高度。 */
+  usedHeight: number;
+  /** 当前栏中的内容分片。 */
+  fragments: FragmentPlan[];
+  /** 落在页尾的模块间距。 */
+  trailingGap?: number;
+}
+
+/** 分页计划中的区域。 */
+export interface RegionPlan {
+  /** 对应布局配置中的区域编号。 */
+  regionId: string;
+  /** 当前页相邻可见区域之间的实际间距。 */
+  gapBefore: number;
+  /** 当前区域已经使用的高度。 */
+  usedHeight: number;
+  /** 当前区域中的栏。 */
+  columns: ColumnPlan[];
+}
+
+/** 页面计划中的单页。 */
+export interface PagePlanPage {
+  /** 页码，从零开始。 */
+  pageIndex: number;
+  /** 当前页面中的区域。 */
+  regions: RegionPlan[];
+}
+
+/** 预览、打印和导出共用的分页计划。 */
+export interface PagePlan {
+  /** 当前计划状态。 */
+  status: PagePlanStatus;
+  /** 当前计划版本号。 */
+  version: number;
+  /** 页面列表。 */
+  pages: PagePlanPage[];
+  /** 布局过程中的问题。 */
+  warnings: LayoutWarning[];
+}
+
+const getDecoration = (fragment: FlowFragmentKind): FragmentPlan["decoration"] => {
+  if (fragment === "first") return "top";
+  if (fragment === "middle") return "middle";
+  if (fragment === "last") return "bottom";
+  return "full";
+};
+
+const toFragmentPlan = (item: FlowPageItem): FragmentPlan => ({
+  fragmentId: item.fragmentId,
+  sourceNodeId: item.nodeId,
+  sourceModuleKey: item.sourceModuleKey,
+  fragment: item.fragment,
+  payload: item.payload,
+  height: item.height,
+  leadingOnPage: item.leadingOnPage,
+  contentRange: item.contentRange,
+  blockRange: item.blockRange,
+  decoration: getDecoration(item.fragment),
+});
+
+/** 区域在一页里可用的高度：与区域分页流使用同一份推导，避免两处口径分叉 */
+const getRegionHeight = (region: RegionConfig, fallback: number) =>
+  getRegionContentHeight(region, fallback);
+
+/** 页面计划构建参数。 */
+export interface BuildPagePlanOptions {
+  /** 页面布局配置。 */
+  layout: PageLayoutConfig;
+  /** 每个栏独立生成的分页流。 */
+  flowPagesByColumn: ReadonlyMap<string, FlowPage[]>;
+  /** 区域默认可用高度。 */
+  availableHeight: number;
+  /** 每个栏的可用高度。 */
+  availableHeightByColumn?: ReadonlyMap<string, number>;
+  /** 当前布局版本号。 */
+  version?: number;
+  /** 上游已经发现的问题。 */
+  warnings?: LayoutWarning[];
+  /** 原始节点，提供后与测量结果共同检查分片完整性。 */
+  nodes?: readonly LayoutNode[];
+  /** 当前节点的测量结果，覆盖检查沿用分页的同一份输入。 */
+  measurements?: ReadonlyMap<string, MeasuredNode>;
+}
+
+const emptyFlowPage = (pageIndex: number): FlowPage => ({
+  pageIndex,
+  usedHeight: 0,
+  items: [],
+});
+
+/** 将每个栏的独立分页流合并为统一的 PagePlan。 */
+export const buildPagePlan = ({
+  layout,
+  flowPagesByColumn,
+  availableHeight,
+  availableHeightByColumn,
+  version = 0,
+  warnings = [],
+  nodes,
+  measurements,
+}: BuildPagePlanOptions): PagePlan => {
+  const orderedRegions = [...layout.regions].sort((a, b) => a.order - b.order);
+  if (orderedRegions.length === 0) {
+    return {
+      status: "invalid",
+      version,
+      pages: [],
+      warnings: [...warnings, { code: "missingRegion", message: "分页计划缺少页面区域配置" }],
+    };
+  }
+  const missingColumnWarnings = orderedRegions
+    .filter((region) => region.columns.length === 0)
+    .map<LayoutWarning>((region) => ({
+      code: "missingColumn",
+      message: `页面区域 ${region.id} 缺少栏位配置`,
+    }));
+  if (missingColumnWarnings.length > 0) {
+    return {
+      status: "invalid",
+      version,
+      pages: [],
+      warnings: [...warnings, ...missingColumnWarnings],
+    };
+  }
+
+  // 每栏只读取当前布局生成的分页流。
+  const getFlowPages = (columnId: string) => flowPagesByColumn.get(columnId) || [emptyFlowPage(0)];
+  const allColumnPages = orderedRegions.flatMap((region) =>
+    region.columns.map((column) => getFlowPages(column.id)),
+  );
+  const pageCount = Math.max(1, ...allColumnPages.map((pages) => pages.length));
+  const overflowWarnings = orderedRegions.flatMap((region) =>
+    region.columns.flatMap((column) => {
+      const columnHeight = Math.max(
+        0,
+        availableHeightByColumn?.get(column.id) ?? getRegionHeight(region, availableHeight),
+      );
+      return getFlowPages(column.id).flatMap((page) =>
+        page.items
+          .filter((item) => item.height > (page.availableHeight ?? columnHeight))
+          .map<LayoutWarning>((item) => ({
+            code: "overflow",
+            message: `节点 ${item.nodeId} 超出栏 ${column.id} 的可用高度`,
+            nodeId: item.nodeId,
+          })),
+      );
+    }),
+  );
+  // 每栏流合并后统一检查，不按主题或业务模块编写专属验收规则。
+  const coverageWarnings = nodes && measurements
+    ? validateFragmentCoverage(nodes, measurements, allColumnPages.flatMap((columnPages) => columnPages.flatMap((page) => page.items)))
+    : [];
+  const allWarnings = [...warnings, ...overflowWarnings, ...coverageWarnings];
+
+  const pages = Array.from({ length: pageCount }, (_, pageIndex) => {
+    let previousVisibleRegion: RegionConfig | undefined;
+    return {
+      pageIndex,
+      regions: orderedRegions.map((region) => {
+        const columns = region.columns.map<ColumnPlan>((column) => {
+          const sourcePage = getFlowPages(column.id)[pageIndex] || emptyFlowPage(pageIndex);
+          const columnHeight = Math.max(
+            0,
+            availableHeightByColumn?.get(column.id) ?? getRegionHeight(region, availableHeight),
+          );
+          return {
+            columnId: column.id,
+            availableHeight: sourcePage.availableHeight ?? columnHeight,
+            usedHeight: sourcePage.usedHeight,
+            fragments: sourcePage.items.map(toFragmentPlan),
+            trailingGap: sourcePage.trailingGap,
+          };
+        });
+        // 区域间距只在当前页两个可见区域之间生成一次，渲染层直接消费结果。
+        const visible = columns.some((column) => column.fragments.length > 0);
+        const gapBefore = visible ? resolveRegionGap(previousVisibleRegion, region) : 0;
+        if (visible) previousVisibleRegion = region;
+        return {
+          regionId: region.id,
+          gapBefore,
+          usedHeight: Math.max(...columns.map((column) => column.usedHeight), 0),
+          columns,
+        };
+      }),
+    };
+  });
+
+  return {
+    status: allWarnings.some((warning) => ["contentMissing", "contentOverlap", "contentOutOfBounds", "invalidLayout"].includes(warning.code))
+      ? "invalid" : allWarnings.some((warning) => warning.code === "overflow") ? "overflow" : "ready",
+    version,
+    pages,
+    warnings: allWarnings,
+  };
+};

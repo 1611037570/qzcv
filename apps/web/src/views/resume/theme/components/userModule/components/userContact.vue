@@ -1,0 +1,464 @@
+<script setup>
+import dayjs from "dayjs";
+import { computed } from "vue";
+import { resolveIcon } from "@/views/resume/editor/data/iconCategories";
+import { isUserCustomFieldKey } from "@/stores/modules/resume/hooks/useUserCustomField";
+import { getUserSubtitleKeys } from "@/stores/modules/resume/hooks/useUserSubtitle";
+import { getInfoSeparatorMark } from "@/domain/resume/theme/uiConfig";
+import { calcWorkYears } from "@/domain/resume/workYears";
+import { getPreviewText } from "@/views/resume/editor/preview/shared/i18n";
+import UserContactItem from "./userContactItem.vue";
+import { useUserFieldVisibility } from "../useUserFieldVisibility";
+import InlineInfoList from "@/views/resume/editor/preview/components/inlineInfoList.vue";
+import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";
+
+// 个人信息组件：基础信息与联系方式统一排序展示，标签支持图标、文字和隐藏模式，对齐方式由使用方通过 class 控制
+const {
+  data: previewData,
+  lang: previewLang,
+  userFieldOrder,
+  userFieldLabels,
+  theme: { userInfoMode, userInfoLayout, infoSeparator },
+} = useResumePreviewContext();
+const props = defineProps({
+  // 信息内容水平对齐：左 / 居中 / 右
+  align: {
+    type: String,
+    default: "left",
+  },
+  // 窄栏资料逐条成块并使用单列，弹性与网格只改变排布方向，不合并内容块。
+  singleColumnGrid: {
+    type: Boolean,
+    default: false,
+  },
+  // 双栏个人信息的分页块区间，前两个块由头像与姓名占用。
+  blockRange: {
+    type: Object,
+    default: () => ({ start: 0 /* 起始块序号 */, end: Number.MAX_SAFE_INTEGER /* 结束块序号 */ }),
+  },
+});
+const user = computed(() => previewData.value?.user?.data || {});
+// 字段级 UI 配置（图标等），与编辑器同读个人信息模块 ui 层级
+const ui = computed(() => previewData.value?.user?.ui || {});
+// 读取字段配置中的稳定标识，并解析为当前图标名称
+const fieldIcon = (key) => resolveIcon(ui.value?.[key]?.icon);
+// 出生日期展示形态：年龄或出生日期，未配置时按年龄展示
+const birthdayDisplay = computed(() => ui.value?.birthday?.display || "age");
+// 参加工作时间展示形态：工作年限按实际整年或四舍五入展示，未配置时按实际整年
+const workTimeDisplay = computed(() => ui.value?.workTime?.display || "exact");
+// 组合字段沿用全局分隔符，避免内部仍固定为圆点。
+const joinInfo = (items) => {
+  const mark = getInfoSeparatorMark(infoSeparator.value);
+  return items.filter(Boolean).join(mark ? ` ${mark} ` : " ");
+};
+// 副标题字段在姓名下方单独展示，不再出现在信息行
+const subtitleKeys = computed(() => getUserSubtitleKeys(ui.value));
+const { isUserFieldHidden } = useUserFieldVisibility();
+const isIconMode = computed(() => userInfoMode?.value === "icon");
+// 隐藏模式仅保留个人信息字段值
+const isLabelHidden = computed(() => userInfoMode?.value === "none");
+// 计算年龄：出生日期缺失或不可解析时返回 null，0 岁是合法年龄
+const age = computed(() => {
+  if (isUserFieldHidden("birthday")) return null;
+  const birthday = user.value?.birthday;
+  if (!birthday || !dayjs(birthday).isValid()) return null;
+  const ageDiff = dayjs().diff(dayjs(birthday), "year");
+  return Math.max(0, ageDiff);
+});
+// 按个人资料中的参加工作时间计算工作经验，避免依赖全局当前简历状态
+const workYearsNumber = computed(() => {
+  if (isUserFieldHidden("workTime")) return 0;
+  // 取整口径跟随该字段的展示形态：默认实际整年，选四舍五入时把满 5 个月计入下一年
+  return calcWorkYears(user.value?.workTime, { round: workTimeDisplay.value === "round" });
+});
+// 根据信息位置切换布局，并保持对应的水平对齐方式
+const useFlexLayout = computed(() => !props.singleColumnGrid && userInfoLayout?.value === "flex");
+const layoutClass = computed(() => {
+  const align = props.align || "left";
+  const centered = align === "center";
+  const alignEnd = align === "right";
+  // 弹性排布在窄栏仍逐条渲染，只把单列网格换成横向流动。
+  if (userInfoLayout?.value === "flex") {
+    return [
+      "flex flex-wrap",
+      centered ? "justify-center" : alignEnd ? "justify-end" : "justify-start",
+    ];
+  }
+  if (!props.singleColumnGrid) {
+    return [
+      "resume-user-contact-adaptive-grid grid gap-3",
+      centered ? "justify-center" : alignEnd ? "justify-end" : "justify-start",
+    ];
+  }
+  return [
+    "grid grid-cols-1 gap-3",
+    centered && "justify-items-center",
+    alignEnd && "justify-items-end",
+  ];
+});
+const hasPhone = computed(() => !isUserFieldHidden("phone") && !!user.value?.phone);
+const hasEmail = computed(() => !isUserFieldHidden("email") && !!user.value?.email);
+const hasWechat = computed(() => !isUserFieldHidden("wechat") && !!user.value?.wechat);
+const hasGithub = computed(() => !isUserFieldHidden("github") && !!user.value?.github);
+const hasLinkedin = computed(() => !isUserFieldHidden("linkedin") && !!user.value?.linkedin);
+const hasWebsite = computed(() => !isUserFieldHidden("website") && !!user.value?.website);
+const phoneLabel = computed(() => getPreviewText("phoneLabel", previewLang.value));
+const emailLabel = computed(() => getPreviewText("emailLabel", previewLang.value));
+const wechatLabel = computed(() => getPreviewText("wechatLabel", previewLang.value));
+const githubLabel = computed(() => getPreviewText("githubLabel", previewLang.value));
+const linkedinLabel = computed(() => getPreviewText("linkedinLabel", previewLang.value));
+const websiteLabel = computed(() => getPreviewText("websiteLabel", previewLang.value));
+
+// 基础信息（性别、年龄、工作年限、求职岗位）与联系方式合并为同一列表
+const metaItems = computed(() => {
+  const items = [];
+  if (!isUserFieldHidden("sex") && user.value?.sex) {
+    items.push({
+      key: "sex",
+      icon: fieldIcon("sex"),
+      label: getPreviewText("sexLabel", previewLang.value),
+    });
+  }
+  // 文化水平有值且未隐藏时展示在个人信息中
+  if (!isUserFieldHidden("educationLevel") && user.value?.educationLevel) {
+    items.push({
+      key: "educationLevel",
+      icon: fieldIcon("educationLevel"),
+      label: getPreviewText("educationLevelLabel", previewLang.value),
+    });
+  }
+  // 出生日期展示形态为日期时直接展示字段值，否则展示推导出的年龄
+  if (birthdayDisplay.value === "date") {
+    if (!isUserFieldHidden("birthday") && user.value?.birthday) {
+      items.push({
+        key: "birthday",
+        icon: fieldIcon("birthday"),
+        label: getPreviewText("birthdayLabel", previewLang.value),
+      });
+    }
+  } else if (age.value !== null) {
+    items.push({
+      // 年龄跟随出生日期排序，图标与标签沿用出生日期字段配置
+      sortKey: "birthday",
+      icon: fieldIcon("birthday"),
+      label: getPreviewText("ageLabel", previewLang.value),
+      text: getPreviewText("age", previewLang.value, { age: age.value }),
+    });
+  }
+  if (workYearsNumber.value) {
+    items.push({
+      // 工作年限跟随参加工作时间排序，图标与标签沿用参加工作时间字段配置
+      sortKey: "workTime",
+      icon: fieldIcon("workTime"),
+      label: getPreviewText("expYearsLabel", previewLang.value),
+      text: getPreviewText("expYears", previewLang.value, { years: workYearsNumber.value }),
+    });
+  }
+  if (!isUserFieldHidden("position") && user.value?.position) {
+    items.push({
+      key: "position",
+      icon: fieldIcon("position"),
+      label: getPreviewText("positionLabel", previewLang.value),
+    });
+  }
+  return items;
+});
+
+// 身高体重按身高与体重拼接展示
+const heightWeightText = computed(() => {
+  if (isUserFieldHidden("heightWeight")) return "";
+  const value = user.value?.heightWeight;
+  if (typeof value === "string") return value;
+  const height = value?.height;
+  const weight = value?.weight;
+  const hasHeight = height != null && height !== "";
+  const hasWeight = weight != null && weight !== "";
+  if (!hasHeight && !hasWeight) return "";
+  return joinInfo([hasHeight ? `${height}cm` : "", hasWeight ? `${weight}kg` : ""]);
+});
+// 模特三围按胸围、腰围、臀围顺序展示，允许只填写部分数据
+const measurementsText = computed(() => {
+  if (isUserFieldHidden("measurements")) return "";
+  const value = user.value?.measurements;
+  if (typeof value === "string") return value;
+  const measurements = [value?.bust, value?.waist, value?.hip].filter(
+    (item) => item != null && item !== "",
+  );
+  if (!measurements.length) return "";
+  return joinInfo(measurements.map((item) => `${item}cm`));
+});
+// 尺码按上装、下装、鞋码顺序展示，允许只填写部分数据
+const sizesText = computed(() => {
+  if (isUserFieldHidden("sizes")) return "";
+  const value = user.value?.sizes;
+  if (typeof value === "string") return value;
+  const sizes = [
+    { key: "top", value: value?.top },
+    { key: "bottom", value: value?.bottom },
+    { key: "shoes", value: value?.shoes },
+  ]
+    .filter((item) => item.value != null && item.value !== "")
+    .map((item) => (item.key === "shoes" ? `${item.value}码` : item.value));
+  return joinInfo(sizes);
+});
+// 期望薪资展示：只选了最低薪资的未完成区间按「Xk以上」展示，不再隐藏
+const salaryText = computed(() => {
+  if (isUserFieldHidden("salary")) return "";
+  const salary = user.value?.salary;
+  if (!salary) return "";
+  const incompleteMatch = String(salary).match(/^(.+?)k-$/i);
+  return incompleteMatch ? `${incompleteMatch[1]}k以上` : String(salary);
+});
+const secondaryItems = computed(() => {
+  const items = [];
+  if (!isUserFieldHidden("status") && user.value?.status) {
+    items.push({
+      key: "status",
+      icon: fieldIcon("status"),
+      label: getPreviewText("statusLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("arrivalTime") && user.value?.arrivalTime) {
+    items.push({
+      key: "arrivalTime",
+      icon: fieldIcon("arrivalTime"),
+      label: getPreviewText("arrivalTimeLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("political") && user.value?.political) {
+    items.push({
+      key: "political",
+      icon: fieldIcon("political"),
+      label: getPreviewText("politicalLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("marital") && user.value?.marital) {
+    items.push({
+      key: "marital",
+      icon: fieldIcon("marital"),
+      label: getPreviewText("maritalLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("nation") && user.value?.nation) {
+    items.push({
+      key: "nation",
+      icon: fieldIcon("nation"),
+      label: getPreviewText("nationLabel", previewLang.value),
+    });
+  }
+  // 国籍有值且未隐藏时加入预览信息
+  if (!isUserFieldHidden("nationality") && user.value?.nationality) {
+    items.push({
+      key: "nationality",
+      icon: fieldIcon("nationality"),
+      label: getPreviewText("nationalityLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("zodiac") && user.value?.zodiac) {
+    items.push({
+      key: "zodiac",
+      icon: fieldIcon("zodiac"),
+      label: getPreviewText("zodiacLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("mbti") && user.value?.mbti) {
+    items.push({
+      key: "mbti",
+      icon: fieldIcon("mbti"),
+      label: getPreviewText("mbtiLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("city") && user.value?.city) {
+    items.push({
+      key: "city",
+      icon: fieldIcon("city"),
+      label: getPreviewText("cityLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("nativePlace") && user.value?.nativePlace) {
+    items.push({
+      key: "nativePlace",
+      icon: fieldIcon("nativePlace"),
+      label: getPreviewText("nativePlaceLabel", previewLang.value),
+    });
+  }
+  // 生源地有值且未隐藏时加入预览信息
+  if (!isUserFieldHidden("sourcePlace") && user.value?.sourcePlace) {
+    items.push({
+      key: "sourcePlace",
+      icon: fieldIcon("sourcePlace"),
+      label: getPreviewText("sourcePlaceLabel", previewLang.value),
+    });
+  }
+  if (!isUserFieldHidden("currentCity") && user.value?.currentCity) {
+    items.push({
+      key: "currentCity",
+      icon: fieldIcon("currentCity"),
+      label: getPreviewText("currentCityLabel", previewLang.value),
+    });
+  }
+  // 期望薪资有值即展示；只选最低薪资时由 salaryText 转成「Xk以上」
+  if (salaryText.value) {
+    items.push({
+      fieldKey: "salary",
+      sortKey: "salary",
+      text: salaryText.value,
+      icon: fieldIcon("salary"),
+      label: getPreviewText("salaryLabel", previewLang.value),
+    });
+  }
+  if (heightWeightText.value) {
+    items.push({
+      // 身高体重没有对应的原始字段项，去重时按字段标识匹配
+      fieldKey: "heightWeight",
+      sortKey: "heightWeight",
+      text: heightWeightText.value,
+      icon: fieldIcon("heightWeight"),
+      label: getPreviewText("heightWeightLabel", previewLang.value),
+    });
+  }
+  if (measurementsText.value) {
+    items.push({
+      fieldKey: "measurements",
+      sortKey: "measurements",
+      text: measurementsText.value,
+      icon: fieldIcon("measurements"),
+      label: getPreviewText("measurementsLabel", previewLang.value),
+    });
+  }
+  if (sizesText.value) {
+    items.push({
+      fieldKey: "sizes",
+      sortKey: "sizes",
+      text: sizesText.value,
+      icon: fieldIcon("sizes"),
+      label: getPreviewText("sizesLabel", previewLang.value),
+    });
+  }
+  return items;
+});
+// 自定义字段与预设字段共用更多字段排序，标题由运行时配置提供
+const customItems = computed(() =>
+  userFieldOrder.value
+    .filter((key) => isUserCustomFieldKey(key))
+    .filter((key) => !isUserFieldHidden(key) && user.value?.[key])
+    .map((key) => {
+      const label = userFieldLabels.value.get(key) || "自定义字段";
+      return {
+        key,
+        icon: fieldIcon(key),
+        // 自定义联系方式与预设字段保持一致，文字标签末尾统一显示冒号。
+        label: /[:：]\s*$/.test(label) ? label : `${label}：`,
+      };
+    }),
+);
+// 统一整理基础信息、联系方式和扩展信息，交由通用单项组件渲染
+const contactItems = computed(() => {
+  const items = [];
+  if (hasPhone.value) {
+    items.push({
+      key: "phone",
+      icon: fieldIcon("phone"),
+      label: phoneLabel.value,
+    });
+  }
+  if (hasEmail.value) {
+    items.push({
+      key: "email",
+      // 图标读取字段 UI 配置，由表单默认值兜底写入
+      icon: fieldIcon("email"),
+      label: emailLabel.value,
+    });
+  }
+  if (hasWechat.value) {
+    items.push({
+      key: "wechat",
+      icon: fieldIcon("wechat"),
+      label: wechatLabel.value,
+    });
+  }
+  if (hasGithub.value) {
+    items.push({
+      key: "github",
+      icon: fieldIcon("github"),
+      label: githubLabel.value,
+    });
+  }
+  if (hasLinkedin.value) {
+    items.push({
+      key: "linkedin",
+      icon: fieldIcon("linkedin"),
+      label: linkedinLabel.value,
+    });
+  }
+  // 个人网站有值时与其他联系方式一同展示
+  if (hasWebsite.value) {
+    items.push({
+      key: "website",
+      icon: fieldIcon("website"),
+      label: websiteLabel.value,
+    });
+  }
+  const order = new Map(userFieldOrder.value.map((key, index) => [key, index]));
+  return (
+    [...metaItems.value, ...items, ...secondaryItems.value, ...customItems.value]
+      // 副标题字段及其派生项不再出现在信息行
+      .filter((item) => !subtitleKeys.value.includes(item.key || item.fieldKey || item.sortKey))
+      .sort(
+        (a, b) =>
+          (order.get(a.sortKey || a.key) ?? Number.MAX_SAFE_INTEGER) -
+          (order.get(b.sortKey || b.key) ?? Number.MAX_SAFE_INTEGER),
+      )
+  );
+});
+// 单列资料按字段切分，其他个人信息版式保持完整展示。
+const visibleContactItems = computed(() => props.singleColumnGrid
+  ? contactItems.value.slice(Math.max(0, props.blockRange.start - 2), Math.max(0, props.blockRange.end - 2))
+  : contactItems.value);
+</script>
+
+<template>
+  <InlineInfoList
+    v-if="contactItems.length && useFlexLayout"
+    :items="contactItems"
+    :class="layoutClass"
+  >
+    <template #default="{ item }">
+      <UserContactItem
+        :icon="item.icon"
+        :label="item.label"
+        :model-value="item.key ? user[item.key] : null"
+        :text="item.text"
+        :icon-mode="isIconMode"
+        :hide-label="isLabelHidden"
+        flow-mode
+      />
+    </template>
+  </InlineInfoList>
+  <div v-else-if="visibleContactItems.length" class="resume-user-contact max-w-full min-w-0 items-center" :class="layoutClass">
+    <UserContactItem
+      v-for="(item, index) in visibleContactItems"
+      :key="item.key || item.text"
+      :data-layout-block-index="singleColumnGrid ? Math.max(2, blockRange.start) + index : undefined"
+      :icon="item.icon"
+      :label="item.label"
+      :model-value="item.key ? user[item.key] : null"
+      :text="item.text"
+      :icon-mode="isIconMode"
+      :hide-label="isLabelHidden"
+    />
+  </div>
+</template>
+
+<style lang="scss" scoped>
+/* 资料行列间距与文本对齐由主题变量决定，未声明时保持公共排布。 */
+.resume-user-contact {
+  gap: var(--resume-user-contact-gap, 0.75rem); // 资料行距
+  text-align: var(--resume-user-contact-align, inherit); // 资料文本对齐
+}
+
+/* 常规资料固定为两列，并按两列实际内容长度动态分配可用宽度。 */
+.resume-user-contact-adaptive-grid {
+  grid-template-columns: minmax(0, max-content) minmax(0, max-content);
+}
+</style>

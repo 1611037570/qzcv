@@ -1,0 +1,96 @@
+import { getResumeThemeTemplate } from "@/views/resume/theme";
+import { xiaozhou } from "../avatar";
+
+// 大众视频剪辑师简历示例数据。
+const resumeData: any = {
+  data: {
+    user: {
+      ui: {},
+      data: {
+        position: "视频剪辑师",
+        name: "周予",
+        birthday: "1998.10",
+        phone: "15888888888",
+        email: "16****70@qq.com",
+        workTime: "2020.07",
+        sex: "女",
+        avatar: xiaozhou,
+      },
+    },
+    skill: {
+      ui: { collapsed: ["1"]},
+      data: {
+        content:
+          "<p><strong>1、</strong>熟练使用 Premiere Pro、After Effects 与 DaVinci Resolve，能独立完成素材整理、叙事剪辑、调色与包装交付，熟悉 4K 横屏及 9:16 竖屏等多规格成片输出。</p><p><strong>2、</strong>熟悉品牌 TVC、产品广告、人物访谈与社交媒体短视频的制作节奏，具备镜头语言和音乐节奏把控能力，单条成片交付周期可控制在 3 个工作日内。</p>",
+      },
+    },
+    education: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "南京艺术学院",
+            education: "本科",
+            post: "数字媒体艺术",
+            startTime: "2016.09",
+            endTime: "2020.06",
+            content: "<p>主修影视语言、非线性编辑、声音设计与动态图形设计。</p>",
+            mode: "全日制",
+          },
+        },
+      ],
+    },
+    work: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "杭州****新媒体有限公司",
+            post: "视频剪辑师",
+            startTime: "2020.07",
+            endTime: "至今",
+            content:
+              "<p>负责品牌短视频、活动回顾与人物访谈的剪辑制作，覆盖前期脚本沟通、粗剪、精剪、调色、包装及多规格成片交付，年均完成 120 余条内容。</p><p>沉淀常用片头、字幕和转场模板，团队日常内容生产效率提升约 30%。</p>",
+          },
+        },
+      ],
+    },
+    project: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "品牌人物纪录短片系列",
+            post: "剪辑师",
+            startTime: "2025.02",
+            endTime: "2025.04",
+            link: { name: "作品集", url: "https://portfolio.example.com/zhou-yu" },
+            content:
+              "<p>完成 6 期人物访谈的叙事结构设计、剪辑、调色与字幕包装，单期平均时长 8 分钟，系列全平台累计播放量超 300 万。</p>",
+          },
+        },
+        {
+          ui: {},
+          data: {
+            name: "新品上市社交媒体短片",
+            post: "剪辑师",
+            startTime: "2024.08",
+            endTime: "2024.10",
+            content:
+              "<p>围绕新品卖点剪辑 15 秒、30 秒与 60 秒多规格短视频素材，适配品牌官网、信息流广告与社交平台投放。</p>",
+          },
+        },
+      ],
+    },
+  },
+  config: {
+    modules: [{ key: "user" }, { key: "education" }, { key: "skill" }, { key: "work" }, { key: "project" }],
+  },
+  // 界面配置沿用主题预设：与模板页该主题的样式卡片共用同一份配置，保证布局与配色一致。
+  ui: structuredClone(getResumeThemeTemplate("tealCard").item.ui),
+};
+
+export default resumeData;

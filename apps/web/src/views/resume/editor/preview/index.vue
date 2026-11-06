@@ -1,0 +1,57 @@
+<script setup>
+// 简历页面渲染组件
+import ResumePage from "./modes/page.vue";
+// 缩放容器组件
+import ScaleContainer from "./scaleContainer/index.vue";
+import { useResumeStore } from "@/stores";
+import { storeToRefs } from "pinia";
+import { computed, ref, watch } from "vue";
+import { useRuntimeData } from "../hooks/useRuntimeData";
+// 全屏预览组件
+const FullscreenPreview = markRaw(defineAsyncComponent(() => import("./modes/fullscreen.vue")));
+const resumeStore = useResumeStore();
+const { currentData, currentConfig, currentUI, runtimeConfig, runtimeFields, previewSyncing } =
+  storeToRefs(resumeStore);
+const { markPreviewStart, markPreviewEnd } = useRuntimeData();
+// 预览区加载开始：组件初始化即记录，作为预览区加载耗时起点
+markPreviewStart();
+// 预览区渲染完成（测量收口）时记录加载完成时间
+watch(
+  previewSyncing,
+  (syncing) => {
+    if (!syncing) markPreviewEnd();
+  },
+  { immediate: true },
+);
+
+// 组装全屏预览所需的简历项
+const resumeItem = computed(() => ({
+  data: currentData.value,
+  // 编辑态优先使用运行时配置，与编辑预览保持同一配置来源
+  config: runtimeConfig.value ?? currentConfig.value,
+  ui: currentUI.value,
+}));
+
+const isFullscreen = ref(false);
+const openFullscreen = () => {
+  isFullscreen.value = true;
+};
+</script>
+
+<template>
+  <div class="scrollbar-hide relative flex h-full flex-1 flex-col items-center overflow-y-auto">
+    <ScaleContainer @fullscreen="openFullscreen">
+      <ResumePage />
+    </ScaleContainer>
+    <!-- 仅打开时挂载异步组件，避免编辑器初始化时提前加载全屏预览。 -->
+    <FullscreenPreview
+      v-if="isFullscreen"
+      :visible="isFullscreen"
+      :item="resumeItem"
+      :expanded-fields="runtimeFields"
+      @close="isFullscreen = false"
+    />
+  </div>
+</template>
+
+<style scoped></style>

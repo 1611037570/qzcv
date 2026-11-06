@@ -1,0 +1,37 @@
+import type { BreakPointType } from "../types";
+
+/** 一个可拆分断点的真实高度信息 */
+export interface BreakPointMeasure {
+  /** 断点在节点内容中的位置 */
+  offset: number;
+  /** 断点对应的语义类型 */
+  type: BreakPointType;
+  /** 从节点起点到当前断点的实际高度 */
+  height: number;
+  /** 块断点覆盖的块数量：区间为 [0, blockEnd)，仅块断点存在 */
+  blockEnd?: number;
+  /** 块自身的外边距：续段落在页首时渲染层会去掉它，分页计价需同步扣除 */
+  leadingMargin?: number;
+}
+
+/** 分页前用于计算节点占用空间的测量结果 */
+export interface MeasuredNode {
+  /** 对应的排版节点编号 */
+  nodeId: string;
+  /** 当前节点的实际测量宽度 */
+  width: number;
+  /** 当前节点完整内容的实际高度 */
+  fullHeight: number;
+  /** 实际存在的稳定内容块编号，隐藏字段允许留下空号。 */
+  blockIndices?: number[];
+  textBlockIndex?: number; // 显式正文块编号；字符分片仅允许该块重复出现
+  /** 当前节点可用的拆分断点 */
+  breakPoints: BreakPointMeasure[];
+  /**
+   * 当前节点正文的真实字符长度，供分页推导内容末尾。
+   * 不能改用断点序列的最后一项：块断点的偏移恒为零，排在文本断点之后会把内容末尾低估成零
+   */
+  contentLength?: number;
+  /** 续段渲染时被去掉的顶部留白高度 */
+  droppedTopSpacing?: number;
+}

@@ -1,0 +1,578 @@
+<template>
+  <div
+    style=""
+    class="sf-wang-editor sf-wang-editor-theme relative w-full rounded-2xl"
+    :class="[bg, sfBorder]"
+    @mousedown.capture="handleLinkMenuMouseDown"
+    @click.capture="handleLinkMenuClick"
+    @paste.capture="handleExternalPaste"
+  >
+    <div class="relative">
+      <!-- 编辑器实例创建成功后再挂载工具栏，避免工具栏在 editor 就绪前初始化报错 -->
+      <div v-if="editorRef" class="flex min-w-0 items-center">
+        <PastePlainTextToggle />
+        <EditorToolbar :editor="editorRef" :config="toolbarConfig" :mode="mode" />
+        <slot v-if="$slots.toolbar" name="toolbar" :editor="editorRef" />
+      </div>
+      <!-- 正文顶部显示分隔线，关闭滚动条默认左右留白以避免重复内边距。 -->
+      <SfScrollbar
+        flush
+        :max-height="height"
+        class="border-t border-sf-b"
+        :class="$slots.bottom ? 'rounded-b-none' : 'rounded-b-2xl'"
+      >
+        <Editor
+          :class="$slots.bottom ? 'rounded-b-none' : 'rounded-b-2xl'"
+          :style="{ height: 'auto', minHeight: '80px' }"
+          v-model="valueHtml"
+          :defaultConfig="editorConfig"
+          :mode="mode"
+          @onCreated="handleCreated"
+          @onChange="handleChange"
+        />
+      </SfScrollbar>
+      <div class="pointer-events-none absolute right-2 bottom-2 z-10 text-xs text-sf-text-2">
+        {{ currentLength }}/{{ props.maxLength }}
+      </div>
+    </div>
+    <!-- 底部插槽与编辑内容共用编辑器卡片外框 -->
+    <slot name="bottom" />
+  </div>
+
+  <SfModal
+    v-model="linkModalVisible"
+    :title="$t(linkMode === 'edit' ? 'editLink' : 'insertLink')"
+    width="420px"
+  >
+    <form class="flex w-full flex-col gap-3" @submit.prevent="confirmLink">
+      <label class="flex flex-col gap-3 text-sm text-sf-text">
+        <span>{{ $t("linkTextOptional") }}</span>
+        <SfInput v-model="linkText" :placeholder="$t('linkTextPlaceholder')" clearable />
+      </label>
+      <label class="flex flex-col gap-3 text-sm text-sf-text">
+        <span>{{ $t("linkUrl") }}</span>
+        <SfInput v-model="linkUrl" :placeholder="$t('linkUrlPlaceholder')" clearable />
+      </label>
+      <footer class="flex justify-end gap-3">
+        <SfButton type="bg" @click="linkModalVisible = false">{{ $t("cancel") }}</SfButton>
+        <SfButton :disabled="!canInsertLink" @click="confirmLink">
+          {{ $t(linkMode === "edit" ? "save" : "insertLink") }}
+        </SfButton>
+      </footer>
+    </form>
+  </SfModal>
+
+  <!-- 展开编辑：弹窗内使用独立编辑器实例，确认后才写回主编辑器 -->
+  <SfModal
+    v-model="expandVisible"
+    :title="$t('expandEditorTitle')"
+    width="720px"
+    :before-close="guardExpandClose"
+  >
+    <div
+      class="sf-wang-editor-theme flex h-[70vh] min-h-0 flex-col gap-3"
+      @paste.capture="(event) => handleExternalPaste(event, expandEditorRef)"
+      @mousedown.capture="handleLinkMenuMouseDown"
+      @click.capture="(event) => handleLinkMenuClick(event, expandEditorRef)"
+    >
+      <!-- 弹窗工具栏与主编辑器共用同一份配置，实例就绪后再渲染 -->
+      <div v-if="expandEditorRef" class="flex min-w-0 items-center rounded-2xl border border-sf-b px-3">
+        <PastePlainTextToggle />
+        <EditorToolbar :editor="expandEditorRef" :config="expandToolbarConfig" :mode="mode" />
+      </div>
+      <!-- 正文沿用主编辑器的滚动口径：外层 SfScrollbar 负责滚动，正文自然撑开 -->
+      <SfScrollbar
+        flush
+        max-height="100%"
+        class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-sf-b"
+      >
+        <div class="p-3">
+          <Editor
+            :style="{ height: 'auto', minHeight: '80px' }"
+            v-model="expandHtml"
+            :defaultConfig="editorConfig"
+            :mode="mode"
+            @onCreated="handleExpandCreated"
+            @onChange="handleExpandChange"
+          />
+        </div>
+      </SfScrollbar>
+      <footer class="flex items-center justify-between gap-3">
+        <span class="text-xs text-sf-text-2">{{ expandLength }}/{{ props.maxLength }}</span>
+        <div class="flex gap-3">
+          <SfButton type="bg" @click="closeExpand">{{ $t("cancel") }}</SfButton>
+          <SfButton @click="confirmExpand">{{ $t("save") }}</SfButton>
+        </div>
+      </footer>
+    </div>
+  </SfModal>
+</template>
+
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
+import DOMPurify from "dompurify";
+import { ElMessage } from "element-plus";
+import { $t } from "@/locales";
+import { confirm } from "@/components/business/confirm";
+import PastePlainTextToggle from "./pastePlainTextToggle.vue";
+import EditorToolbar from "./editorToolbar.vue";
+import { storeToRefs } from "pinia";
+import { useSystemStore } from "@/stores/modules/system";
+import {
+  Editor,
+  getSelectedEditorLink,
+  insertEditorLink,
+  registerExpandHandler,
+  updateEditorLink,
+} from "./editorLoader";
+import { useFormReadyTask } from "../dynamicForm/api";
+// 富文本实际创建后才完成任务，异步代码下载完成不等于可编辑。
+const finishReady = useFormReadyTask();
+const sfBorder = inject("sfBorder", "");
+// 所有富文本实例读取系统设置中的同一个粘贴开关。
+const { pastePlainText } = storeToRefs(useSystemStore());
+
+const props = defineProps({
+  height: {
+    type: String,
+    default: "300px",
+  },
+  maxLength: {
+    type: Number,
+    default: 9999,
+  },
+});
+// 编辑器实例，必须用 shallowRef
+const editorRef = shallowRef();
+const bg = inject("bg", "var(--color-sf-primary)");
+// 内容 HTML
+const valueHtml = defineModel("modelValue", {
+  default: "<p>欢迎体验 雪花浏览器</p>",
+});
+const linkModalVisible = ref(false);
+const linkMode = ref("insert");
+const linkText = ref("");
+const linkUrl = ref("");
+const canInsertLink = computed(() => Boolean(linkUrl.value.trim()));
+// 发起链接操作的编辑器实例，用于把链接插回展开弹窗或主编辑器
+const linkTargetEditor = shallowRef();
+
+// 根据编辑器实例的纯文本内容统计当前字数，仅用于展示
+const currentLength = ref(0);
+const updateCurrentLength = (editor) => {
+  currentLength.value = editor.getText().length;
+};
+
+// 模拟 ajax 异步获取内容
+onMounted(() => {});
+
+const toolbarConfig = {
+  toolbarKeys: [
+    // 清除格式放在最前：选中文本点一下即可去掉加粗、斜体、颜色、背景色等全部行内样式
+    "clearStyle",
+    "bold",
+    "italic",
+    "underline",
+    // 恢复文字颜色与文字背景色工具，供正文局部强调使用。
+    "color",
+    "bgColor",
+    "bulletedList",
+    "numberedList",
+    "insertLink",
+    "undo",
+    "redo",
+    // 展开编辑放在工具栏末尾，点击打开大尺寸弹窗
+    "expandEditor",
+  ],
+};
+// 关闭编辑器内部滚动，避免出现嵌套滚动条
+const editorConfig = { placeholder: "请输入内容...", scroll: false };
+
+// 弹窗本身就处于展开状态，工具栏去掉展开按钮避免出现无效入口
+const expandToolbarConfig = {
+  toolbarKeys: toolbarConfig.toolbarKeys.filter((key) => key !== "expandEditor"),
+};
+
+const mode = "simple"; // 或 'simple'
+
+// 组件销毁时，也及时销毁编辑器
+onBeforeUnmount(() => {
+  const editor = editorRef.value;
+  if (editor == null) return;
+  editor.destroy();
+});
+
+// ——————————————展开编辑——————————————
+// 弹窗显隐，弹窗内独立编辑，确认后才写回主编辑器
+const expandVisible = ref(false);
+// 弹窗内编辑器的内容，未确认前不影响表单数据
+const expandHtml = ref("");
+// 弹窗内编辑器的纯文本字数
+const expandLength = ref(0);
+// 弹窗内容是否有未保存的改动，用于关闭前的误关确认
+const expandDirty = ref(false);
+// 打开弹窗时的内容快照，只在编辑器内部比较，判断是否被改动
+let expandSnapshot = "";
+// 弹窗内编辑器实例，弹窗关闭后释放
+const expandEditorRef = shallowRef();
+
+const updateExpandLength = (editor) => {
+  expandLength.value = editor.getText().length;
+};
+
+// 有未保存的改动时先确认，返回 false 表示继续留在弹窗里
+const guardExpandClose = async () => {
+  if (!expandDirty.value) return true;
+  try {
+    await confirm($t("expandDiscardContent"), $t("expandDiscardTitle"), {
+      cancelText: $t("cancel"),
+      confirmText: $t("expandDiscardConfirm"),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// 取消按钮与弹窗关闭出口共用同一个守卫
+const closeExpand = async () => {
+  if (!(await guardExpandClose())) return;
+  expandVisible.value = false;
+};
+
+// 以主编辑器的当前内容作为弹窗编辑的起点
+const openExpand = () => {
+  expandHtml.value = String(valueHtml.value ?? "");
+  expandSnapshot = expandHtml.value;
+  expandDirty.value = false;
+  expandLength.value = currentLength.value;
+  expandVisible.value = true;
+};
+
+const handleExpandCreated = (editor) => {
+  expandEditorRef.value = editor;
+  // 编辑器会把 HTML 规范化，创建后以规范化结果作为未修改基准
+  expandSnapshot = editor.getHtml();
+  expandDirty.value = false;
+  updateExpandLength(editor);
+};
+
+const handleExpandChange = (editor) => {
+  updateExpandLength(editor);
+  expandDirty.value = editor.getHtml() !== expandSnapshot;
+};
+
+// 保存才写回主编辑器；取消、右上角关闭与 ESC 在有改动时会先弹确认
+const confirmExpand = () => {
+  valueHtml.value = expandHtml.value;
+  currentLength.value = expandLength.value;
+  expandVisible.value = false;
+};
+
+// 弹窗内的编辑器实例不会被组件卸载自动销毁，关闭时手动回收
+watch(
+  expandVisible,
+  (visible) => {
+    if (visible) return;
+    const editor = expandEditorRef.value;
+    expandEditorRef.value = null;
+    editor?.destroy();
+  },
+  { flush: "pre" },
+);
+
+const handleCreated = (editor) => {
+  editorRef.value = editor; // 记录 editor 实例，重要！
+  finishReady();
+  updateCurrentLength(editor);
+  // 工具栏上的展开按钮交由本组件打开弹窗
+  registerExpandHandler(editor, openExpand);
+};
+
+const handleChange = (editor) => {
+  updateCurrentLength(editor);
+};
+
+// 外部贴入内容的清洗口径：安全清洗（去脚本、去内联事件、去编辑器未挂载的媒体节点），
+// 再配合 stripPastedTypography 摘掉主题控制的排版属性，只留简历支持的行内样式；
+// 结构标签的最终收敛仍由预览层按 RICH_TEXT_SANITIZE_CONFIG 白名单完成。
+const PASTE_SANITIZE_CONFIG = {
+  // 编辑器没有挂载媒体模块，插入这些节点会让解析直接失败。
+  FORBID_TAGS: ["img", "video", "audio", "iframe"],
+};
+
+// 只保留简历支持的行内样式（加粗、斜体、下划线、颜色、背景色、列表、链接），
+// 其余排版属性一律摘掉：字号、字体、行高、字距、缩进、内外边距都由简历主题与排版设置统一控制。
+// 外部值一旦被解析成行内标记存进简历，预览和导出的 PDF 就会脱离主题，和产品排版对不上。
+const PASTED_TYPOGRAPHY_PROPERTIES = [
+  "font-size",
+  "font-family",
+  "line-height",
+  "letter-spacing",
+  "text-indent",
+  "margin",
+  "padding",
+];
+
+const stripPastedTypography = (html) => {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  container.querySelectorAll("[style]").forEach((node) => {
+    PASTED_TYPOGRAPHY_PROPERTIES.forEach((property) => node.style.removeProperty(property));
+    // 属性被清空后不保留空 style。
+    if (!node.getAttribute("style")?.trim()) node.removeAttribute("style");
+  });
+  // 兼容 <font size="5" face="宋体"> 这类老式写法。
+  container.querySelectorAll("font[size], font[face]").forEach((node) => {
+    node.removeAttribute("size");
+    node.removeAttribute("face");
+  });
+  return container.innerHTML;
+};
+
+// 外部带格式内容粘贴兜底。
+// 编辑器内核的 paste 判定要求剪贴板只有一种类型（纯文本）才接管：
+//   clipboardData.getData("text/plain") !== "" && clipboardData.types.length === 1
+// 带格式的文案（网页 / Word / 聊天工具）types 为 text/plain + text/html，判定不成立，
+// 内核不 preventDefault 也不 insertData，只能等 beforeinput 的 dataTransfer；
+// beforeinput 取不到 dataTransfer 时两个分支都不执行，结果是「不插入、不报错」。
+// 另外 insertData → dangerouslyInsertHtml 在过滤后没有可用节点时会直接 return，
+// 同样表现为静默丢失。这里在捕获阶段自行接管，任何一条失败都降级为纯文本插入。
+const handleExternalPaste = (event, editor = editorRef.value) => {
+  if (!editor || editor.isDisabled()) return;
+  const target = event.target;
+  // 只接管正文区域，工具栏与链接弹窗保持默认粘贴行为。
+  if (!(target instanceof Element) || !target.closest("[data-slate-editor]")) return;
+  const data = event.clipboardData;
+  if (!data) return;
+  const html = data.getData("text/html");
+  const plainText = data.getData("text/plain");
+  // 开启时统一只插入剪贴板纯文本，图片等无文本内容仍走原有处理。
+  if (pastePlainText.value && plainText) {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      editor.insertText(plainText);
+    } catch (error) {
+      console.error("[wangEditor] 纯文本粘贴失败", error);
+      ElMessage({ type: "error", message: $t("pasteContentLost"), grouping: true });
+    }
+    return;
+  }
+  // 纯文本粘贴由编辑器内核正常处理，不介入。
+  if (!html) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  // 用正文快照判断是否真的插入成功：内核在过滤后没有可用节点时既不报错也不插入。
+  const textBeforePaste = editor.getText();
+  let insertError = null;
+  try {
+    // 统一走白名单清洗，避免外部 HTML 带入脚本与内联事件。
+    const sanitized = DOMPurify.sanitize(html, PASTE_SANITIZE_CONFIG);
+    editor.dangerouslyInsertHtml(stripPastedTypography(sanitized));
+  } catch (error) {
+    insertError = error;
+  }
+  // 插入成功即保持静默，正常粘贴不打扰用户。
+  if (editor.getText() !== textBeforePaste) return;
+
+  // 内容没进来必须让用户看见，任何降级都不允许静默发生。
+  if (insertError) console.warn("[wangEditor] 粘贴 HTML 解析失败，降级为纯文本插入", insertError);
+  if (!plainText) {
+    console.warn("[wangEditor] 粘贴内容没有可插入节点，也没有纯文本可降级");
+    ElMessage({ type: "error", message: $t("pasteContentLost"), grouping: true });
+    return;
+  }
+  console.warn("[wangEditor] 粘贴内容未插入，降级为纯文本");
+  try {
+    editor.insertText(plainText);
+  } catch (error) {
+    console.error("[wangEditor] 降级纯文本插入仍失败", error);
+    ElMessage({ type: "error", message: $t("pasteContentLost"), grouping: true });
+    return;
+  }
+  ElMessage({ type: "warning", message: $t("pasteHtmlFallback"), grouping: true });
+};
+
+// 打开外部弹窗前保存当前选中文字，关闭内置链接浮层依赖。
+const openLinkModal = async (mode = "insert", editor = editorRef.value) => {
+  if (!editor) return;
+  // 记录发起链接操作的编辑器，确认时插回到同一个编辑器
+  linkTargetEditor.value = editor;
+  linkMode.value = mode;
+  if (mode === "edit") {
+    const link = await getSelectedEditorLink(editor);
+    if (!link) return;
+    linkText.value = link.text;
+    linkUrl.value = link.url;
+  } else {
+    linkText.value = editor.getSelectionText()?.trim() || "";
+    linkUrl.value = "";
+  }
+  linkModalVisible.value = true;
+};
+
+// 插入与修改按钮保留在编辑器内部，按下时阻止内置浮层抢走编辑器选区。
+const handleLinkMenuMouseDown = (event) => {
+  const target = event.target;
+  if (
+    !(target instanceof Element) ||
+    !target.closest('[data-menu-key="insertLink"], [data-menu-key="editLink"]')
+  ) return;
+  event.preventDefault();
+  event.stopPropagation();
+};
+
+// 捕获原链接按钮点击，仅打开项目弹窗，不执行编辑器内置链接弹层。
+const handleLinkMenuClick = (event, editor = editorRef.value) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const menu = target.closest('[data-menu-key="insertLink"], [data-menu-key="editLink"]');
+  if (!menu) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openLinkModal(menu.getAttribute("data-menu-key") === "editLink" ? "edit" : "insert", editor);
+};
+
+// 未填写协议时按网页地址补全，已填写的协议保持原值。
+const normalizeLinkUrl = (value) => {
+  const url = value.trim();
+  if (!url) return "";
+  return /^[a-z][a-z\d+.-]*:/i.test(url) || url.startsWith("#") ? url : `https://${url}`;
+};
+
+// 确认后恢复编辑器选区并插入链接节点，弹窗始终位于编辑器外层。
+const confirmLink = async () => {
+  const editor = linkTargetEditor.value ?? editorRef.value;
+  const url = normalizeLinkUrl(linkUrl.value);
+  const text = linkText.value.trim() || url;
+  if (!editor || !url) return;
+  if (linkMode.value === "edit") await updateEditorLink(editor, text, url);
+  else await insertEditorLink(editor, text, url);
+  linkModalVisible.value = false;
+};
+</script>
+
+<style scoped lang="scss">
+// 主编辑器与展开弹窗中的工具栏、面板共用项目主题颜色。
+.sf-wang-editor-theme {
+  --w-e-toolbar-color: var(--color-sf-text);
+  --w-e-toolbar-bg-color: var(--color-sf-primary);
+  --w-e-toolbar-active-color: var(--color-sf-text);
+  --w-e-toolbar-active-bg-color: var(--color-sf-bg-2);
+  --w-e-toolbar-disabled-color: var(--color-sf-text-3);
+  --w-e-toolbar-border-color: var(--color-sf-b);
+  --w-e-modal-button-bg-color: var(--color-sf-bg);
+  --w-e-modal-button-border-color: var(--color-sf-b);
+}
+
+// ——————工具栏样式开始——————
+:deep(.w-e-bar svg) {
+  fill: var(--color-sf-base);
+  width: 12px; // 图标宽度，同步缩小工具栏按钮
+  height: 12px; // 图标高度，同步缩小工具栏按钮
+}
+/* 修改工具栏样式 */
+:deep(.w-e-bar) {
+  background: transparent;
+  color: var(--color-sf-base);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 0 !important;
+  font-size: 12px; // 工具栏文字尺寸
+}
+:deep(.w-e-hover-bar) {
+  background: var(--color-sf-page) !important;
+}
+:deep(.w-e-bar-item) {
+  height: 28px; // 单个工具项高度，决定工具栏整体高度
+  padding: 2px; // 工具项四周留白
+}
+:deep(.w-e-bar-item button) {
+  border-radius: 50% !important; // 悬停背景与新增开关保持圆形
+  height: 24px; // 按钮高度
+  padding: 0 3px; // 宽度随图标内容撑开
+}
+// 编辑器原生按钮继续处理菜单，图标统一由项目组件绘制。
+:deep(.w-e-bar-item button.sf-wang-icon-ready > svg) {
+  display: none;
+}
+:deep(.w-e-bar-item button.sf-wang-icon-ready .sf-wang-toolbar-icon svg) {
+  fill: none;
+  stroke: currentColor;
+}
+:deep(.w-e-bar-item button.sf-wang-icon-ready:hover .sf-wang-toolbar-icon),
+:deep(.w-e-bar-item button.sf-wang-icon-ready.active .sf-wang-toolbar-icon) {
+  color: var(--color-sf-theme);
+}
+// 选中态不铺背景底色，只让图标变成主题色
+:deep(.w-e-bar-item .active) {
+  background-color: transparent;
+  svg {
+    fill: var(--color-sf-theme);
+  }
+}
+// 悬停时只改变图标颜色，避免不等宽按钮出现椭圆背景。
+:deep(.w-e-bar-item button:hover) {
+  background-color: transparent;
+  svg {
+    fill: var(--color-sf-theme);
+  }
+}
+// 修改工具栏按钮下拉菜单hover样式
+:deep(.w-e-menu-tooltip-v5) {
+  &::before {
+    color: var(--color-sf-text);
+    background: var(--color-sf-primary);
+    border: var(--color-sf-b) 1px solid;
+    top: 28px; // 提示气泡与缩小后的工具项高度对齐
+  }
+  &:after {
+    border: none !important;
+  }
+}
+// ——————工具栏样式结束——————
+
+// ——————编辑器样式开始——————
+/* 修改编辑器文本容器样式 */
+:deep(.w-e-text-container) {
+  background: transparent;
+  color: var(--color-sf-base);
+  height: auto !important;
+  padding: 0 !important;
+  padding-bottom: 3px !important;
+}
+// 让编辑器内容自然撑开，由外层滚动容器负责滚动。
+// 高度写 100% 时，正文会锁定在外层可视高度内：超出部分既不撑开容器也不产生滚动条，
+// 长文粘贴后只看到前几段，后面被裁掉。
+:deep(.w-e-scroll) {
+  height: auto !important;
+}
+// SfScrollbar 统一把内容容器钉成 100% 高，正文作为它的子节点同样会被裁断。
+// 这里只在本组件内放开，其它用到 SfScrollbar 的布局不受影响。
+:deep(.el-scrollbar__view) {
+  display: block !important;
+  height: auto !important;
+  min-height: 100%;
+}
+// 正文仅保留顶部留白，取消底部及默认左右留白。
+:deep(.w-e-text-container [data-slate-editor]) {
+  min-height: 100px;
+  padding-top: 12px;
+  padding-bottom: 0;
+  padding-inline: 0;
+}
+// 占位文字与取消留白后的正文起点对齐。
+:deep(.w-e-text-placeholder) {
+  top: 12px !important;
+  left: 0;
+}
+// 修改段落样式
+:deep(.w-e-text-container p) {
+  margin: 0 !important;
+  margin-bottom: 10px !important;
+}
+// ——————编辑器样式结束——————
+</style>

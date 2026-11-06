@@ -1,0 +1,61 @@
+# 日志文件
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+# 屏蔽 dsh 目录下的所有文件
+.dsh-*
+
+# 依赖和构建产物
+node_modules
+# Playwright 浏览器内核缓存
+.cache
+.DS_Store
+dist
+dist-ssr
+# 根目录构建产物及其全部子文件不纳入版本控制。
+/build/
+coverage
+*.local
+test
+.pnpm-store
+.turbo
+# 测试产物
+/cypress/videos/
+/cypress/screenshots/
+.trae/documents
+# 编辑器文件
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+
+# VS Code Counter 插件生成物
+.VSCodeCounter
+# Codex 生成物
+.codex
+# WorkBuddy 工作区数据
+.workbuddy
+
+# 本地独立应用目录
+# 忽略本地共享文件目录。
+/share/
+/apps/apply-extension/
+/apps/job-extension/
+/apps/resume-showcase/
+
+# TypeScript
+*.tsbuildinfo
+apps/web/src/types/components.d.ts
+
+# HTML 文件
+stats.html
+
+# 构建产物：打包时由 vite versionPlugin 自动生成的时间戳版本号
+apps/web/public/version.json

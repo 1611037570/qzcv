@@ -1,0 +1,244 @@
+<template>
+  <Teleport to="body">
+    <!-- 背景模糊层 -->
+    <SfMask :show="!!modeValue" :index="80" />
+
+    <!-- 弹窗外壳 -->
+    <Transition name="fade" :disabled="performanceMode" appear>
+      <div
+        v-if="modeValue"
+        ref="mask"
+        class="modal-container fixed top-0 right-0 bottom-0 left-0 z-80 flex items-center justify-center"
+        @mousemove="handleMouseMove"
+      >
+        <!-- 弹窗容器 -->
+        <div
+          id="element"
+          ref="elementRef"
+          class="flex flex-col border border-sf-b p-3"
+          :class="[bgClass, full ? 'h-screen w-screen rounded-none' : 'max-h-[90vh] max-w-[90vw] rounded-3xl']"
+          :style="[elementStyle, widthStyle]"
+          @mouseenter="handleMouseEnter"
+          @mouseleave="handleMouseLeave"
+        >
+          <!-- 标题和关闭按钮 -->
+          <div
+            class="flex-c relative mb-3 min-w-full text-xl font-bold"
+            v-if="title"
+            :class="titleClass"
+          >
+            {{ title }}
+            <div class="absolute top-1/2 -right-1 z-2 h-9 w-9 -translate-y-1/2">
+              <SfIcon
+                @click="requestClose"
+                icon="carbon:close-outline"
+                size="6"
+                boxSize="9"
+                class="rounded-2xl transition-all duration-300 group-hover:text-sf-theme hover:bg-sf-theme"
+              />
+            </div>
+          </div>
+          <!-- 内容区域 -->
+          <div class="flex-1 overflow-hidden">
+            <slot v-if="modeValue"></slot>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<script setup>
+import { useSystemStore } from "@/stores/modules/system";
+import { useScrollLock } from "@vueuse/core";
+import { useOverlayKeys } from "@/hooks/modules/useOverlayKeys";
+import { storeToRefs } from "pinia";
+import { computed, onUnmounted, ref, useTemplateRef, watch } from "vue";
+
+defineOptions({ name: "SfModal" });
+
+// ==================== Props 定义 ====================
+const props = defineProps({
+  /** 弹窗标题 */
+  title: { type: String, default: "" },
+  /** 弹窗标题自定义类名 */
+  titleClass: { type: String, default: "" },
+  /** 弹窗主体背景类名，允许调用方调整底色，默认沿用主要背景。 */
+  bgClass: { type: String, default: "bg-sf-primary" },
+  /** 弹窗宽度 */
+  width: { type: String, default: "" },
+  /** 是否全屏显示（默认 false） */
+  full: { type: Boolean, default: false },
+  /** 关闭前的守卫，返回 false 可阻止关闭，支持异步返回 Promise */
+  beforeClose: { type: Function, default: undefined },
+});
+
+// ==================== 全局状态 ====================
+const systemStore = useSystemStore();
+/** 性能模式：开启后禁用所有动效（毛玻璃、3D倾斜、过渡动画） */
+const { performanceMode } = storeToRefs(systemStore);
+
+// ==================== 弹窗显隐控制 ====================
+const mask = useTemplateRef("mask");
+/** 双向绑定弹窗显隐状态 */
+const modeValue = defineModel();
+/** 锁定背景滚动 */
+const isLocked = useScrollLock(document.body);
+
+/** 缓存遮罩层边界信息，避免鼠标移动时重复读取 */
+let maskRect = null;
+
+// 统一的关闭入口：右上角关闭按钮与 ESC 都先过守卫，未传守卫时直接关闭
+// 守卫执行期间忽略重复触发，避免连点关闭按钮弹出多个确认框
+let closing = false;
+const requestClose = async () => {
+  if (closing) return;
+  closing = true;
+  try {
+    if (props.beforeClose) {
+      const allowed = await props.beforeClose();
+      if (allowed === false) return;
+    }
+    modeValue.value = false;
+  } finally {
+    closing = false;
+  }
+};
+
+// ==================== 键盘事件 ====================
+// ESC 关闭交给弹层仲裁：叠加确认框时只关闭最上层，本弹窗保持打开。
+useOverlayKeys({ escape: requestClose }, () => modeValue.value);
+
+/**
+ * 弹窗打开与关闭的联动处理
+ * - 弹窗打开 → 在 DOM 更新后缓存遮罩层边界
+ * - 弹窗关闭 → 清除缓存，节省性能
+ */
+watch(
+  modeValue,
+  async (val) => {
+    isLocked.value = val;
+    if (val) {
+      await nextTick();
+      maskRect = mask.value?.getBoundingClientRect() || null;
+    } else {
+      maskRect = null;
+    }
+  },
+  { immediate: true },
+);
+
+/** 组件卸载时解除滚动锁定，按键监听由弹层仲裁自行回收 */
+onUnmounted(() => {
+  isLocked.value = false;
+});
+
+// ==================== 3D 视差倾斜核心逻辑 ====================
+/** 鼠标偏移灵敏度系数（数值越小，倾斜越敏感） */
+const multiple = 55;
+/** 3D 元素 DOM 引用 */
+const elementRef = ref(null);
+/** 鼠标是否悬浮在卡片上（悬浮时停止倾斜，避免干扰点击） */
+const isMouseOverCard = ref(false);
+
+// ---------- 弹窗 3D 倾斜样式 ----------
+/**
+ * 弹窗主体样式
+ * - 性能模式：禁用 transform 和 transition，取消 3D 倾斜
+ * - 正常模式：只保留平滑过渡，具体角度通过原生 DOM 操作赋值以绕过 Vue 渲染
+ */
+const elementStyle = computed(() =>
+  performanceMode.value || props.full
+    ? { transform: "none", transition: "none" }
+    : { transition: "transform 0.15s ease-out" },
+);
+
+// ---------- 弹窗宽度样式 ----------
+/** 按 width 属性设置弹窗宽度，未传时不生效 */
+const widthStyle = computed(() => (props.width ? { width: props.width } : {}));
+
+// ---------- 倾斜计算函数 ----------
+/**
+ * 根据鼠标坐标计算 3D 旋转角度
+ * @param {number} clientX - 鼠标在视口中的 X 坐标
+ * @param {number} clientY - 鼠标在视口中的 Y 坐标
+ *
+ * 原理：以弹窗容器中心为原点，鼠标偏移量除以灵敏度系数得出角度，
+ * 并限制最大倾斜角度为 ±14 度，避免过度扭曲。
+ */
+function transformElement(clientX, clientY) {
+  // 鼠标悬停在卡片上时停止倾斜，避免干扰点击操作
+  if (isMouseOverCard.value) return;
+  const element = elementRef.value;
+  if (!element) return;
+
+  // 使用缓存的遮罩层边界，作为旋转参考中心
+  const { left, top, width, height } = maskRect;
+  const centerX = left + width / 2;
+  const centerY = top + height / 2;
+
+  // 计算偏移量并转换为角度
+  const maxAngle = 14; // 最大倾斜角度限制
+  const rx = Math.max(-maxAngle, Math.min(maxAngle, -(clientY - centerY) / multiple));
+  const ry = Math.max(-maxAngle, Math.min(maxAngle, (clientX - centerX) / multiple));
+
+  // 直接操作 DOM，避免高频触发 Vue 响应式更新
+  element.style.transform = `translateZ(0) rotateX(${rx}deg) rotateY(${ry}deg)`;
+}
+
+// ---------- 鼠标事件处理 ----------
+let ticking = false;
+/**
+ * 鼠标在遮罩层上移动时触发倾斜效果
+ * 使用 requestAnimationFrame 和 ticking 节流，保证每帧只执行一次
+ */
+function handleMouseMove(e) {
+  if (performanceMode.value || props.full) return;
+  if (!ticking) {
+    requestAnimationFrame(() => {
+      transformElement(e.clientX, e.clientY);
+      ticking = false;
+    });
+    ticking = true;
+  }
+}
+
+/** 鼠标进入弹窗卡片：暂停倾斜并复位角度 */
+function handleMouseEnter() {
+  if (performanceMode.value) return;
+  isMouseOverCard.value = true;
+  if (elementRef.value) {
+    elementRef.value.style.transform = "translateZ(0) rotateX(0deg) rotateY(0deg)";
+  }
+}
+
+/** 鼠标离开弹窗卡片：恢复倾斜跟踪 */
+function handleMouseLeave() {
+  isMouseOverCard.value = false;
+}
+</script>
+
+<style>
+.modal-container {
+  perspective: 1300px;
+  will-change: transform, opacity;
+}
+
+#element {
+  /* transition 已移至内联样式，由性能模式控制 */
+  will-change: transform;
+}
+
+/* ========== 弹窗淡入淡出动画 ========== */
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: scale(0.3);
+}
+</style>

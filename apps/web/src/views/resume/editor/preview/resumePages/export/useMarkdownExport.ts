@@ -1,0 +1,195 @@
+import { storeToRefs } from "pinia";
+import {
+  getFieldDataPath,
+  getFieldLabel,
+  walkFormFields,
+} from "@/components/business/dynamicForm/api";
+import { useResumeStore } from "@/stores";
+import { allConfig } from "@/stores/modules/resume/config/formConfig";
+import { useResumeName } from "../../../../hooks/useResumeName";
+
+type FieldDefinition = {
+  // 字段业务标识
+  key: string;
+  // 导出显示名称
+  label: string;
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  content: "内容",
+  desc: "说明",
+  img: "图片",
+  size: "大小",
+  url: "链接",
+};
+
+// 将富文本内容转换为 Markdown 可读的纯文本
+const formatText = (value: unknown) => {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return value.filter(Boolean).join(" - ");
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>)
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  const text = String(value);
+  if (!/<[a-z][\s\S]*>/i.test(text)) return text.trim();
+  const element = document.createElement("div");
+  element.innerHTML = text.replace(/<br\s*\/?\s*>/gi, "\n").replace(/<\/(p|li|h[1-6])>/gi, "\n");
+  return (element.textContent || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+
+const collectFieldDefinitions = (fields: any[], definitions: FieldDefinition[]) => {
+  walkFormFields(fields, (field) => {
+    // 字段包裹组按被包裹字段定位数据，名称取包裹组声明
+    const path = getFieldDataPath(field);
+    const key = path?.length ? String(path[path.length - 1]) : "";
+    if (!key || ["collapsed", "hidden", "icon"].includes(key)) return;
+    if (definitions.some((item) => item.key === key)) return;
+    definitions.push({
+      key,
+      label: getFieldLabel(field) || FIELD_LABELS[key] || key,
+    });
+  });
+};
+
+const getSchema = (moduleKey: string, runtimeConfig: any) => {
+  // 运行时配置已按模板展开为完整 schema，未命中时回退模板注册表
+  const runtimeField = runtimeConfig?.fields?.find((field: any) => field.key === moduleKey);
+  if (runtimeField) return runtimeField;
+  if (moduleKey.startsWith("custom_")) return allConfig.custom;
+  return (allConfig as Record<string, any>)[moduleKey];
+};
+
+const getSchemaFields = (schema: any) => (Array.isArray(schema) ? schema : schema?.fields) || [];
+
+// 模块标题：优先模块 ui.title，其次模板声明的标题默认值
+const getModuleTitle = (moduleKey: string, moduleData: any, schema: any) => {
+  const normalizedSchema = Array.isArray(schema) ? schema[0] : schema;
+  return (
+    moduleData?.ui?.title ||
+    normalizedSchema?.model?.find((item: any) => item?.prop === "title")?.defaultValue ||
+    { user: "个人信息", account: "社交账号", skill: "专业技能", advantage: "个人优势" }[
+      moduleKey
+    ] ||
+    moduleKey
+  );
+};
+
+// 数组模块按 list 取记录，对象模块把 data 视为单条记录
+const getRecords = (moduleData: any) => {
+  // Markdown 与预览一致，隐藏记录不进入导出
+  if (Array.isArray(moduleData?.list)) return moduleData.list
+    .filter((record: any) => record?.ui?.hidden !== true && record?.data)
+    .map((record: any) => record.data);
+  return moduleData?.data && typeof moduleData.data === "object" ? [moduleData.data] : [];
+};
+
+const appendRecord = (
+  lines: string[],
+  record: Record<string, unknown>,
+  definitions: FieldDefinition[],
+  hiddenFields: Record<string, any> = {},
+) => {
+  const entries = definitions
+    // 个人字段的隐藏开关同样适用于文本导出
+    .filter((definition) => hiddenFields[definition.key]?.hidden !== true)
+    .map((definition) => ({
+      ...definition,
+      value: formatText(record[definition.key]),
+    }))
+    .filter((item) => item.value);
+  if (!entries.length) return;
+
+  const titleEntry = entries.find((item) => item.key === "name");
+  if (titleEntry) {
+    lines.push(`### ${titleEntry.value}`, "");
+  }
+
+  entries.forEach((entry) => {
+    if (entry === titleEntry) return;
+    if (entry.key === "avatar") {
+      lines.push(`![头像](${entry.value})`, "");
+      return;
+    }
+    if (entry.key === "content") {
+      lines.push(entry.value, "");
+      return;
+    }
+    lines.push(`- ${entry.label}：${entry.value}`);
+  });
+  lines.push("");
+};
+
+// 按当前模块顺序生成可读的 Markdown 简历
+export const exportMarkdown = (onSuccess?: () => void, itemOverride?: any) => {
+  // 调用时取得当前仓库，避免模块导入阶段依赖已激活的状态容器
+  const { currentItem, runtimeConfig } = storeToRefs(useResumeStore());
+  const { getExportFileName, getResumeTitle, resumeTitle } = useResumeName();
+  // 脱敏导出传入独立副本，普通导出继续读取当前简历。
+  const item = itemOverride ?? currentItem.value;
+  const data = item?.data || {};
+  // 字段配置统一以模块 key 标识
+  const configuredKeys = (runtimeConfig.value?.fields || item?.config?.modules || [])
+    .map((field: any) => field?.key)
+    .filter(Boolean);
+  const moduleKeys = [...new Set([...configuredKeys, ...Object.keys(data)])];
+  // 自动标题也过滤求职意向的隐藏状态，避免岗位从独立模块泄漏。
+  const titleData = { ...data };
+  for (const key of ["user", "jobIntent", "education"]) {
+    const source = titleData[key];
+    if (!source) continue;
+    const module = { ...source, data: { ...source.data } };
+    titleData[key] = module;
+    if (module.ui?.hidden) { delete titleData[key]; continue; }
+    if (module.data) Object.keys(module.data).forEach((field) => {
+      if (module.ui?.[field]?.hidden) delete module.data[field];
+    });
+    if (module.list) module.list = module.list.filter((record: any) => record?.ui?.hidden !== true);
+  }
+  const lines = [`# ${getResumeTitle({ ...item, data: titleData })}`, ""];
+
+  moduleKeys.forEach((moduleKey) => {
+    const moduleData = data[moduleKey];
+    if (!moduleData || moduleData.ui?.hidden) return;
+    const schema = getSchema(moduleKey, runtimeConfig.value);
+    const definitions: FieldDefinition[] = [];
+    collectFieldDefinitions(getSchemaFields(schema), definitions);
+    // 专业技能的正文与列表可以同时保存，导出当前布局对应的内容。
+    const skillList = moduleKey === "skill" && item?.ui?.skill?.layout === "proficiency";
+    if (skillList) {
+      definitions.splice(0, definitions.length,
+        { key: "name", label: "技能名称" },
+        { key: "desc", label: "说明" },
+        { key: "level", label: "熟练度" },
+      );
+    } else if (moduleKey === "skill") {
+      definitions.splice(0, definitions.length, { key: "content", label: "内容" });
+    }
+    const records = getRecords(moduleKey === "skill" && !skillList ? { data: moduleData.data } : moduleData);
+    if (!records.length) return;
+
+    lines.push(`## ${getModuleTitle(moduleKey, moduleData, schema)}`, "");
+    records.forEach((record: Record<string, unknown>) => appendRecord(lines, record, definitions, moduleData.ui));
+  });
+
+  const markdown = `${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = getExportFileName(resumeTitle.value, "md");
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  onSuccess?.();
+};

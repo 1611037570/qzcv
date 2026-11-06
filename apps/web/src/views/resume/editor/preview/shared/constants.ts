@@ -1,0 +1,46 @@
+/**
+ * 简历预览层的共享尺寸常量
+ * 统一维护分页、缩放、PDF 导出三处使用的尺寸，避免硬编码散落各处导致不一致
+ */
+
+/** 简历内容宽度（px），与 A4 96dpi 对应 */
+export const RESUME_WIDTH = 794;
+/** 简历内容高度（px） */
+export const RESUME_HEIGHT = 1123;
+/** 页码区域固定高度（px） */
+export const PAGE_NUMBER_HEIGHT = 36;
+
+/**
+ * 页面可用内容高度：页面高 - 纸张边框 - 上边距 - 底部占用
+ * 底部占用取「下边距」与「页尾高度」中的较大者：页尾更高时由页尾占满底部，
+ * 下边距更大时只补足超出的部分，避免页尾与下边距各扣一次把内容区压两次
+ * 分页算法与智能一页共用同一公式，避免两处独立维护导致分页判定不一致
+ * @param paddingVertical - 上下页边距（px）
+ * @param showPageNumber - 是否渲染页码区
+ * @param borderWidth - 纸张边框宽度（px），缺省不描边
+ */
+export const getContentHeight = (
+  paddingVertical: number,
+  showPageNumber: boolean,
+  borderWidth = 0,
+): number =>
+  RESUME_HEIGHT -
+  Math.max(0, borderWidth) * 2 -
+  paddingVertical -
+  Math.max(paddingVertical, showPageNumber ? PAGE_NUMBER_HEIGHT : 0);
+/** PDF A4 页面宽度（mm） */
+export const PDF_PAGE_WIDTH = 210;
+/** PDF A4 页面高度（mm） */
+export const PDF_PAGE_HEIGHT = 297;
+/** 简历容器宽度固定样式（分页页面与单页测量容器共用） */
+export const RESUME_CONTAINER_WIDTH = {
+  width: `${RESUME_WIDTH}px`,
+  minWidth: `${RESUME_WIDTH}px`,
+  maxWidth: `${RESUME_WIDTH}px`,
+};
+/** 简历容器高度固定样式（分页页面与单页测量容器共用） */
+export const RESUME_CONTAINER_HEIGHT = {
+  height: `${RESUME_HEIGHT}px`,
+  minHeight: `${RESUME_HEIGHT}px`,
+  maxHeight: `${RESUME_HEIGHT}px`,
+};

@@ -1,0 +1,152 @@
+// 一键优化报告数据结构与解析工具：协调编排技能输出与前端面板渲染
+import type { ResumeAgentIncompleteReason, ResumeAgentTaskEvidence } from "../runtime/taskTypes";
+export interface ReportDimension {
+  // 固定评分维度名称
+  name: string;
+  // 百分制整数分，不适用或无依据时为空
+  score: number | null;
+}
+
+export interface ReportCheck {
+  // 问题严重程度
+  level: "error" | "warning";
+  // 有简历证据的问题说明
+  message: string;
+}
+
+export interface ReportChange {
+  // 实际发生修改的模块展示名称
+  module: string;
+  // 实际成功改动的简要说明
+  summary: string;
+  problem?: string; // 本次改写针对的具体问题，兼容历史报告缺失。
+  before?: string; // 原简历中的真实代表性片段。
+  after?: string; // 优化草稿中的真实代表性片段。
+  benefit?: string; // 实际解决的阅读或岗位表达问题。
+}
+
+// 一键优化产出的结构化报告，字段与按钮任务配置的输出约定保持一致
+export interface ResumeReport {
+  // 本次优化的整体结论，兼容旧报告时为空。
+  summary: string;
+  // 有效维度得分均值，无可评分维度时为空
+  totalScore: number | null;
+  // 六个固定维度及其评分
+  dimensions: ReportDimension[];
+  // 优化后仍存在的问题
+  checks: ReportCheck[];
+  // 本轮实际完成的改动
+  changes: ReportChange[];
+  // 需要用户补充的事实
+  todo: string[];
+  // 有依据的优化亮点
+  highlights: string[];
+  // 尚未解决问题的行动建议
+  suggestions: string[];
+}
+
+// 评分顺序与技能约定一致，拒绝缺失、重复或臆造维度
+export const RESUME_SCORE_DIMENSIONS = [
+  "信息完整度", "阅读效率", "职业契合度", "职业成就", "发展潜力", "职业稳定性",
+];
+const isScore = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 100;
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+const isStringList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+// 校验完整报告并按有效维度重算总分，缺失的可选清单兼容为空数组
+const normalizeReport = (value: unknown): ResumeReport | null => {
+  if (!isObject(value) || !(value.totalScore === null || isScore(value.totalScore))) return null;
+  const dimensions = value.dimensions;
+  if (!Array.isArray(dimensions) || dimensions.length !== RESUME_SCORE_DIMENSIONS.length) return null;
+  if (!dimensions.every((item, index) => isObject(item) &&
+    item.name === RESUME_SCORE_DIMENSIONS[index] && (item.score === null || isScore(item.score)))) return null;
+  const checks = value.checks ?? [];
+  const changes = value.changes ?? [];
+  const todo = value.todo ?? [];
+  const highlights = value.highlights ?? [];
+  const suggestions = value.suggestions ?? [];
+  if (value.summary != null && typeof value.summary !== "string") return null;
+  if (!Array.isArray(checks) || !checks.every((item) => isObject(item) &&
+    ["error", "warning"].includes(String(item.level)) && typeof item.message === "string")) return null;
+  if (!Array.isArray(changes) || !changes.every((item) => isObject(item) &&
+    typeof item.module === "string" && typeof item.summary === "string" &&
+    ["problem", "before", "after", "benefit"].every((key) => item[key] == null || typeof item[key] === "string"))) return null;
+  if (![todo, highlights, suggestions].every(isStringList)) return null;
+  const scores = dimensions.map((item) => item.score).filter(isScore);
+  return {
+    summary: typeof value.summary === "string" ? value.summary : "", // 兼容历史报告缺少整体结论。
+    // 根据校验后的有效分数计算，避免模型总分与维度不一致
+    totalScore: scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null,
+    // 校验后保留固定顺序的维度
+    dimensions: dimensions as ReportDimension[],
+    // 校验后的问题清单
+    checks: checks as ReportCheck[],
+    // 校验后的实际改动清单
+    changes: changes as ReportChange[],
+    // 兼容旧报告缺失的待补充清单
+    todo: todo as string[],
+    // 兼容旧报告缺失的优化亮点
+    highlights: highlights as string[],
+    // 兼容旧报告缺失的行动建议
+    suggestions: suggestions as string[],
+  };
+};
+
+// 仅识别实际符合报告契约的专用或兼容代码块
+const REPORT_BLOCK_RE = /```(?:resume-report|json)\s*\n([\s\S]*?)\n```/g;
+const parseReportJson = (content: string): ResumeReport | null => {
+  try {
+    return normalizeReport(JSON.parse(content));
+  } catch {
+    return null;
+  }
+};
+
+// 从回复正文中提取有效报告；无效块不阻断后续报告，普通 JSON 不识别为报告
+export const parseResumeReport = (content: string): ResumeReport | null => {
+  if (!content) return null;
+  for (const match of content.matchAll(REPORT_BLOCK_RE)) {
+    const report = parseReportJson(match[1]!);
+    if (report) return report;
+  }
+  return parseReportJson(content);
+};
+
+// 报告改动条目必须覆盖真实写入的模块，避免把计划或失败操作列为成果。
+// 按模块比对而不是逐条比对：同一模块的多条操作允许合并成一条说明改动范围。
+export const validateResumeReportChanges = (
+  content: string,
+  evidence: ResumeAgentTaskEvidence[],
+): ResumeAgentIncompleteReason | null => {
+  const report = parseResumeReport(content);
+  if (!report) {
+    return { code: "report_invalid", text: "请按规定输出完整且有效的简历评分报告。" };
+  }
+  const verifiedChanges = evidence
+    .filter((item) => item.kind === "resume_change" && !item.replayed &&
+      item.changed === true && item.status !== "failed")
+    .flatMap((item) => item.verifiedChanges ?? []);
+  const verifiedModules = [...new Set(verifiedChanges.map((item) => item.module))];
+  const reportModules = report.changes.map((item) => item.module);
+  const missing = verifiedModules.filter((module) => !reportModules.includes(module));
+  const extra = reportModules.filter((module) => !verifiedModules.includes(module));
+  if (missing.length || extra.length) {
+    return {
+      code: "report_mismatch",
+      // 回给模型的具体差异，便于逐项对齐
+      text: `报告 changes 必须覆盖实际写入的模块，不得多列未改动的模块：应包含 ${JSON.stringify(verifiedModules)}，当前为 ${JSON.stringify(reportModules)}。`,
+    };
+  }
+  return null;
+};
+
+// 仅移除有效报告，保留普通 JSON、无效报告与未完成的流式内容
+export const stripResumeReportBlock = (content: string): string => {
+  if (!content) return content;
+  if (parseReportJson(content)) return "";
+  return content.replace(REPORT_BLOCK_RE, (block, body: string) =>
+    parseReportJson(body) ? "" : block).trim();
+};

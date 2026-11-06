@@ -1,0 +1,35 @@
+{
+  "core": {
+    "router": {
+    "resume": "Skiff Resume",
+    "resumeDesc": "Free online resume builder, no sign-up needed",
+    "resumeEditor": "Cloud Sail Editor",
+    "resumeEditorDesc": "Ride the momentum, sail across the vast sea",
+    "resumeAI": "Skiff AI",
+    "resumeAIDesc": "AI assistant for your resume",
+    "resumeStatistics": "Resume Statistics"
+    },
+    "load": "The formula for reversing time and space is to cherish the present",
+    "theme": {
+    "system": "Follow System",
+    "dark": "Dark Mode",
+    "light": "Light Mode",
+    "eyeCare": "Eye Care Mode"
+    },
+    "donation": {
+    "supportProject": "Support Project",
+    "otherWays": "Other Ways to Support",
+    "otherWaysDescription": "Besides financial support, you can also support the project in the following ways:",
+    "githubStars": "Star the project on GitHub",
+    "recommendProject": "Recommend it to friends and colleagues",
+    "thanks": "Thank you for your support!",
+    "donationDescription": "If you enjoy this project, a donation is both material and emotional support.",
+    "donationImpact": "Every contribution helps the project continue to grow and improve.",
+    "alipay": "Alipay",
+    "wechatPay": "WeChat Pay",
+    "go": "Go"
+    },
+    "copyright": "Copyright",
+    "allRightsReserved": "All Rights Reserved"
+  }
+}

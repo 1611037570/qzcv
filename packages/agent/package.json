@@ -1,0 +1,10 @@
+{
+  "name": "@snowflake/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "pnpm --filter @snowflake/ai build && vitest run" },
+  "exports": { ".": "./index.ts" },
+  "dependencies": { "@snowflake/ai": "workspace:*" },
+  "devDependencies": { "vitest": "^4.0.14" }
+}

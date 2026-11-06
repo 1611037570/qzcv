@@ -1,0 +1,70 @@
+// AI 助手宿主配置类型：技能与工具由调用方提供，chat 引擎不内置业务内容
+import type { ReactConfig, ReactTool } from "@/apis/llm/react";
+import type { ResumeAgentTaskProfile, SkillResource } from "@snowflake/resume-agent";
+import type { Ref } from "vue";
+import type { ResumeChangeCallbacks } from "./changes/types";
+
+// 引导流程步骤：预设询问或自由输入；options 为函数时在步骤展示前求值（如按当前简历动态生成）
+export type FlowStep = {
+  question: string;
+  options: string[] | (() => string[]);
+  input?: boolean;
+  // 条件步骤仅在满足业务条件时加入本次引导流程
+  when?: () => boolean;
+  // 命中取消答案时结束流程，不触发 AI 请求
+  cancelAnswers?: string[];
+  cancelMessage?: string;
+  collectAnswer?: boolean;
+};
+
+// 引导流程：点击建议卡片后先收集信息，再构造真实请求
+export type Flow = {
+  userContent: string;
+  steps: FlowStep[];
+  build: (answers: string[]) => {
+    prompt?: string;
+    userContent: string;
+    requestContext?: Record<string, unknown>;
+  };
+};
+
+// 建议卡片：由调用方注入，Chat 只负责展示与转发
+export type SuggestCard = {
+  icon: string; // 建议卡片图标。
+  title: string; // 建议操作名称。
+  flow: string; // 对应简历引导流程。
+  // 编辑器建议仅保留简历功能，面试由独立栏目承接。
+  category: "resume";
+  // 功能介绍用于建议卡片启动前展示能力、耗时与适用场景
+  intro?: {
+    badge?: string; // 功能介绍标签。
+    duration: string; // 预计耗时说明。
+    description: string; // 功能用途。
+    features: string[]; // 能力说明列表。
+    scene: string; // 适用场景。
+    action: string; // 开始操作文案。
+  };
+};
+
+// 宿主组装后传给 chat 的配置，技能与工具均由调用方传入
+export type AssistantResources = {
+  // ReAct 可调用的参考知识与简历工具。
+  tools: ReactTool[];
+  // 本轮可供任务契约规划器选择的任务能力。
+  capabilities: SkillResource[];
+  // 当前按钮入口解析后的任务配置，供工具和会话共用。
+  taskProfile?: ResumeAgentTaskProfile;
+};
+
+export interface AssistantConfig {
+  // 请求期间置为 true 的生成状态
+  generating: Ref<boolean>;
+  // 首次请求时解析工具与能力，可选回调仅接收本轮实际改动。
+  resolveTools: (context?: Record<string, unknown>, changes?: ResumeChangeCallbacks) => Promise<AssistantResources>;
+  // 工具执行错误回调：由宿主决定恢复或中断，引擎只负责转交
+  onToolError?: ReactConfig["onToolError"];
+  // 请求前准备本轮读取范围，与 afterRequest 成对使用
+  beforeRequest?: (context?: Record<string, unknown>, taskId?: string) => void;
+  // 请求结束后清除本轮上下文
+  afterRequest?: (taskId?: string) => void;
+}

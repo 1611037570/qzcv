@@ -1,0 +1,192 @@
+// 简历表单选项字典：仅供动态表单 raw 绑定运行时读取，不写入简历数据
+import cityData from "./cityData.json";
+
+// 可选值字典：字典的值即为字段的合法取值，AI 数据契约据此提取可选值做写入校验
+export const RESUME_VALUE_OPTIONS = {
+  // 性别
+  sex: [
+    { name: "男", value: "男" },
+    { name: "女", value: "女" },
+  ],
+  // 技能熟练度档位：一到五档，写入技能条目 level 字段
+  proficiency: [
+    { name: "了解", value: 1 },
+    { name: "掌握", value: 2 },
+    { name: "熟练", value: 3 },
+    { name: "精通", value: 4 },
+    { name: "专家", value: 5 },
+  ],
+  // 当前就业状态
+  status: [
+    { name: "在职", value: "在职" },
+    { name: "离职", value: "离职" },
+    { name: "应届生", value: "应届生" },
+    { name: "在职看机会", value: "在职看机会" },
+  ],
+  // 预计到岗时间
+  arrivalTime: [
+    { name: "随时到岗", value: "随时到岗" },
+    { name: "一周内到岗", value: "一周内到岗" },
+    { name: "两周内到岗", value: "两周内到岗" },
+    { name: "一个月内到岗", value: "一个月内到岗" },
+    { name: "一个月以上到岗", value: "一个月以上到岗" },
+    { name: "到岗时间可协商", value: "到岗时间可协商" },
+  ],
+  // 常见求职岗位，保留自定义输入以覆盖未列出的岗位名称
+  position: [
+    { name: "前端开发", value: "前端开发", group: "technologyEngineering", category: "技术研发" },
+    { name: "Java开发", value: "Java开发", group: "technologyEngineering", category: "技术研发" },
+    { name: "后端开发", value: "后端开发", group: "technologyEngineering", category: "技术研发" },
+    { name: "Python开发", value: "Python开发", group: "technologyEngineering", category: "技术研发" },
+    { name: "全栈开发", value: "全栈开发", group: "technologyEngineering", category: "技术研发" },
+    { name: "测试工程师", value: "测试工程师", group: "technologyEngineering", category: "技术研发" },
+    { name: "算法工程师", value: "算法工程师", group: "technologyEngineering", category: "技术研发" },
+    { name: "数据分析师", value: "数据分析师", group: "technologyEngineering", category: "技术研发" },
+    { name: "产品经理", value: "产品经理", group: "productAndProject", category: "产品与项目" },
+    { name: "产品助理", value: "产品助理", group: "productAndProject", category: "产品与项目" },
+    { name: "项目经理", value: "项目经理", group: "productAndProject", category: "产品与项目" },
+    { name: "UI设计师", value: "UI设计师", group: "design", category: "设计" },
+    { name: "平面设计师", value: "平面设计师", group: "design", category: "设计" },
+    { name: "运营专员", value: "运营专员", group: "operations", category: "运营" },
+    { name: "新媒体运营", value: "新媒体运营", group: "operations", category: "运营" },
+    { name: "市场专员", value: "市场专员", group: "marketingAndSales", category: "市场与销售" },
+    { name: "销售专员", value: "销售专员", group: "marketingAndSales", category: "市场与销售" },
+    { name: "人力资源专员", value: "人力资源专员", group: "businessSupport", category: "职能支持" },
+    { name: "行政专员", value: "行政专员", group: "businessSupport", category: "职能支持" },
+    { name: "会计", value: "会计", group: "businessSupport", category: "职能支持" },
+  ],
+  // 常见专业分类，未命中的专业仍可自定义输入
+  major: [
+    { name: "计算机科学与技术", value: "计算机科学与技术", group: "engineering", category: "工学" },
+    { name: "软件工程", value: "软件工程", group: "engineering", category: "工学" },
+    { name: "数据科学与大数据技术", value: "数据科学与大数据技术", group: "engineering", category: "工学" },
+    { name: "电子信息工程", value: "电子信息工程", group: "engineering", category: "工学" },
+    { name: "通信工程", value: "通信工程", group: "engineering", category: "工学" },
+    { name: "自动化", value: "自动化", group: "engineering", category: "工学" },
+    { name: "电气工程及其自动化", value: "电气工程及其自动化", group: "engineering", category: "工学" },
+    { name: "机械工程", value: "机械工程", group: "engineering", category: "工学" },
+    { name: "土木工程", value: "土木工程", group: "engineering", category: "工学" },
+    { name: "数学与应用数学", value: "数学与应用数学", group: "science", category: "理学" },
+    { name: "统计学", value: "统计学", group: "science", category: "理学" },
+    { name: "应用物理学", value: "应用物理学", group: "science", category: "理学" },
+    { name: "生物科学", value: "生物科学", group: "science", category: "理学" },
+    { name: "经济学", value: "经济学", group: "economics", category: "经济学" },
+    { name: "金融学", value: "金融学", group: "economics", category: "经济学" },
+    { name: "国际经济与贸易", value: "国际经济与贸易", group: "economics", category: "经济学" },
+    { name: "财政学", value: "财政学", group: "economics", category: "经济学" },
+    { name: "工商管理", value: "工商管理", group: "management", category: "管理学" },
+    { name: "会计学", value: "会计学", group: "management", category: "管理学" },
+    { name: "人力资源管理", value: "人力资源管理", group: "management", category: "管理学" },
+    { name: "市场营销", value: "市场营销", group: "management", category: "管理学" },
+    { name: "信息管理与信息系统", value: "信息管理与信息系统", group: "management", category: "管理学" },
+    { name: "行政管理", value: "行政管理", group: "management", category: "管理学" },
+    { name: "物流管理", value: "物流管理", group: "management", category: "管理学" },
+    { name: "汉语言文学", value: "汉语言文学", group: "literature", category: "文学" },
+    { name: "英语", value: "英语", group: "literature", category: "文学" },
+    { name: "新闻学", value: "新闻学", group: "literature", category: "文学" },
+    { name: "广告学", value: "广告学", group: "literature", category: "文学" },
+    { name: "法学", value: "法学", group: "law", category: "法学" },
+    { name: "社会工作", value: "社会工作", group: "law", category: "法学" },
+    { name: "教育学", value: "教育学", group: "education", category: "教育学" },
+    { name: "学前教育", value: "学前教育", group: "education", category: "教育学" },
+    { name: "体育教育", value: "体育教育", group: "education", category: "教育学" },
+    { name: "临床医学", value: "临床医学", group: "medicine", category: "医学" },
+    { name: "护理学", value: "护理学", group: "medicine", category: "医学" },
+    { name: "药学", value: "药学", group: "medicine", category: "医学" },
+    { name: "口腔医学", value: "口腔医学", group: "medicine", category: "医学" },
+    { name: "视觉传达设计", value: "视觉传达设计", group: "arts", category: "艺术学" },
+    { name: "环境设计", value: "环境设计", group: "arts", category: "艺术学" },
+    { name: "产品设计", value: "产品设计", group: "arts", category: "艺术学" },
+    { name: "动画", value: "动画", group: "arts", category: "艺术学" },
+  ],
+  // 婚姻状况
+  marital: [
+    { name: "未婚", value: "未婚" },
+    { name: "已婚", value: "已婚" },
+    { name: "离异", value: "离异" },
+  ],
+  // 星座
+  zodiac: [
+    { name: "白羊座", value: "白羊座" },
+    { name: "金牛座", value: "金牛座" },
+    { name: "双子座", value: "双子座" },
+    { name: "巨蟹座", value: "巨蟹座" },
+    { name: "狮子座", value: "狮子座" },
+    { name: "处女座", value: "处女座" },
+    { name: "天秤座", value: "天秤座" },
+    { name: "天蝎座", value: "天蝎座" },
+    { name: "射手座", value: "射手座" },
+    { name: "摩羯座", value: "摩羯座" },
+    { name: "水瓶座", value: "水瓶座" },
+    { name: "双鱼座", value: "双鱼座" },
+  ],
+  // Myers–Briggs personality types
+  mbti: [
+    { name: "ISTJ", value: "ISTJ" },
+    { name: "ISFJ", value: "ISFJ" },
+    { name: "INFJ", value: "INFJ" },
+    { name: "INTJ", value: "INTJ" },
+    { name: "ISTP", value: "ISTP" },
+    { name: "ISFP", value: "ISFP" },
+    { name: "INFP", value: "INFP" },
+    { name: "INTP", value: "INTP" },
+    { name: "ESTP", value: "ESTP" },
+    { name: "ESFP", value: "ESFP" },
+    { name: "ENFP", value: "ENFP" },
+    { name: "ENTP", value: "ENTP" },
+    { name: "ESTJ", value: "ESTJ" },
+    { name: "ESFJ", value: "ESFJ" },
+    { name: "ENFJ", value: "ENFJ" },
+    { name: "ENTJ", value: "ENTJ" },
+  ],
+  // 政治面貌
+  political: [
+    { name: "共产党员", value: "共产党员" },
+    { name: "预备党员", value: "预备党员" },
+    { name: "共青团员", value: "共青团员" },
+    { name: "群众", value: "群众" },
+  ],
+  // 学历
+  education: [
+    { name: "小学", value: "小学" },
+    { name: "初中", value: "初中" },
+    { name: "高中", value: "高中" },
+    { name: "中专", value: "中专" },
+    { name: "大专", value: "大专" },
+    { name: "专升本", value: "专升本" },
+    { name: "成人本科", value: "成人本科" },
+    { name: "本科", value: "本科" },
+    { name: "硕士", value: "硕士" },
+    { name: "博士", value: "博士" },
+  ],
+  // 学制
+  mode: [
+    { name: "全日制", value: "全日制" },
+    { name: "非全日制", value: "非全日制" },
+  ],
+  // 论文发表状态
+  publicationStatus: [
+    { name: "已发表", value: "已发表" },
+    { name: "已录用", value: "已录用" },
+    { name: "在投" /* 下拉显示名称 */, value: "在投" /* 保存的发表状态 */ },
+  ],
+};
+
+// 省市级联字典：静态数据一次性构建；直辖市自身即为城市，可直接选中，不再展开子级
+const CITY_OPTIONS = cityData.map((province) => {
+  const isDirectCity = province.cities.length === 1 && province.cities[0] === province.label;
+  return {
+    value: province.label,
+    label: province.label,
+    children: isDirectCity
+      ? undefined
+      : province.cities.map((name) => ({ value: name, label: name })),
+  };
+});
+
+// 表单渲染字典：可选值字典 + 仅用于渲染的字典（如省市级联树，结构不参与可选值提取）
+export const RESUME_OPTIONS = {
+  ...RESUME_VALUE_OPTIONS,
+  // 城市（省市级联）
+  city: CITY_OPTIONS,
+};

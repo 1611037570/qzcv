@@ -1,0 +1,26 @@
+<script setup>
+// 统一条目标题组件，强调样式由日期位置动态决定
+import ResumeField from "./resumeField/index.vue";
+import { useResumePreviewContext } from "../shared/previewContext";
+const { emphasis = true } = defineProps({
+  name: {
+    default: "",
+  },
+  emphasis: {
+    type: Boolean,
+    default: true,
+  },
+});
+const {
+  theme: { fontValue },
+} = useResumePreviewContext();
+</script>
+
+<template>
+  <!-- 主题通过公开标题标记定位，不猜测内部嵌套和字体类名。 -->
+  <div data-resume-item-title :data-emphasis="emphasis" :class="{ 'font-bold': emphasis }" :style="[fontValue(emphasis ? 1 : 0)]">
+    <ResumeField :model-value="name" />
+  </div>
+</template>
+
+<style lang="scss" scoped></style>

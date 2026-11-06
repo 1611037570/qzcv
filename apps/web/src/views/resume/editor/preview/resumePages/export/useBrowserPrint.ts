@@ -1,0 +1,176 @@
+import { collectResumeStyles } from "./exportStyles";
+import { nextTick } from "vue";
+import { useResumeStore } from "@/stores";
+import { useResumeName } from "../../../../hooks/useResumeName";
+import { cloneExportContent } from "./exportContent";
+import { waitForExportResources } from "./exportResources";
+
+type ResumeRootRef = { value: HTMLElement | null };
+
+const getResumeRoot = (rootRef: ResumeRootRef) => rootRef.value;
+
+// 等待字体、图片和两帧布局完成后再调用浏览器打印。
+const waitForPrintReady = async (
+  printWindow: Window,
+  printDocument: Document,
+  signal: AbortSignal,
+) => {
+  await waitForExportResources(printDocument.getElementById("print-content")!, signal);
+  await new Promise<void>((resolve) => {
+    let frame = 0;
+    const finish = () => {
+      if (frame) printWindow.cancelAnimationFrame(frame);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    signal.addEventListener("abort", finish, { once: true });
+    if (signal.aborted) {
+      finish();
+      return;
+    }
+    frame = printWindow.requestAnimationFrame(() => {
+      if (signal.aborted) {
+        finish();
+        return;
+      }
+      frame = printWindow.requestAnimationFrame(finish);
+    });
+  });
+};
+
+// 使用隐藏 iframe 复制当前简历 DOM，交给浏览器原生打印。
+export const printResume = async (
+  rootRef: ResumeRootRef,
+  onSuccess?: () => void,
+  scale = 1,
+) => {
+  void scale;
+  const resumeStore = useResumeStore();
+  const { getExportFileName, resumeTitle } = useResumeName();
+  const signal = resumeStore.beginPrinting();
+  if (!signal) return;
+  // 记录导出所属简历，避免旧打印任务继续操作新简历
+  const resumeId = resumeStore.currentItem?.id;
+  const isCurrentResume = () => resumeStore.currentItem?.id === resumeId;
+
+  let root = getResumeRoot(rootRef);
+  if (!root) {
+    resumeStore.finishPrinting(signal);
+    console.error("未找到可打印的简历页面");
+    return;
+  }
+
+  const printFrame = document.createElement("iframe");
+  printFrame.setAttribute("title", "简历打印预览");
+  printFrame.style.position = "absolute";
+  printFrame.style.width = "1px";
+  printFrame.style.height = "1px";
+  printFrame.style.left = "-9999px";
+  printFrame.style.visibility = "hidden";
+
+  // iframe 打印时浏览器取顶层 document.title 作为默认文件名，打印结束后还原
+  const originalTitle = document.title;
+  let restored = false;
+  const restorePrintState = (success = false) => {
+    if (restored) return;
+    restored = true;
+    if (isCurrentResume()) document.title = originalTitle;
+    printFrame.remove();
+    resumeStore.finishPrinting(signal);
+    if (success && isCurrentResume()) onSuccess?.();
+  };
+
+  signal.addEventListener(
+    "abort",
+    () => restorePrintState(),
+    { once: true },
+  );
+
+  try {
+    // 在线图标完成后再克隆，避免打印文档留下无法自行加载的图标占位。
+    await waitForExportResources(root, signal);
+    if (signal.aborted || !isCurrentResume()) return;
+    // 资源加载可能触发预览重建，复制前重新取得当前页面。
+    root = getResumeRoot(rootRef);
+    if (!root) throw new Error("未找到可打印的简历页面");
+    const clonedRoot = cloneExportContent(root);
+    clonedRoot.style.transform = "none";
+    clonedRoot.style.zoom = "1";
+    clonedRoot.classList.add("resume-iframe-print-root");
+
+    const styleText = collectResumeStyles(clonedRoot, root);
+    const baseHref = document.baseURI.replace(/"/g, "&quot;");
+    document.body.appendChild(printFrame);
+    const printDocument = printFrame.contentDocument;
+    const printWindow = printFrame.contentWindow;
+    if (!printDocument || !printWindow) {
+      restorePrintState();
+      console.error("创建浏览器打印文档失败");
+      return;
+    }
+
+    printDocument.open();
+    printDocument.write(`
+      <!doctype html>
+      <html lang="zh-CN" class="${document.documentElement.className}">
+        <head>
+          <meta charset="UTF-8" />
+          <base href="${baseHref}" />
+          <title>${document.title}</title>
+          <style>${styleText}</style>
+          <style>
+            @page { size: A4; margin: 0; }
+            html, body { margin: 0; padding: 0; background: #fff; }
+            body { width: 210mm; min-width: 794px; }
+            /* 强制打印背景色，否则浏览器默认丢弃背景导致主题色丢失 */
+            html, body, .resume-iframe-print-root, .resume-iframe-print-root * {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .resume-iframe-print-root { width: 794px !important; gap: 0 !important; }
+            .resume-iframe-print-root .resume-page-item {
+              margin: 0 !important;
+              border-radius: 0 !important;
+              box-shadow: none !important;
+              transform: none !important;
+              zoom: 1 !important;
+              break-after: page;
+              page-break-after: always;
+            }
+            .resume-iframe-print-root .resume-page-item:last-child {
+              break-after: auto;
+              page-break-after: auto;
+            }
+          </style>
+        </head>
+        <body>
+          <main id="print-content"></main>
+        </body>
+      </html>
+    `);
+    printDocument.close();
+    printDocument.body.className = document.body.className;
+
+    const printContent = printDocument.getElementById("print-content");
+    if (!printContent) {
+      restorePrintState();
+      console.error("创建浏览器打印内容失败");
+      return;
+    }
+    printContent.appendChild(clonedRoot);
+
+    await nextTick();
+    if (signal.aborted || !isCurrentResume()) return;
+    await waitForPrintReady(printWindow, printDocument, signal);
+    if (signal.aborted || !isCurrentResume()) return;
+
+    printWindow.onafterprint = () => restorePrintState(true);
+    // 仅在此刻改标题，避免简历标题中的特殊字符写入打印文档
+    document.title = getExportFileName(resumeTitle.value, "pdf");
+    printWindow.focus();
+    printWindow.print();
+  } catch (error) {
+    restorePrintState();
+    if (!signal.aborted) console.error("创建 iframe 浏览器打印失败:", error);
+  }
+};

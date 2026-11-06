@@ -1,0 +1,138 @@
+import type { LayoutNode } from "../types";
+import {
+  createLayoutAdapterRegistry,
+  createModuleTitleNode,
+  type LayoutAdapterRegistry,
+} from "./index";
+import { registerAcademicModuleAdapters } from "./academicModules";
+import { registerExperienceModuleAdapters } from "./experienceModules";
+import { registerOtherModuleAdapters } from "./otherModules";
+import { registerRichTextModuleAdapters } from "./richTextModules";
+
+/**
+ * 在模块每个内容条目前插入段间距节点。
+ * 间距与标题一样是独立节点：能放进当前页就留在这页，放不下与后面的内容一起顺延，
+ * 成为新页第一项时由 hideWhenPageLeading 隐藏占位，因此分页层不需要为它单独判断。
+ */
+const addParagraphSpacingRows = (nodes: LayoutNode[], height: number): LayoutNode[] => {
+  const first = nodes[0];
+  if (!first || height <= 0) return nodes;
+  // 每个条目独立保留段间距，避免同一模块的后续条目紧贴前一条目。
+  return nodes.flatMap((node) => {
+    const spacer: LayoutNode = {
+      /** 间距节点唯一编号 */
+      id: `${node.id}.paragraph-spacing`,
+      /** 间距所属模块 */
+      sourceModuleKey: node.sourceModuleKey,
+      /** 独立间距节点类型 */
+      type: "spacer",
+      /** 后续页面首位隐藏间距 */
+      hideWhenPageLeading: true,
+      /** 间距渲染载荷 */
+      payload: { height /* 间距高度 */ },
+    };
+    return [spacer, node];
+  });
+};
+
+/** 创建内置简历模块适配器注册表。 */
+export const createResumeLayoutAdapterRegistry = (): LayoutAdapterRegistry => {
+  const registry = createLayoutAdapterRegistry();
+  registerRichTextModuleAdapters(registry);
+  registerExperienceModuleAdapters(registry);
+  registerAcademicModuleAdapters(registry);
+  registerOtherModuleAdapters(registry);
+  return registry;
+};
+
+/** 节点构建输入，注册表可由调用方提供。 */
+export interface BuildLayoutNodesOptions {
+  moduleKeys: string[]; // 当前模块顺序
+  data: Record<string, unknown>; // 简历业务数据
+  ui?: Record<string, unknown>; // 当前排版配置
+  config?: unknown; // 模块适配配置
+  registry?: LayoutAdapterRegistry; // 当前适配器注册表
+}
+
+/**
+ * 节点内容签名：只覆盖渲染读取的字段。
+ * 载荷与断点由富文本解析缓存保证同内容同引用，因此同一节点在内容未变时签名一致。
+ */
+const createNodeSignature = (node: LayoutNode): string =>
+  JSON.stringify([
+    node.type,
+    node.contentKind, // 内容组件语义参与节点复用签名
+    node.sourceModuleKey,
+    Boolean(node.hideWhenPageLeading),
+    node.payload,
+    node.breakPoints ?? [],
+  ]);
+
+/** 复用上一轮结果里内容未变的节点对象，避免输入时整棵测量树重渲染 */
+const reuseUnchangedNodes = (
+  nextNodes: LayoutNode[],
+  previousNodes: Map<string, LayoutNode>,
+  previousSignatures: Map<string, string>,
+): { nodes: LayoutNode[]; signatures: Map<string, string> } => {
+  const signatures = new Map<string, string>();
+  const nodes = nextNodes.map((node) => {
+    const signature = createNodeSignature(node);
+    signatures.set(node.id, signature);
+    const previous = previousNodes.get(node.id);
+    return previous && previousSignatures.get(node.id) === signature ? previous : node;
+  });
+  return { nodes, signatures };
+};
+
+/**
+ * 按页面配置顺序生成排版节点。
+ * 适配器只处理业务数据到语义节点的转换，不决定节点进入哪一栏；模块标题作为独立节点排在模块最前。
+ * 单次构建不持有跨调用状态，节点复用由当前实例的构建器负责。
+ */
+export const buildLayoutNodes = ({
+  moduleKeys,
+  data,
+  ui,
+  config,
+  registry = createResumeLayoutAdapterRegistry(),
+}: BuildLayoutNodesOptions): LayoutNode[] => {
+  // 节点仅由真实模块清单生成，主题只负责外观与栏位分配。
+  const nextNodes = moduleKeys.flatMap((moduleKey): LayoutNode[] => {
+    const adapter = registry.resolve(moduleKey);
+    if (!adapter) return [];
+    const nodes = adapter({ moduleKey, data, ui, config });
+    const policy = registry.resolvePolicy(moduleKey); // 模块装配能力只在注册处维护
+    const spacing = Number((ui as any)?.page?.spacing?.paragraph);
+    if (nodes.length === 0 && policy.title) {
+      // 空模块保留零高占位与标题，避免模块无内容时标题从预览中消失。
+      return [
+        createModuleTitleNode(moduleKey),
+        {
+          id: `${moduleKey}.title-only`,
+          sourceModuleKey: moduleKey,
+          type: "spacer",
+          hideWhenPageLeading: true,
+          payload: { height: 0 },
+        },
+      ];
+    }
+    const contentNodes = policy.paragraphSpacing
+      ? addParagraphSpacingRows(nodes, Number.isFinite(spacing) ? Math.max(0, spacing) : 0)
+      : nodes;
+    return policy.title ? [createModuleTitleNode(moduleKey), ...contentNodes] : contentNodes;
+  });
+
+  return nextNodes;
+};
+
+/** 每个排版实例独立复用节点，并只初始化一次适配器注册表。 */
+export const createLayoutNodeBuilder = (registry = createResumeLayoutAdapterRegistry()) => {
+  let lastNodesById = new Map<string, LayoutNode>();
+  let lastSignatures = new Map<string, string>();
+  return (options: Omit<BuildLayoutNodesOptions, "registry">): LayoutNode[] => {
+    const reused = reuseUnchangedNodes(buildLayoutNodes({ ...options, registry }), lastNodesById, lastSignatures);
+    lastNodesById = new Map(reused.nodes.map((node) => [node.id, node]));
+    lastSignatures = reused.signatures;
+    return reused.nodes;
+  };
+};

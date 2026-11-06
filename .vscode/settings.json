@@ -1,0 +1,77 @@
+{
+  // 强制当前项目中所有文件默认使用 LF 换行符
+  "files.eol": "\n",
+  // 可选：禁止自动检测换行符（避免 VS Code 自动切换为 CRLF）
+  "files.autoGuessEncoding": false,
+  // 指定文件编码为 UTF-8
+  "files.encoding": "utf8",
+  // 允许 JSON 文件使用注释
+  "files.associations": {
+    "*.json": "jsonc"
+  },
+  // 关闭文件夹自动折叠（紧凑文件夹）功能
+  "explorer.compactFolders": false,
+
+  // i18n Ally 配置
+  // 语言文件路径（指向具体的语言文件目录）
+  "i18n-ally.localesPaths": ["apps/web/src/locales/lang"],
+  // 键值对样式
+  "i18n-ally.keystyle": "nested",
+  //启用框架
+  "i18n-ally.enabledFrameworks": ["vue", "vscode"],
+  //自动解析路径
+  "i18n-ally.enabledParsers": ["ts", "json"],
+  // 源语言
+  "i18n-ally.sourceLanguage": "zh",
+  // 显示语言
+  "i18n-ally.displayLanguage": "zh",
+
+  // 自动格式化设置
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": null,
+  // 自动换行设置
+  "editor.wordWrap": "bounded",
+  // 自动换行列数
+  "editor.wordWrapColumn": 100,
+  // 自动换行缩进
+  "editor.wrappingIndent": "indent",
+
+  // 文件类型格式化工具
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[vue]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[less]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // Prettier插件 格式化
+  "prettier.enable": true,
+  "prettier.useEditorConfig": true,
+  "prettier.resolveGlobalModules": false,
+  // cSpell插件 自定义单词列表
+  "cSpell.words": [
+    "Addtional",
+    "backtop",
+    "datas",
+    "daterange",
+    "echarts",
+    "iconify",
+    "Persistedstate",
+    "pinia",
+    "Stylesheet",
+    "Trae",
+    "unplugin",
+    "Vite",
+    "vueuse",
+    "xiao",
+    "yyqx"
+  ]
+}

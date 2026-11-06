@@ -1,0 +1,80 @@
+/** 页面尺寸，单位为像素 */
+export interface PageSize {
+  /** 页面宽度 */
+  width: number;
+  /** 页面高度 */
+  height: number;
+}
+
+/** 四个方向的内边距，单位为像素 */
+export interface BoxSpacing {
+  /** 上内边距 */
+  top: number;
+  /** 右内边距 */
+  right: number;
+  /** 下内边距 */
+  bottom: number;
+  /** 左内边距 */
+  left: number;
+}
+
+/** 页面区域高度的计算方式 */
+export type RegionHeight =
+  | { mode: "auto" }
+  | { mode: "remaining" }
+  | { mode: "fixed"; value: number };
+
+/** 页面栏宽度的计算方式 */
+export type ColumnWidth = { mode: "fixed"; value: number } | { mode: "ratio"; value: number };
+
+/** 页面布局配置，描述内容应该如何安排到页面区域和栏位中 */
+export interface PageLayoutConfig {
+  /** 页面尺寸 */
+  pageSize: PageSize;
+  /** 页面四周的内边距 */
+  pagePadding: BoxSpacing;
+  /** 首页通栏占位编号，独立装饰使用 decoration，业务区域使用自身编号，未命中时为 null */
+  fullBleedRegionId?: string | null;
+  /** 页面区域配置 */
+  regions: RegionConfig[];
+}
+
+/** 页面中的一个垂直区域，例如页眉区域或正文区域 */
+export interface RegionConfig {
+  /** 区域唯一编号 */
+  id: string;
+  /** 区域在页面中的垂直顺序 */
+  order: number;
+  /** 区域高度的计算方式 */
+  height: RegionHeight;
+  /** 区域使用纸张全宽或页面边距以内的内容宽度，缺省使用内容宽度 */
+  widthMode?: "page" | "content";
+  /** 区域四周的内部留白：同时扣除栏宽与每页可用高度，是区域几何的唯一来源 */
+  padding?: BoxSpacing;
+  /** 区域与前一区域之间的额外间距，未声明时两个区域自然相接 */
+  gapBefore?: number;
+  /** 栏外间距，供没有栏间线条或分栏背景的双栏区域使用 */
+  columnGap?: number;
+  /** 区域中的栏配置 */
+  columns: ColumnConfig[];
+}
+
+/** 栏内左右装饰空间，不改变栏外部占用宽度 */
+export interface ColumnPadding {
+  left: number; // 栏内容距左侧装饰边缘的距离
+  right: number; // 栏内容距右侧装饰边缘的距离
+}
+
+/** 区域中的一个内容栏 */
+export interface ColumnConfig {
+  /** 栏唯一编号 */
+  id: string;
+  /** 栏宽度的计算方式 */
+  width: ColumnWidth;
+  /** 栏内部装饰留白，测量与预览统一施加在栏盒子上 */
+  padding?: ColumnPadding;
+  /** 当前栏内节点之间的间距 */
+  gap: number;
+  /** 明确指定进入当前栏的模块 key，不允许自动分配 */
+  moduleKeys: string[];
+}

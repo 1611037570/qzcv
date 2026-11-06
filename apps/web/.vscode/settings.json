@@ -1,0 +1,29 @@
+{
+  // 文件嵌套设置
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    // 嵌套 tsconfig 相关文件
+    "tsconfig.json": "tsconfig.*.json, env.d.ts",
+    // 嵌套 vite 相关配置文件
+    "vite.config.*": "jsconfig*, vitest.config.*, cypress.config.*, playwright.config.*",
+    // 嵌套 package.json 相关文件
+    "package.json": "package-lock.json, pnpm*, .yarnrc*, yarn*, .eslint*, eslint*, .oxlint*, oxlint*, .prettier*, prettier*, .editorconfig, lint-staged.config.js, commitlint.config.js, .pnpmrc",
+    // 嵌套 env 相关文件
+    ".env": ".env.development, .env.production",
+    "pwa.config.ts": "manifest.ts, workbox.ts"
+  },
+  // 保存时代码操作
+  "editor.codeActionsOnSave": {
+    // 自动修复所有问题
+    "source.fixAll": "explicit",
+    // 自动组织导入语句
+    "source.organizeImports": "explicit"
+    // 额外：自动修复 ESLint 可修复的错误（如变量未使用等）
+    // "source.fixAll.eslint": "explicit"
+  },
+
+  // 禁用内置格式化工具（避免冲突）
+  // "typescript.format.enable": false,
+  // "javascript.format.enable": false,
+  // "html.format.enable": false,
+}

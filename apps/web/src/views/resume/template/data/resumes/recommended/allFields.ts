@@ -1,0 +1,337 @@
+import { xiaoyang } from "../../avatar";
+
+// 预设角色「PM 羊」：全字段数据，覆盖全部模块与全部业务字段，作为字段完整性基准。
+// 新增业务字段后必须在此补齐对应取值，否则无法用它核对新字段的展示效果。
+const resumeData: any = {
+  data: {
+    user: {
+      ui: {},
+      data: {
+        name: "PM 羊",
+        birthday: "1996.06",
+        sex: "男",
+        marital: "未婚",
+        nation: "汉族",
+        nationality: "中国", // 国籍
+        zodiac: "双子座",
+        mbti: "ENTJ",
+        educationLevel: "本科",
+        workTime: "2019.07",
+        phone: "15888888888",
+        email: "16****70@qq.com",
+        wechat: "liran_pm",
+        github: "https://github.com/liran-pm",
+        linkedin: "https://www.linkedin.com/in/liran-pm",
+        website: "https://portfolio.example.com/li-ran",
+        political: "中共党员",
+        nativePlace: "江苏南京",
+        sourcePlace: "江苏南京",
+        currentCity: "上海",
+        heightWeight: { height: "178", weight: "70" },
+        measurements: { bust: "96", waist: "78", hip: "94" },
+        sizes: { top: "L", bottom: "32", shoes: "42" },
+        avatar: xiaoyang,
+        logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210' viewBox='0 0 210 210'%3E%3Ccircle cx='105' cy='105' r='98' fill='white' stroke='%23245278' stroke-width='8'/%3E%3Cpath d='M45 85L105 50L165 85L105 120Z' fill='%23245278'/%3E%3Cpath d='M65 105V140Q105 170 145 140V105' fill='none' stroke='%23245278' stroke-width='10'/%3E%3C/svg%3E", // 个人信息校徽图片示例。
+      },
+    },
+    jobIntent: {
+      ui: {}, // 求职意向模块及字段展示设置。
+      data: {
+        position: "高级产品经理", // 求职岗位。
+        status: "在职看机会", // 当前求职状态。
+        arrivalTime: "一个月内到岗", // 预计到岗时间。
+        city: "上海", // 期望工作城市。
+        salary: "30k-40k", // 期望薪资范围。
+      }, // 求职意向字段示例。
+    },
+    account: {
+      ui: { collapsed: ["1"]},
+      list: [
+        { ui: {}, data: { name: "个人作品集", url: "https://portfolio.example.com/li-ran" } },
+        { ui: {}, data: { name: "知乎", url: "https://www.zhihu.com/people/li-ran" } },
+      ],
+    },
+    skill: {
+      ui: { collapsed: ["1"]},
+      data: {
+        content: "<p><strong>产品能力：</strong>熟悉用户研究、需求分析、原型设计、数据分析与项目管理，能够独立推进 0-1 产品落地。</p><p><strong>工具：</strong>熟练使用 Figma、Axure、SQL、Excel 与数据看板工具。</p>",
+      },
+      list: [
+        { data: { name: "数据分析" /* 技能名称 */, desc: "熟悉数据清洗与可视化" /* 技能描述 */, level: 4 /* 技能熟练度档位 */ } },
+      ],
+    },
+    advantage: {
+      ui: { collapsed: ["1"]},
+      data: {
+        content: "<p>具备跨团队协作与复杂项目拆解能力，能够在业务目标、用户体验与研发成本之间完成平衡。</p><p>擅长通过数据分析定位增长机会，并推动策略从验证到规模化落地。</p>",
+      },
+    },
+    education: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "同济大学",
+            college: "经济与管理学院",
+            education: "本科",
+            mode: "全日制",
+            post: "信息管理与信息系统",
+            city: "上海",
+            startTime: "2015.09",
+            endTime: "2019.06",
+            tags: ["985", "双一流"],
+            link: { name: "毕业设计", url: "https://portfolio.example.com/li-ran/graduation" },
+            content: "<p>GPA 3.7/4.0，主修管理信息系统、数据分析与用户行为研究。</p><p>参与校园创新项目，负责用户调研与产品方案设计。</p>",
+          },
+        },
+        {
+          ui: {},
+          data: {
+            name: "南京市金陵中学",
+            education: "高中",
+            mode: "全日制",
+            city: "南京",
+            startTime: "2012.09",
+            endTime: "2015.06",
+            content: "<p>完成高中阶段课程学习，打下扎实的数理与人文基础。</p><p>积极参与校园社团活动，培养沟通协作与组织能力。</p>",
+          },
+        },
+      ],
+    },
+    work: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "上海****科技有限公司",
+            department: "增长产品部",
+            post: "高级产品经理",
+            city: "上海",
+            startTime: "2022.03",
+            endTime: "至今",
+            tags: ["核心成员", "跨部门协作"],
+            link: { name: "产品案例", url: "https://portfolio.example.com/li-ran/growth" },
+            content: "<p>负责会员增长与营销自动化产品，搭建分层触达策略和实验平台，推动核心转化链路持续优化。</p><p>协同运营、研发与数据团队迭代关键场景，提升会员激活与复购表现。</p>",
+          },
+        },
+        {
+          ui: {},
+          data: {
+            name: "杭州****网络有限公司",
+            department: "商业产品部",
+            post: "产品经理",
+            city: "杭州",
+            startTime: "2019.07",
+            endTime: "2022.02",
+            tags: ["独立负责", "从0到1"],
+            content: "<p>负责商家后台和数据报表产品，完成需求调研、原型设计、研发协同及上线后的数据复盘。</p><p>梳理商家核心工作流程，持续优化功能易用性与业务处理效率。</p>",
+          },
+        },
+      ],
+    },
+    internship: { // 实习经历范本模块。
+      ui: { collapsed: ["1"] /* 模块展开状态 */}, // 模块界面状态。
+      list: [ // 实习记录列表。
+        {
+          ui: {}, // 记录界面状态。
+          data: { // 实习业务内容。
+            name: "上海****科技有限公司", // 实习公司名称。
+            department: "产品部", // 所在部门。
+            post: "产品经理实习生", // 实习岗位。
+            city: "上海", // 实习所在城市。
+            startTime: "2018.07", // 实习开始月份。
+            endTime: "2018.12", // 实习结束月份。
+            tags: ["跨部门协作"], // 实习经历标签。
+            link: { name: "实习作品" /* 链接展示名称 */, url: "https://portfolio.example.com/li-ran/internship" /* 作品链接地址 */ }, // 实习相关作品链接。
+            content: "<p>参与用户访谈与竞品分析，整理需求并协助产品经理完成原型设计。</p><p>跟进功能验收，整理用户反馈与上线后的问题清单。</p>", // 实习职责与成果正文。
+          },
+        },
+      ],
+    },
+    project: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "会员生命周期运营平台",
+            department: "增长产品部",
+            post: "项目负责人",
+            city: "上海",
+            startTime: "2024.04",
+            endTime: "2024.11",
+            tags: ["已上线", "团队协作"],
+            link: { name: "项目复盘", url: "https://portfolio.example.com/li-ran/lifecycle" },
+            content: "<p>整合用户分群、自动化触达与实验分析能力，支持运营团队自助配置活动并追踪转化效果。</p><p>项目上线后运营配置效率提升，关键营销活动转化率得到改善。</p>",
+          },
+        },
+        {
+          ui: {},
+          data: {
+            name: "商家经营数据看板",
+            department: "商业产品部",
+            post: "产品负责人",
+            city: "杭州",
+            startTime: "2021.03",
+            endTime: "2021.10",
+            tags: ["数据产品", "已上线"],
+            content: "<p>整合订单、用户与营销数据，帮助商家及时了解经营表现和变化趋势。</p><p>通过指标体系与异常提醒优化日常经营决策效率。</p>",
+          },
+        },
+      ],
+    },
+    publication: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            title: "基于用户行为序列的会员流失预警模型",
+            authors: "李然、王敏、陈立",
+            status: "已发表",
+            venue: "全国信息管理与信息系统学术会议",
+            date: "2023.09",
+            doi: "https://doi.org/10.12345/example.2023.04",
+            indexTags: ["EI 收录", "优秀论文"],
+            content: "基于会员行为序列构建流失预警模型，将预测准确率提升至 87%。",
+          },
+        },
+        {
+          ui: {},
+          data: {
+            title: "本地生活服务平台的用户分层与触达策略研究",
+            authors: "王敏、李然",
+            status: "已录用",
+            venue: "数据分析与管理科学国际研讨会",
+            date: "2025.03",
+            indexTags: ["会议报告"],
+            content: "结合分层模型与实验设计，验证差异化触达策略对复购的促进作用。",
+          },
+        },
+      ],
+    },
+    honor: {
+      ui: { collapsed: ["1"]},
+      list: [
+        { ui: {}, data: {
+          name: "年度优秀产品奖" /* 荣誉名称 */,
+          link: { name: "获奖公告" /* 荣誉链接名称 */, url: "https://example.com/award" /* 荣誉链接地址 */ },
+          content: "负责的产品项目获得年度优秀产品奖。" /* 荣誉描述 */,
+        } },
+        { ui: {}, data: { name: "用户增长专项奖" } },
+      ],
+    },
+    club: {
+      list: [{ data: {
+        name: "产品创新社" /* 组织/活动 */,
+        post: "项目负责人" /* 担任职务 */,
+        startTime: "2017.09" /* 开始时间 */,
+        endTime: "2018.06" /* 结束时间 */,
+        city: "上海" /* 所在城市 */,
+        tags: ["组织策划"] /* 经历标签 */,
+        content: "<p>组织产品策划活动并协调团队完成成果展示。</p>" /* 经历描述 */,
+      } }],
+    },
+    volunteer: {
+      list: [{ data: {
+        name: "社区公益项目" /* 组织名称 */,
+        duration: "120 小时" /* 服务时长 */,
+        startTime: "2018.03" /* 开始时间 */,
+        endTime: "2018.06" /* 结束时间 */,
+        city: "上海" /* 所在城市 */,
+        tags: ["志愿服务"] /* 经历标签 */,
+        content: "<p>参与社区活动组织与现场服务。</p>" /* 经历描述 */,
+      } }],
+    },
+    // portfolio：作品集，链接和图片可分别填写。
+    portfolio: {
+      ui: { collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "产品方案讲解", // 作品名称
+            url: "https://www.example.com/product-demo", // 作品链接
+            desc: "会员生命周期运营平台的方案讲解与演示视频。介绍用户分层、自动触达和效果分析流程。", // 作品描述
+          },
+        },
+        {
+          ui: {},
+          data: {
+            name: "用户增长复盘", // 作品名称
+            url: "https://www.example.com/growth-review", // 作品链接
+            desc: "拆解会员增长实验的设计与结果。总结关键指标变化及后续优化方向。", // 作品描述
+          },
+        },
+        {
+          ui: {},
+          data: {
+            name: "产品原型展示", // 作品名称
+            img: xiaoyang, // 作品图片
+            desc: "会员运营后台核心页面原型。展示运营配置与活动效果分析视图。", // 作品描述
+            size: 50, // 图片显示大小百分比
+          },
+        },
+        {
+          ui: {},
+          data: {
+            name: "用户增长数据看板", // 作品名称
+            img: xiaoyang, // 作品图片
+            desc: "展示用户分层与转化漏斗原型。覆盖核心增长指标及运营分析视图。", // 作品描述
+            size: 50, // 图片显示大小百分比
+          },
+        },
+      ],
+    },
+    custom_product_research: {
+      ui: { title: "行业研究", collapsed: ["1"]},
+      list: [
+        {
+          ui: {},
+          data: {
+            name: "本地生活行业增长研究",
+            department: "战略产品组",
+            post: "研究负责人",
+            city: "上海",
+            startTime: "2023.06",
+            endTime: "2023.09",
+            tags: ["独立负责", "跨部门协作"],
+            link: { name: "研究报告", url: "https://portfolio.example.com/li-ran/research" },
+            content: "<p>访谈商家与消费者并完成竞品分析，为下一阶段业务增长策略提供决策依据。</p><p>结合行业数据识别重点细分场景，输出可执行的产品机会与验证建议。</p>",
+          },
+        },
+      ],
+    },
+  },
+  config: {
+    modules: [
+      { key: "user" },
+      { key: "jobIntent" /* 求职意向独立展示。 */ },
+      { key: "account" },
+      { key: "education" },
+      { key: "skill" },
+      { key: "advantage" },
+      { key: "work" },
+      { key: "internship" /* 实习经历模块标识 */ },
+      { key: "project" },
+      { key: "publication" },
+      { key: "honor" },
+      { key: "club" /* 社团经历模块 */ },
+      { key: "volunteer" /* 志愿服务模块 */ },
+      { key: "portfolio" /* 作品集模块标识 */ },
+      { key: "custom_product_research" },
+    ],
+  },
+  ui: {
+    page: { padding: { vertical: 24, horizontal: 24 }, spacing: { paragraph: 12, module: 12 }, footer: "轻舟简历" },
+    font: { family: "text-puhui", size: 16, titleSize: 22, lineHeight: 1.2 },
+    content: { language: "zh", textAlign: "auto", infoSeparator: "dot", linkUnderline: false, dateStyle: "dot", datePosition: "right" },
+    theme: { template: "colorDotNotes", color: "#2563EB", titleIconMode: "none" }, // 产品经理范本改用彩点便签主题
+    layout: { leftColumnWidth: 40 },
+    user: { infoMode: "text", infoLayout: "grid" /* 个人资料按网格排列 */, avatarPosition: "right", infoPosition: "left", logo: { width: 70 /* 校徽展示宽度 */, ratio: "1:1" /* 上传裁切比例 */ } },
+  },
+};
+
+export default resumeData;
