@@ -37,6 +37,72 @@ const collectLineEndOffsets = (element: HTMLElement) => {
   return result.filter((line, index, list) => index === 0 || line.offset > list[index - 1].offset);
 };
 
+/** 按完整富文本的真实行尾取断点，避免稀疏字符探针将一行提前截断。 */
+const collectRichTextLineEnds = (element: HTMLElement) => {
+  const range = element.ownerDocument.createRange();
+  const result: Array<{
+    offset: number; // 当前行结束后的正文偏移
+    bottom: number; // 当前行盒在测量树中的底边
+  }> = [];
+  // 缓存仅用于本次正文测量，同一元素的样式和块尺寸只读取一次。
+  const lineHeights = new Map<HTMLElement, number>();
+  const blockRects = new Map<Element, DOMRect>();
+  let offset = 0;
+  let currentCenter: number | null = null;
+  let currentLineBottom = Number.NEGATIVE_INFINITY;
+  const visit = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const textLength = node.nodeValue?.length ?? 0;
+      if (!textLength) return;
+      const parent = node.parentElement!;
+      let computedLineHeight = lineHeights.get(parent);
+      if (computedLineHeight === undefined) {
+        computedLineHeight = Number.parseFloat(getComputedStyle(parent).lineHeight) || 0;
+        lineHeights.set(parent, computedLineHeight);
+      }
+      const block = parent.closest("p, li") ?? element;
+      let blockRect = blockRects.get(block);
+      if (!blockRect) {
+        blockRect = block.getBoundingClientRect();
+        blockRects.set(block, blockRect);
+      }
+      for (let index = 0; index < textLength; index += 1) {
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const rect = range.getClientRects()[0];
+        if (rect && rect.height > 0) {
+          const lineHeight = computedLineHeight || rect.height;
+          const center = (rect.top + rect.bottom) / 2;
+          if (currentCenter !== null && center > currentCenter + lineHeight / 2) {
+            result.push({ offset, bottom: currentLineBottom });
+            currentLineBottom = Number.NEGATIVE_INFINITY;
+          }
+          // 从实际块盒还原行高，避免字体字形底边和布局像素舍入把可容纳的一行误推到续页。
+          const actualLineHeight = blockRect.height / Math.max(1, Math.round(blockRect.height / lineHeight));
+          const lineIndex = Math.max(0, Math.floor(((rect.top + rect.bottom) / 2 - blockRect.top) / actualLineHeight));
+          currentCenter = center;
+          currentLineBottom = Math.max(currentLineBottom, blockRect.top + (lineIndex + 1) * actualLineHeight);
+        }
+        offset += 1;
+      }
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    if ((node as Element).tagName === "BR") {
+      // 显式换行与解析器共用一个字符的位置口径。
+      offset += 1;
+      return;
+    }
+    Array.from(node.childNodes).forEach(visit);
+  };
+  Array.from(element.childNodes).forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE && !child.textContent?.trim()) return;
+    visit(child);
+  });
+  if (currentCenter !== null) result.push({ offset, bottom: currentLineBottom });
+  return result;
+};
+
 /**
  * 从测量宿主读取节点高度和语义断点。
  * 该函数只读取 DOM，不改变节点、不执行分页，也不依赖业务模块名称。
@@ -143,6 +209,15 @@ export const measureLayoutNodes = (
       throw new Error(`节点 ${node.id} 的正文必须声明为最后一个内容块`);
     }
     if (declaredContentLength > 0 && blockIndices.length && textBlockIndex === undefined) throw new Error(`节点 ${node.id} 缺少正文块标记`);
+    // 只在已启用正文探针时补齐真实行尾，字符采样点不再直接参与分页。
+    const useRichTextLineEnds = Boolean(textBlock && breakPoints.some(point => point.type === "char"));
+    const richTextLineBreakPoints = useRichTextLineEnds
+      ? collectRichTextLineEnds(textBlock!).filter(line => line.offset < declaredContentLength).map(line => ({
+          offset: line.offset, // 完整正文中的真实行尾偏移
+          type: "textRange" as const, // 按行切分的正文断点
+          height: line.bottom - nodeTop, // 行盒底边相对节点的累计高度
+        }))
+      : [];
     const indexedBreakPoints = indexedBlocks.map((block, index) => {
       const blockRect = readRect(block);
       const previousBottom = index > 0 ? readRect(indexedBlocks[index - 1]!).bottom : blockRect.top;
@@ -180,7 +255,7 @@ export const measureLayoutNodes = (
       fullHeight: rect.height,
       blockIndices: node.splitMode === "whole" ? [] : blockIndices, // 实际存在的稳定块编号，允许隐藏字段留下空号
       textBlockIndex: node.splitMode === "whole" ? undefined : textBlockIndex, // 正文身份只来自组件标记
-      breakPoints: node.splitMode === "whole" ? [] : [...blockBreakPoints, ...indexedBreakPoints, ...breakPoints, ...lineBreakPoints],
+      breakPoints: node.splitMode === "whole" ? [] : [...blockBreakPoints, ...indexedBreakPoints, ...breakPoints.filter(point => point.type !== "char" || !useRichTextLineEnds), ...richTextLineBreakPoints, ...lineBreakPoints],
       // 富文本从自身断点取正文末尾，按行拆分的纯文本则从实测行尾取，避免续页提前结束。
       contentLength: Math.max(
         lineBreakPoints.reduce((max, point) => Math.max(max, point.offset), 0),

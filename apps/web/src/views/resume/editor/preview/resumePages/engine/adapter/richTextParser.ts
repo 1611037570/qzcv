@@ -154,6 +154,21 @@ export const sliceRichText = (parsed: ParsedRichText, start = 0, end?: number): 
     }
     const result = document.createElement("div");
     result.appendChild(content);
+    // 同一列表项的续片只延续正文，保留缩进但不重复绘制列表标记。
+    let sourceAncestor = first.startNode.nodeType === Node.ELEMENT_NODE
+      ? first.startNode as Element
+      : first.startNode.parentElement;
+    const firstContent = document.createTreeWalker(result, NodeFilter.SHOW_TEXT).nextNode();
+    let slicedAncestor = firstContent?.parentElement ?? result.querySelector("br")?.parentElement;
+    // 列表项的字符连续，只需检查前一个位置，无需复制并遍历全部前文。
+    const previousPosition = positions[safeStart - 1];
+    while (sourceAncestor && sourceAncestor !== container && slicedAncestor && slicedAncestor !== result) {
+      if (sourceAncestor.tagName === "LI" && previousPosition && sourceAncestor.contains(previousPosition.startNode)) {
+        (slicedAncestor as HTMLElement).style.listStyleType = "none";
+      }
+      sourceAncestor = sourceAncestor.parentElement;
+      slicedAncestor = slicedAncestor.parentElement;
+    }
     return result.innerHTML;
   })();
 
