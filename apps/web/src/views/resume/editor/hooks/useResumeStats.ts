@@ -1,5 +1,6 @@
 // resume-stats.ts
-import { computed, isRef } from "vue";
+import { computed, isRef, type MaybeRef } from "vue";
+import type { ResumeUi } from "@/domain/resume/theme/uiTypes";
 
 /**
  * 剔除 HTML 标签及常见实体
@@ -31,6 +32,12 @@ export function stripHtml(html: string): string {
 // collapsed：模块/记录折叠 UI 状态
 // hidden：模块显隐 UI 状态
 const SKIP_TEXT_FIELDS = ["avatar", "img", "status", "collapsed", "hidden"];
+
+// 技能正文与列表可共存，判空和统计只读取当前布局展示的内容。
+const getModuleData = (key: string, module: any, ui?: ResumeUi) =>
+  key === "skill"
+    ? ui?.skill?.layout === "proficiency" ? module.list : module.data
+    : module.list ?? module.data;
 
 /**
  * 递归收集文本（content 剥离 HTML），跳过非内容字段
@@ -76,7 +83,7 @@ export interface ResumeStats {
 /**
  * 纯计算函数，用于统计
  */
-function computeStats(data: any): ResumeStats {
+function computeStats(data: any, ui?: ResumeUi): ResumeStats {
   const result: ResumeStats = {} as ResumeStats;
   const totalStats: ModuleStats = {
     total: 0,
@@ -92,8 +99,7 @@ function computeStats(data: any): ResumeStats {
     if (!module || typeof module !== "object") continue;
     if (!("data" in module || "list" in module)) continue;
 
-    // 对象模块只有 data，数组模块记录只在 list
-    const moduleData = module.list ?? module.data;
+    const moduleData = getModuleData(key, module, ui);
     const texts: string[] = [];
 
     if (Array.isArray(moduleData)) {
@@ -127,10 +133,10 @@ function computeStats(data: any): ResumeStats {
   return result;
 }
 
-export function useResumeStats(data: any) {
+export function useResumeStats(data: any, ui?: MaybeRef<ResumeUi | undefined>) {
   return computed(() => {
     const rawData = isRef(data) ? data.value : data;
-    return computeStats(rawData);
+    return computeStats(rawData, isRef(ui) ? ui.value : ui);
   });
 }
 
@@ -156,14 +162,13 @@ function hasText(obj: unknown): boolean {
 /**
  * 轻量判空：按 computeStats 相同的字段口径扫描模块，命中文本即可提前结束
  */
-export function isEmptyResume(data: any): boolean {
+export function isEmptyResume(data: any, ui?: ResumeUi): boolean {
   if (!data || typeof data !== "object") return true;
   for (const key of Object.keys(data)) {
     const module = data[key];
     if (!module || typeof module !== "object") continue;
     if (!("data" in module || "list" in module)) continue;
-    // 对象模块只有 data，数组模块记录只在 list
-    const moduleData = module.list ?? module.data;
+    const moduleData = getModuleData(key, module, ui);
     if (Array.isArray(moduleData)) {
       if (moduleData.some((item) => hasText(item?.data))) return false;
     } else if (hasText(moduleData)) {

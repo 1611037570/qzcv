@@ -100,7 +100,7 @@ const themeDecisions = computed(() => resolveThemeDecisions(ui.value?.theme?.tem
 const themePageAppearance = computed(() => resolveThemePageAppearance(ui.value?.theme?.template));
 // 轻量判空：命中第一处正文文本即结束，避免为判空执行全量字数统计
 // 顶部独立装饰不构成业务内容，空简历仅根据真实数据判断。
-const isEmpty = computed(() => isEmptyResume(dataRef.value));
+const isEmpty = computed(() => isEmptyResume(dataRef.value, ui.value));
 
 // ---------- 主题样式注入（数据源为 item.ui）----------
 // 简历展示语言：供预览标题语言包使用

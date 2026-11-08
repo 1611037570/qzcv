@@ -28,7 +28,7 @@ const progressData = computed(() =>
   useProgress(runtimeFields.value || [], currentData.value, currentUI.value),
 );
 // 保留数据引用，切换简历及撤销替换数据后重新统计当前内容
-const resumeStats = useResumeStats(computed(() => currentData.value || {}));
+const resumeStats = useResumeStats(computed(() => currentData.value || {}), currentUI);
 // 时间线一致性检查结果（随进度一起返回）
 const timelineData = computed(() => progressData.value.timeline);
 
