@@ -11,7 +11,7 @@ const props = defineProps({
   // 已校验的作品链接，为空时仅展示链接文本。
   url: { type: String, default: "" },
 });
-const { layout, themeDecisions, ui, showPageNumber, theme: { linkUnderline } } = useResumePreviewContext();
+const { layout, themeDecisions, ui, theme: { linkUnderline } } = useResumePreviewContext();
 const rootRef = ref(null);
 const captionRef = ref(null);
 const imageMaxHeight = ref(0);
@@ -26,8 +26,9 @@ const pageHeight = computed(() => {
     padding: layout.value.regions.find((region) => region.id === "main")?.padding, // 读取结算后的留白，包含页面上边距注入
   });
   return Math.max(0, getContentHeight(
-    Number(ui.value.page?.padding?.vertical) || 0,
-    showPageNumber.value,
+    Number(ui.value.page?.padding?.top) || 0,
+    Number(ui.value.page?.padding?.bottom) || 0,
+    ui.value.page?.showFooter ?? false,
     Number(themeDecisions.value.pageBorder.width) || 0,
   ) - regionPaddingHeight);
 });

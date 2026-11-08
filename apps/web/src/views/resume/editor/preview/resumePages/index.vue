@@ -46,11 +46,7 @@ const props = defineProps({
     type: String,
     default: "editor",
   },
-  // 页面显示设置和编辑态高亮由调用方提供，渲染器不读取编辑器 store。
-  showPageNumber: {
-    type: Boolean,
-    default: false,
-  },
+  // 编辑态高亮由调用方提供，渲染器不读取编辑器 store。
   showDebug: {
     type: Boolean,
     default: false,
@@ -109,14 +105,15 @@ const isEmpty = computed(() => isEmptyResume(dataRef.value));
 // ---------- 主题样式注入（数据源为 item.ui）----------
 // 简历展示语言：供预览标题语言包使用
 const previewLang = computed(() => ui.value.content?.language || "zh");
-const showPageNumber = computed(() => props.showPageNumber);
+// 预览和导出统一读取当前简历的页尾显示配置。
+const showPageNumber = computed(() => ui.value.page.showFooter);
 const themeStyles = useResumeTheme(ui);
 const { paddingStyle, fontStyle, lineHeightStyle, fontReadyVersion } = themeStyles;
 // 页面四周留白：测量树里的正文容器用它内缩，位置与真实页面一致
 const pagePadding = computed(() => ({
-  top: Number(ui.value.page?.padding?.vertical) || 0,
+  top: Number(ui.value.page?.padding?.top) || 0, // 页面上边距
   right: Number(ui.value.page?.padding?.horizontal) || 0,
-  bottom: Number(ui.value.page?.padding?.vertical) || 0,
+  bottom: Number(ui.value.page?.padding?.bottom) || 0, // 页面下边距
   left: Number(ui.value.page?.padding?.horizontal) || 0,
 }));
 // 纸张边框宽度：页面盒子内圈描边，测量树同样内缩，长度口径与引擎一致
@@ -219,7 +216,6 @@ const {
   data: dataRef,
   ui,
   themeDecisions, // 分页与渲染共用同一份主题固定外观
-  showPageNumber,
   isThumb,
   fontReadyVersion,
   renderSignature,
@@ -239,7 +235,6 @@ provideResumePreviewContext({
   theme: themeStyles,
   themeDecisions, // 当前主题固定版式与纸张外观
   layout, // 图片等正文组件复用公共引擎结算后的几何
-  showPageNumber,
   userHiddenFields,
   userFieldOrder,
   userFieldLabels,

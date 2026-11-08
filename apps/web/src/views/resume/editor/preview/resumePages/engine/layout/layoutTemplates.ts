@@ -228,7 +228,8 @@ export const createPageLayoutTemplate = ({
 export const createDefaultPageLayoutTemplate = ({
   templateId,
   moduleKeys,
-  paddingVertical,
+  paddingTop,
+  paddingBottom,
   paddingHorizontal,
   gap,
   leftWidthPercent,
@@ -238,8 +239,10 @@ export const createDefaultPageLayoutTemplate = ({
   templateId: PageLayoutTemplateId;
   /** 当前简历实际存在的模块 key。 */
   moduleKeys: string[];
-  /** 页面上下内边距。 */
-  paddingVertical: number;
+  /** 页面上内边距。 */
+  paddingTop: number;
+  /** 页面下内边距。 */
+  paddingBottom: number;
   /** 页面左右内边距。 */
   paddingHorizontal: number;
   /** 模块之间的垂直间距。 */
@@ -254,9 +257,9 @@ export const createDefaultPageLayoutTemplate = ({
     moduleKeys,
     pageSize: { width: RESUME_WIDTH, height: RESUME_HEIGHT },
     pagePadding: {
-      top: paddingVertical,
+      top: paddingTop, // 页面上边距
       right: paddingHorizontal,
-      bottom: paddingVertical,
+      bottom: paddingBottom, // 页面下边距
       left: paddingHorizontal,
     },
     gap,

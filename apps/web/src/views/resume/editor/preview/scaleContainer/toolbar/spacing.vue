@@ -7,7 +7,8 @@ import {
   defaultLineHeight,
   defaultModuleSpacing,
   defaultPaddingHorizontal,
-  defaultPaddingVertical,
+  defaultPaddingTop,
+  defaultPaddingBottom,
   defaultParagraphSpacing,
   uiParamRanges,
 } from "@/domain/resume/theme/uiConfig";
@@ -20,14 +21,21 @@ const resumeStore = useResumeStore();
 const { currentUI } = storeToRefs(resumeStore);
 const dropdownVisible = ref(false); // 下拉展开时保持入口高亮
 
-// 间距类参数统一由视图条调整：页边距两组、模块间距两组、行间距一项
+// 页边距分别调整上、下和左右，写入独立字段，不设置联动。
 const spacingFieldList = [
   {
-    container: "page.padding",
-    field: "vertical",
-    labelKey: "layoutTopBottomMargin",
-    defaultValue: defaultPaddingVertical,
-    unit: "px",
+    container: "page.padding", // 页面边距配置路径
+    field: "top", // 上边距字段
+    labelKey: "layoutTopMargin", // 上边距显示名称
+    defaultValue: defaultPaddingTop, // 默认上边距
+    unit: "px", // 数值单位
+  },
+  {
+    container: "page.padding", // 页面边距配置路径
+    field: "bottom", // 下边距字段
+    labelKey: "layoutBottomMargin", // 下边距显示名称
+    defaultValue: defaultPaddingBottom, // 默认下边距
+    unit: "px", // 数值单位
   },
   {
     container: "page.padding",
@@ -85,7 +93,7 @@ const resetSpacingItem = (item) => {
   writeSpacing(item, preset ?? item.defaultValue);
 };
 
-// 分组重置：五项一起回到当前主题预设
+// 分组重置：全部间距参数恢复当前主题预设。
 const resetSpacing = () => {
   spacingFieldList.forEach(resetSpacingItem);
 };
@@ -102,7 +110,7 @@ const spacingFields = computed(() => {
   }));
 });
 
-// 入口只概括上下/左右页边距，模块间距与行间距在面板内单独调
+// 入口依次概括上、下、左右页边距，其他间距在面板内单独调整。
 const spacingLabel = computed(() =>
   spacingFields.value
     .filter((item) => item.container === "page.padding")

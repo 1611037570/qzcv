@@ -4,7 +4,6 @@ import { useResizeObserver } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useOverlayKeys } from "@/hooks/modules/useOverlayKeys";
-import { useResumeStore } from "@/stores";
 import { useThemeStore } from "@/stores/modules/theme";
 import { darkThemeColors, lightThemeColors } from "@/configs/modules/theme";
 import { RESUME_HEIGHT, RESUME_WIDTH } from "@/views/resume/editor/preview/shared/constants";
@@ -66,7 +65,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close", "action", "ai-action"]);
-const { system } = storeToRefs(useResumeStore());
 // 标签彩虹配色：与卡片信息层同一套规则，亮色取浅色主题色、暗色取饱和主题色，按顺序循环取用
 const { isDark } = storeToRefs(useThemeStore());
 const tagColorList = computed(() =>
@@ -156,7 +154,6 @@ onBeforeUnmount(() => {
                 >
                   <ResumePages
                     :item="item"
-                    :show-page-number="system.showPageNumber"
                     :mode="singlePage ? 'single' : 'preview'"
                   />
                 </div>

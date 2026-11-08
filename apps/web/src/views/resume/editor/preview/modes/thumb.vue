@@ -1,8 +1,6 @@
 <script setup>
 import { useIntersectionObserver, useMutationObserver, useResizeObserver } from "@vueuse/core";
 import { onBeforeUnmount, ref } from "vue";
-import { storeToRefs } from "pinia";
-import { useResumeStore } from "@/stores";
 import ResumePages from "../resumePages/index.vue";
 import ResumePreviewSkeleton from "@/views/resume/components/resumePreviewSkeleton.vue";
 import { RESUME_HEIGHT, RESUME_WIDTH } from "../shared/constants";
@@ -10,7 +8,6 @@ import { enqueueThumbMount } from "./thumbMountQueue";
 
 defineOptions({ name: "ThumbPreview" });
 
-const { system } = storeToRefs(useResumeStore());
 
 // 简历缩略图：将 A4 简历页面缩放至容器尺寸并居中显示，适配任意容器大小
 defineProps({
@@ -81,7 +78,6 @@ const { stop: stopVisibleObserve } = useIntersectionObserver(
         <ResumePages
           v-if="mounted"
           :item="item"
-          :show-page-number="system.showPageNumber"
           mode="thumb"
         />
       </div>

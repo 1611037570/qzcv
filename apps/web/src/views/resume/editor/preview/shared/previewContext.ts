@@ -15,8 +15,6 @@ export interface ResumePreviewContext {
   layout: ComputedRef<PageLayoutConfig>; // 公共引擎结算的区域与栏几何，主题只能读取
   /** 当前主题固定版式与纸张外观，独立于用户界面配置。 */
   themeDecisions: ComputedRef<ThemeDecisions>;
-  /** 是否展示页码，用于计算图片作品的整页可用高度。 */
-  showPageNumber: ComputedRef<boolean>;
   userHiddenFields: ComputedRef<Set<string>>; // 个人信息隐藏字段
   userFieldOrder: ComputedRef<string[]>; // 个人信息字段顺序
   userFieldLabels: ComputedRef<Map<string, string>>; // 个人信息字段显示名称

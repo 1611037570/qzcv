@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useResizeObserver } from "@vueuse/core";
-import { useResumeStore } from "@/stores";
 import ResumePages from "../../editor/preview/resumePages/index.vue";
 import { RESUME_HEIGHT, RESUME_WIDTH } from "../../editor/preview/shared/constants";
 
 defineProps<{ item: Record<string, any> /* 只读预览来源，支持完整的多页简历。 */ }>();
-const store = useResumeStore();
 const viewport = ref<HTMLElement | null>(null);
 const content = ref<HTMLElement | null>(null);
 const width = ref(RESUME_WIDTH);
@@ -23,7 +21,7 @@ useResizeObserver(content, ([entry]) => { if (entry) height.value = Math.max(RES
     <div ref="viewport" class="w-full shrink-0 py-3">
       <div class="relative mx-auto" :style="{ width: `${RESUME_WIDTH * scale}px`, height: `${height * scale}px` }">
         <div ref="content" class="absolute top-0 left-0 origin-top-left" :style="{ width: `${RESUME_WIDTH}px`, transform: `scale(${scale})` }">
-          <ResumePages :item="item" :show-page-number="store.system.showPageNumber" mode="preview" :show-editor-interactions="false" />
+          <ResumePages :item="item" mode="preview" :show-editor-interactions="false" />
         </div>
       </div>
     </div>

@@ -1,8 +1,6 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
-import { useResumeStore } from "@/stores";
 import { $t } from "@/locales";
 import ResumePages from "@/views/resume/editor/preview/resumePages/index.vue";
 import { waitForExportResources } from "@/views/resume/editor/preview/resumePages/export/exportResources";
@@ -12,8 +10,7 @@ const payload = window.__SNOWFLAKE_RESUME_PRINT_DATA__ || {};
 const route = useRoute();
 const isBrowserPrint = route.query.browserPrint === "1";
 const printToken = String(route.query.token || "");
-const resumeStore = useResumeStore();
-const { system } = storeToRefs(resumeStore);
+// 打印仅消费载荷中的简历配置，不再写回全局系统设置。
 const item = ref(payload.item || null);
 const isReady = ref(false);
 const previewRef = ref(null); // 当前打印实例公开的测量与分页状态
@@ -25,10 +22,6 @@ let renderVersion = 0; // 隔离重复载荷与已卸载的等待任务
 const BROWSER_PRINT_READY = "snowflake-resume-browser-print-ready";
 const BROWSER_PRINT_DATA = "snowflake-resume-browser-print-data";
 const BROWSER_PRINT_DONE = "snowflake-resume-browser-print-done";
-
-if (payload.system && typeof payload.system === "object") {
-  system.value = payload.system;
-}
 
 // 与编辑器导出共用最新测量及有效分页状态，不用元素存在代替排版完成。
 const waitForRender = async () => {
@@ -98,9 +91,6 @@ const handleBrowserPrintMessage = async (event) => {
 
   const nextPayload = event.data.payload || {};
   item.value = nextPayload.item || null;
-  if (nextPayload.system && typeof nextPayload.system === "object") {
-    system.value = nextPayload.system;
-  }
   isReady.value = false;
   const ready = await waitForRender();
   if (!item.value || !ready) return;
@@ -145,7 +135,6 @@ onBeforeUnmount(() => {
       v-if="item"
       ref="previewRef"
       :item="item"
-      :show-page-number="system.showPageNumber"
       mode="preview"
     />
     <div v-else data-pdf-error>{{ $t("resumePrintNoData") }}</div>

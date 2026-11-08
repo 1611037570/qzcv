@@ -1,7 +1,3 @@
-<script>
-import { defaultPaddingVertical } from "@/domain/resume/theme/uiConfig";
-</script>
-
 <script setup>
 import { computed } from "vue";
 import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";

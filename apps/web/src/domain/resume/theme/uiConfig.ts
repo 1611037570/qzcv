@@ -248,8 +248,9 @@ export const footerTemplateList = [
 ];
 // 页尾默认保留原有的当前页与总页数模板。
 export const defaultFooterTemplate = "total" as const;
-// 默认上下页边距
-export const defaultPaddingVertical = 24;
+// 上下边距默认值独立声明，保留拆分前的实际留白。
+export const defaultPaddingTop = 24; // 默认上边距
+export const defaultPaddingBottom = 24; // 默认下边距
 // 默认左右页边距
 export const defaultPaddingHorizontal = 24;
 // 默认字体类型
@@ -294,7 +295,8 @@ export const defaultInfoSeparator = "space";
 // ===========参数范围（编辑器滑杆与一页纸压缩共用，只维护这一处）=====================
 export const uiParamRanges = {
   // 上下页边距
-  "page.padding.vertical": { min: 12, max: 96, step: 1 },
+  "page.padding.top": { min: 12, max: 96, step: 1 }, // 上边距调节范围
+  "page.padding.bottom": { min: 12, max: 96, step: 1 }, // 下边距调节范围
   // 左右页边距
   "page.padding.horizontal": { min: 12, max: 96, step: 1 },
   // 左栏宽度占比（双栏布局）：上限 80 让右栏可窄到 20%，供右窄版式使用
@@ -313,13 +315,18 @@ export const uiParamRanges = {
 export const DEFAULT_UI = {
   page: {
     background: defaultPageBackground,
-    padding: { vertical: defaultPaddingVertical, horizontal: defaultPaddingHorizontal },
+    padding: {
+      top: defaultPaddingTop, // 页面上边距
+      bottom: defaultPaddingBottom, // 页面下边距
+      horizontal: defaultPaddingHorizontal, // 页面左右边距
+    },
     // 页面内留白参数统一由页面配置管理。
     spacing: {
       paragraph: defaultParagraphSpacing,
       module: defaultModuleSpacing,
     },
     footer: defaultFooter,
+    showFooter: false, // 页尾默认关闭，显示状态随简历保存
     footerTemplate: defaultFooterTemplate, // 页尾模板编号。
   },
   font: {

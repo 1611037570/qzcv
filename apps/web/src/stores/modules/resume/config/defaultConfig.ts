@@ -52,8 +52,6 @@ export const DEFAULT_SYSTEM = {
   defaultItemExpanded: true,
   // 左侧栏更多操作默认展开，侧栏切换后持久保存当前状态
   moreOperationsExpanded: true,
-  // 是否展示页码
-  showPageNumber: true,
   // 打印模式：开启后预览去色，模拟黑白打印效果
   printMode: false,
   // 点击预览定位：开启后点击预览区模块会定位到左侧编辑区对应模块

@@ -1,10 +1,8 @@
 <script setup>
 // 简历放大预览组件：全屏遮罩内用 ScaleContainer 缩放展示 resumePages 渲染的全部页
 // 数据源由 props 传入，供模板页预览、编辑器全屏查看等场景复用
-import { storeToRefs } from "pinia";
 import { $t } from "@/locales";
 import { useOverlayKeys } from "@/hooks/modules/useOverlayKeys";
-import { useResumeStore } from "@/stores";
 import ResumePages from "../resumePages/index.vue";
 import ScaleContainer from "../scaleContainer/index.vue";
 
@@ -30,7 +28,6 @@ const props = defineProps({
     default: undefined,
   },
 });
-const { system } = storeToRefs(useResumeStore());
 
 // ESC 关闭走弹层仲裁：弹窗或确认框盖在本层之上时，按键只作用于最上层。
 // 关闭由父组件统一处理，发送 close 由父复位 visible。
@@ -61,7 +58,6 @@ useOverlayKeys({ escape: () => emit("close") }, () => props.visible);
           <ResumePages
             :item="item"
             :expanded-fields="expandedFields"
-            :show-page-number="system.showPageNumber"
             mode="preview"
           />
         </ScaleContainer>

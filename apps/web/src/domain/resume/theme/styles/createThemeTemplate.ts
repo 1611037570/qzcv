@@ -2,6 +2,7 @@ import type { ThemeDecisions } from "@/domain/resume/theme/themeDecisions";
 import { resolveTitleStyleDefinition } from "@/domain/resume/theme/titleStyles";
 import type { ResumeUi, ThemeUiPreset } from "@/domain/resume/theme/uiTypes";
 import { DEFAULT_UI } from "@/domain/resume/theme/uiConfig";
+import { normalizePagePadding } from "@/domain/resume/theme/pagePadding";
 
 export interface ResumeThemeTemplate {
   name: string; // 主题显示名称
@@ -65,8 +66,9 @@ export const resolveThemeTemplate = (definition: ResumeThemeDefinition): ResumeT
     page: {
       background: ui.page?.background ?? DEFAULT_UI.page.background,
       footer: ui.page?.footer ?? DEFAULT_UI.page.footer,
+      showFooter: ui.page?.showFooter ?? DEFAULT_UI.page.showFooter, // 页尾显示状态沿用主题或全局默认值
       footerTemplate: ui.page?.footerTemplate ?? DEFAULT_UI.page.footerTemplate, // 页尾模板沿用用户或默认选择。
-      padding: { ...DEFAULT_UI.page.padding, ...ui.page?.padding },
+      padding: { ...DEFAULT_UI.page.padding, ...normalizePagePadding(ui.page?.padding) },
       spacing: { ...DEFAULT_UI.page.spacing, ...ui.page?.spacing },
     },
     font: {

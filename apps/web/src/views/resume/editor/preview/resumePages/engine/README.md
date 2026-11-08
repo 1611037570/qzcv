@@ -20,12 +20,16 @@ engine/adapter/buildLayoutNodes.ts（模块 → 通用排版节点）
 
 ## 尺寸口径
 
+页尾显示状态保存在 `ui.page.showFooter`（是否显示页尾）中，默认关闭，随简历保存、导出和导入。所有预览和打印入口读取当前简历配置；关闭时使用自定义下边距，开启时底部取下边距与页尾高度中的较大者，开关可能改变分页。不迁移旧全局页尾开关，缺失该配置时统一按关闭处理。
+
+页面上、下边距分别读取 `ui.page.padding.top`（上边距）与 `ui.page.padding.bottom`（下边距），不联动。旧版 `vertical`（上下共用边距）由领域配置入口同时转换为上、下边距，显式新值优先，零值保留；保存仅输出新字段。主题原默认值不变，渲染和分页不包含旧字段分支。
+
 | 量           | 含义                                                               | 来源                                                                   |
 | ------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
 | 布局像素     | 未经 `transform: scale()` 的真实排版像素                           | 测量树挂在 body 上，处于缩放区之外，`getBoundingClientRect` 即布局像素 |
 | 页面尺寸     | `794 × 1123`                                                       | `editor/preview/shared/constants.ts`                                   |
-| 页尾高度     | `PAGE_NUMBER_HEIGHT = 36`                                          | 同上                                                                   |
-| 整页可用高度 | `RESUME_HEIGHT − paddingVertical − max(paddingVertical, 页尾高度)` | `getContentHeight`，分页与「一页纸」共用同一公式                       |
+| 页尾高度     | 开启时 `PAGE_NUMBER_HEIGHT = 36`，关闭时不占用空间                | 同上                                                                   |
+| 整页可用高度 | `RESUME_HEIGHT − paddingTop − max(paddingBottom, 页尾高度)` | `getContentHeight`，分页与「一页纸」共用同一公式                       |
 | 区域留白     | 区域四周的内部留白（`RegionConfig.padding`），同时扣高度与扣宽度   | `createResumeLayout` 写入，`resolveColumnWidths` 与 `regionHeights` 读取 |
 | 栏宽         | 比例栏按「内容宽 − 区域左右内边距 − 栏间距」再按比例分配           | `resolveColumnWidths`，与渲染层 flex 口径一致                          |
 

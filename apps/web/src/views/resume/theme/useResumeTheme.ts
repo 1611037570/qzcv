@@ -17,7 +17,8 @@ import {
   defaultLineHeight,
   defaultSubtitleCenter,
   defaultPaddingHorizontal,
-  defaultPaddingVertical,
+  defaultPaddingTop,
+  defaultPaddingBottom,
   defaultThemeColor,
   defaultTextAlign,
   defaultTitleFontSize,
@@ -81,8 +82,12 @@ export const useResumeTheme = (ui: ComputedRef<ResumeUi>): ResumeTheme => {
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
   };
-  const paddingVertical = computed(() =>
-    toNumber(ui.value.page?.padding?.vertical, defaultPaddingVertical),
+  // 上下边距独立生成样式，旧边距已在配置入口统一转换。
+  const paddingTop = computed(() =>
+    toNumber(ui.value.page?.padding?.top, defaultPaddingTop),
+  );
+  const paddingBottom = computed(() =>
+    toNumber(ui.value.page?.padding?.bottom, defaultPaddingBottom),
   );
   const paddingHorizontal = computed(() =>
     toNumber(ui.value.page?.padding?.horizontal, defaultPaddingHorizontal),
@@ -109,10 +114,10 @@ export const useResumeTheme = (ui: ComputedRef<ResumeUi>): ResumeTheme => {
   );
 
   // 页面级基础样式对象固定复用，避免模板每次渲染都重新创建相同样式
-  // 上下边距对称：顶部与底部各留一份，页尾落在底部留白之内
+  // 上下边距分别应用，页尾与下边距共用底部空间。
   const paddingStyle = computed(() => ({
-    paddingTop: `${paddingVertical.value}px`,
-    paddingBottom: `${paddingVertical.value}px`,
+    paddingTop: `${paddingTop.value}px`, // 页面上边距
+    paddingBottom: `${paddingBottom.value}px`, // 页面下边距
     paddingLeft: `${paddingHorizontal.value}px`,
     paddingRight: `${paddingHorizontal.value}px`,
   }));

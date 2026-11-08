@@ -10,7 +10,8 @@ export interface ResumeUi {
   page: { // 页面颜色与留白
     background: string; // 纸张背景色
     padding: { // 页面边距，单位像素
-      vertical: number; // 上下边距
+      top: number; // 上边距
+      bottom: number; // 下边距
       horizontal: number; // 左右边距
     };
     spacing: { // 内容间距，单位像素
@@ -18,6 +19,7 @@ export interface ResumeUi {
       module: number; // 模块间距
     };
     footer: string; // 页尾品牌文字，允许留空
+    showFooter: boolean; // 是否显示页尾，关闭时仅保留自定义下边距
     footerTemplate: FooterTemplateId; // 页尾内容模板编号
   };
   font: { // 字体、颜色与字号
@@ -76,7 +78,16 @@ export type UiOverrides<T> = {
 };
 
 /** 简历界面覆盖项；个人信息模板在展开与压缩时固定跟随主题。 */
-export type ResumeUiOverrides = UiOverrides<ResumeUi>;
+export type ResumeUiOverrides = Omit<UiOverrides<ResumeUi>, "page"> & {
+  page?: Omit<UiOverrides<ResumeUi["page"]>, "padding"> & { // 页面参数覆盖项
+    padding?: PagePaddingOverrides; // 页面边距覆盖项，允许读取旧版共用边距
+  };
+};
+
+/** 页面边距输入；旧字段仅用于读取旧简历和已有主题预设。 */
+export type PagePaddingOverrides = Partial<ResumeUi["page"]["padding"]> & {
+  vertical?: number; // 旧版上下共用边距，转换后不再保存
+};
 
 /** 主题预设不得自行覆盖其主题编号。 */
 export type ThemeUiPreset = Omit<ResumeUiOverrides, "theme"> & {

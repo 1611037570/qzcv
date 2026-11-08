@@ -27,7 +27,6 @@ const MODULE_KEYS = ["user", "account", "education", "skill", "work", "project"]
 const PADDING_VERTICAL = 24;
 const PADDING_HORIZONTAL = 24;
 const MODULE_GAP = 12;
-const SHOW_PAGE_NUMBER = true;
 
 /** 区域高度结算的观测量：每栏每页的可用高度与已用高度 */
 interface TestFlowPage {
@@ -52,12 +51,13 @@ const createCase = (definition: CaseDefinition) => {
   // 纸张边框参与页面内容宽高：取值方式与 useResumeLayout 一致
   const borderWidth = Math.max(0, Number(definition.themeDecisions?.pageBorder?.width) || 0);
   const contentWidth = RESUME_WIDTH - borderWidth * 2 - PADDING_HORIZONTAL * 2;
-  const availableHeight = getContentHeight(PADDING_VERTICAL, SHOW_PAGE_NUMBER, borderWidth);
+  const availableHeight = getContentHeight(PADDING_VERTICAL, PADDING_VERTICAL, true, borderWidth);
   const layout = createResumeLayout({
     ui: definition.ui,
     themeDecisions: { ...DEFAULT_THEME_DECISIONS, ...definition.themeDecisions, regions: { user: { inset: appearance.padding.user, fillsPageTop: appearance.fillsPageTop }, main: { inset: appearance.padding.main } } }, // 固定参数进入纯布局契约
     moduleKeys: definition.moduleKeys || MODULE_KEYS,
-    paddingVertical: PADDING_VERTICAL,
+    paddingTop: PADDING_VERTICAL, // 页面上边距
+    paddingBottom: PADDING_VERTICAL, // 页面下边距
     paddingHorizontal: PADDING_HORIZONTAL,
     gap: MODULE_GAP,
   });
@@ -112,7 +112,8 @@ describe("简历页几何基线", () => {
       ui: {}, // 几何由固定能力提供
       themeDecisions: { ...DEFAULT_THEME_DECISIONS, layoutType: "topUserTwoColumn" as const, regions: { main: { columnDecoration: true } } }, // 栏间装饰由主题声明
       moduleKeys: MODULE_KEYS, // 实际内容模块
-      paddingVertical: PADDING_VERTICAL, // 页面上下边距
+      paddingTop: PADDING_VERTICAL, // 页面上边距
+      paddingBottom: PADDING_VERTICAL, // 页面下边距
       paddingHorizontal: PADDING_HORIZONTAL, // 页面左右边距
       gap: MODULE_GAP, // 公共模块间距
     };
@@ -135,7 +136,8 @@ describe("简历页几何基线", () => {
       ui: {}, // 使用主题固定版式
       themeDecisions: { ...DEFAULT_THEME_DECISIONS, layoutType: "topUserTwoColumn" }, // 正文双栏没有栏间装饰
       moduleKeys: MODULE_KEYS, // 实际内容模块
-      paddingVertical: PADDING_VERTICAL, // 页面上下边距
+      paddingTop: PADDING_VERTICAL, // 页面上边距
+      paddingBottom: PADDING_VERTICAL, // 页面下边距
       paddingHorizontal: PADDING_HORIZONTAL, // 页面左右边距
       gap: MODULE_GAP, // 模块间距
     });
@@ -151,7 +153,8 @@ describe("简历页几何基线", () => {
       ui: theme.ui, // 使用霓虹终端的实际页面设置
       themeDecisions: { ...DEFAULT_THEME_DECISIONS, ...theme.decisions }, // 使用主题实际版式声明
       moduleKeys: MODULE_KEYS, // 实际内容模块
-      paddingVertical: theme.ui.page.padding.vertical, // 页面上下边距
+      paddingTop: theme.ui.page.padding.vertical, // 页面上边距
+      paddingBottom: theme.ui.page.padding.vertical, // 页面下边距
       paddingHorizontal: horizontal, // 页面左右边距
       gap: theme.ui.page.spacing.module, // 模块间距
     });
@@ -165,7 +168,8 @@ describe("简历页几何基线", () => {
       ui: theme.ui, // 使用墨玉右栏的实际页面留白
       themeDecisions: { ...DEFAULT_THEME_DECISIONS, ...theme.decisions }, // 使用主题实际分栏装饰声明
       moduleKeys: MODULE_KEYS, // 实际内容模块
-      paddingVertical: 36, // 主题页面上下边距
+      paddingTop: 36, // 页面上边距
+      paddingBottom: 36, // 页面下边距
       paddingHorizontal: 36, // 主题页面左右边距
       gap: MODULE_GAP, // 模块间距
     });
@@ -182,7 +186,8 @@ describe("简历页几何基线", () => {
         regions: { main: { joinsPrevious: true } }, // 关闭两个区域之间的间距
       },
       moduleKeys: MODULE_KEYS, // 实际内容模块
-      paddingVertical: PADDING_VERTICAL, // 页面上下边距
+      paddingTop: PADDING_VERTICAL, // 页面上边距
+      paddingBottom: PADDING_VERTICAL, // 页面下边距
       paddingHorizontal: PADDING_HORIZONTAL, // 页面左右边距
       gap: MODULE_GAP, // 栏内模块间距仍按用户配置
     });
@@ -205,7 +210,8 @@ describe("简历页几何基线", () => {
         layoutType: "twoColumn", // 主题决定双栏布局
       },
       moduleKeys: MODULE_KEYS, // 当前模块清单
-      paddingVertical: PADDING_VERTICAL, // 页面上下边距
+      paddingTop: PADDING_VERTICAL, // 页面上边距
+      paddingBottom: PADDING_VERTICAL, // 页面下边距
       paddingHorizontal: PADDING_HORIZONTAL, // 页面左右边距
       gap: MODULE_GAP, // 模块间距
     });
@@ -663,7 +669,8 @@ describe("简历页几何基线", () => {
         layoutType: "singleColumn", // 主题固定页面版式
       },
       moduleKeys: ["slogan", ...MODULE_KEYS],
-      paddingVertical: PADDING_VERTICAL,
+      paddingTop: PADDING_VERTICAL, // 页面上边距
+      paddingBottom: PADDING_VERTICAL, // 页面下边距
       paddingHorizontal: PADDING_HORIZONTAL,
       gap: MODULE_GAP,
     });
@@ -689,7 +696,8 @@ describe("简历页几何基线", () => {
         layoutType: "topUserSingleColumn", // 主题固定页面版式
       },
       moduleKeys: MODULE_KEYS,
-      paddingVertical: PADDING_VERTICAL,
+      paddingTop: PADDING_VERTICAL, // 页面上边距
+      paddingBottom: PADDING_VERTICAL, // 页面下边距
       paddingHorizontal: PADDING_HORIZONTAL,
       gap: MODULE_GAP,
     });

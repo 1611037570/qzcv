@@ -53,7 +53,7 @@ const regionStyle = computed(() => {
     "--resume-region-inset-top": `${regionPadding.top}px`, // 区域内部顶部定位基准
     "--resume-region-inset-left": `${regionPadding.left}px`, // 区域内部左侧定位基准
     "--resume-page-inset-horizontal": `${horizontal}px`, // 装饰延伸到纸张侧边的距离
-    "--resume-page-inset-vertical": `${Number(ui.value.page?.padding?.vertical) || 0}px`, // 装饰延伸到纸张顶边的距离
+    "--resume-page-inset-vertical": `${Number(ui.value.page?.padding?.top) || 0}px`, // 装饰延伸到纸张顶边的距离，仅使用上边距
   };
 });
 </script>

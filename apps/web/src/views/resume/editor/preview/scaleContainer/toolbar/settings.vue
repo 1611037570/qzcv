@@ -21,7 +21,6 @@ import {
   defaultUserInfoLayout,
   userInfoLayoutList,
 } from "@/domain/resume/theme/uiConfig";
-import { DEFAULT_SYSTEM } from "@/stores/modules/resume/config/defaultConfig";
 import { layoutUsesColumns } from "@/domain/resume/theme/layouts";
 import {
   getResumeThemeTemplate,
@@ -33,14 +32,14 @@ import SettingSection from "./settingSection.vue";
 import SettingNumberField from "./settingNumberField.vue";
 
 const resumeStore = useResumeStore();
-const { system, currentUI } = storeToRefs(resumeStore);
+const { currentUI } = storeToRefs(resumeStore);
 const dropdownVisible = ref(false); // 布局面板打开时保持工具栏入口选中态
 
-// 页尾显示设置与布局参数集中在同一面板。
+// 页尾显示状态属于当前简历，与其他排版参数一起保存和备份。
 const showPageNumber = computed({
-  get: () => system.value.showPageNumber,
+  get: () => currentUI.value?.page?.showFooter ?? false,
   set: (value) => {
-    system.value.showPageNumber = value;
+    currentUI.value.page.showFooter = value;
   },
 });
 const footer = computed({
@@ -162,7 +161,7 @@ const resetContentLayout = () => {
 
 // 页尾分组恢复显示状态、页码模板与默认空文案。
 const resetFooterSettings = () => {
-  showPageNumber.value = DEFAULT_SYSTEM.showPageNumber;
+  showPageNumber.value = themePresetUi.value.page.showFooter;
   footerTemplate.value = defaultFooterTemplate;
   footer.value = defaultFooter;
 };

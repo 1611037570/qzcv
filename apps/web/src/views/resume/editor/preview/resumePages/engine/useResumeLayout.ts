@@ -27,8 +27,6 @@ export interface UseResumeLayoutOptions {
   ui: ComputedRef<Record<string, any>>;
   /** 当前主题固定版式与纸张外观。 */
   themeDecisions: ComputedRef<ThemeDecisions>;
-  /** 是否展示页码。 */
-  showPageNumber: ComputedRef<boolean>;
   /** 字体加载版本。 */
   fontReadyVersion: Ref<number>;
   /** 节点之外仍会影响渲染尺寸的个人信息字段签名。 */
@@ -47,7 +45,6 @@ export const useResumeLayout = ({
   allModules,
   ui,
   themeDecisions,
-  showPageNumber,
   fontReadyVersion,
   renderSignature,
   isThumb,
@@ -80,16 +77,18 @@ export const useResumeLayout = ({
   ]);
   // 纸张边框宽度：参与页面内容宽高，渲染层与测量宿主都用同一份取值
   const pageBorderWidth = computed(() => Math.max(0, Number(themeDecisions.value.pageBorder.width) || 0));
-  const pageTop = computed(() => Number(ui.value.page?.padding?.vertical) || 0);
+  const pageTop = computed(() => Number(ui.value.page?.padding?.top) || 0);
+  const pageBottom = computed(() => Number(ui.value.page?.padding?.bottom) || 0);
   const laterPageAvailableHeight = computed(() =>
-    getContentHeight(pageTop.value, showPageNumber.value, pageBorderWidth.value),
+    getContentHeight(pageTop.value, pageBottom.value, ui.value.page?.showFooter ?? false, pageBorderWidth.value),
   );
   const layout = computed<PageLayoutConfig>(() =>
     createResumeLayout({
       ui: ui.value,
       themeDecisions: themeDecisions.value, // 主题决定页面版式
       moduleKeys: activeModuleKeys.value,
-      paddingVertical: Number(ui.value.page?.padding?.vertical) || 0,
+      paddingTop: pageTop.value, // 独立上边距
+      paddingBottom: pageBottom.value, // 独立下边距
       paddingHorizontal: Number(ui.value.page?.padding?.horizontal) || 0,
       gap: Number(ui.value.page?.spacing?.module) || 0,
       leftColumnWidth: Number(ui.value.layout?.leftColumnWidth) || defaultLeftColumnWidth,

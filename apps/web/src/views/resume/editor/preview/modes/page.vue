@@ -275,7 +275,6 @@ useSmartOnePage({
     ref="pagesRef"
     :item="resumeItem"
     :expanded-fields="runtimeFields"
-    :show-page-number="system.showPageNumber"
     :show-debug="system.showDebug"
     :module-class-map="moduleClassMap"
     :selected-module-keys="selectedModuleKeys"
@@ -300,7 +299,6 @@ useSmartOnePage({
         :item="exportResumeItem"
         :expanded-fields="runtimeFields"
         mode="preview"
-        :show-page-number="system.showPageNumber"
         :show-editor-interactions="false"
       />
     </div>

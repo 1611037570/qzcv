@@ -149,7 +149,7 @@ watch(
     </div>
     <!-- 底部空间与页尾共用：只补足下边距超出页尾高度的部分 -->
     <div v-if="!fullHeightColumns" class="shrink-0" :style="{ height: bottomSpacerHeight }" />
-    <!-- 页码区固定不伸缩：内容超高时只触发分页，不压缩页脚，保证页码位置恒定 -->
+    <!-- 仅开启页尾时占用槽位，关闭后底部只保留页面下边距。 -->
     <div
       v-if="showPageNumber"
       class="flex-c shrink-0 py-3 text-xs opacity-50"

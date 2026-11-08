@@ -1,6 +1,18 @@
 import { cloneDeep, isEqual } from "lodash-es";
 import { getResumeThemeUiPreset } from "@/domain/resume/theme/styles";
 import type { ResumeUi, ResumeUiOverrides } from "@/domain/resume/theme/uiTypes";
+import { normalizePagePadding } from "./pagePadding";
+
+/** 仅旧字段存在时转换；新配置直接复用，展开和压缩不额外复制新结构。 */
+const normalizeUiPadding = (ui?: ResumeUiOverrides): ResumeUiOverrides => ui?.page?.padding?.vertical !== undefined
+  ? {
+      ...ui,
+      page: { // 页面覆盖项保留原配置
+        ...ui.page,
+        padding: normalizePagePadding(ui.page.padding), // 旧边距转换为独立上下边距
+      },
+    }
+  : ui ?? {};
 
 // 按主题预设展开简历配置，用户覆盖项在主题初始值之上生效。
 const mergeUi = (
@@ -21,7 +33,7 @@ const mergeUi = (
 // 编辑与预览使用完整配置，默认值统一来自当前主题。
 export const resolveResumeUi = (ui?: ResumeUiOverrides): ResumeUi => {
   const preset = getResumeThemeUiPreset(ui?.theme?.template);
-  const resolved = mergeUi(preset, ui || {});
+  const resolved = mergeUi(preset, normalizeUiPadding(ui));
   resolved.theme.template = preset.theme.template;
   resolved.theme.userTemplate = preset.theme.userTemplate; // 个人信息模板始终跟随当前主题预设
   return resolved as ResumeUi;
@@ -46,7 +58,7 @@ const compactUi = (ui: Record<string, any>, preset: Record<string, any>): Record
 // 持久化只保留主题编号及与主题默认值不同的用户覆盖项。
 export const compactResumeUi = (ui?: ResumeUiOverrides): ResumeUiOverrides => {
   const preset = getResumeThemeUiPreset(ui?.theme?.template);
-  const compact = compactUi(ui || {}, preset);
+  const compact = compactUi(normalizeUiPadding(ui), preset);
   compact.theme = {
     ...compact.theme,
     template: preset.theme.template, // 当前主题编号

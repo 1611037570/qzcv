@@ -9,7 +9,8 @@ describe("layoutTemplates", () => {
     const layout = createDefaultPageLayoutTemplate({
       templateId: "singleColumn",
       moduleKeys,
-      paddingVertical: 24,
+      paddingTop: 24, // 页面上边距
+      paddingBottom: 24, // 页面下边距
       paddingHorizontal: 24,
       gap: 12,
     });
@@ -33,7 +34,8 @@ describe("layoutTemplates", () => {
       createDefaultPageLayoutTemplate({
         templateId,
         moduleKeys,
-        paddingVertical: 24,
+        paddingTop: 24, // 页面上边距
+        paddingBottom: 24, // 页面下边距
         paddingHorizontal: 24,
         gap: 12,
       }).regions;
@@ -45,7 +47,8 @@ describe("layoutTemplates", () => {
     const layout = createDefaultPageLayoutTemplate({
       templateId: "singleColumn",
       moduleKeys: moduleKeys.filter((key) => key !== "user"),
-      paddingVertical: 24,
+      paddingTop: 24, // 页面上边距
+      paddingBottom: 24, // 页面下边距
       paddingHorizontal: 24,
       gap: 12,
     });
@@ -57,7 +60,8 @@ describe("layoutTemplates", () => {
     const layout = createDefaultPageLayoutTemplate({
       templateId: "topUserTwoColumn",
       moduleKeys,
-      paddingVertical: 24,
+      paddingTop: 24, // 页面上边距
+      paddingBottom: 24, // 页面下边距
       paddingHorizontal: 24,
       gap: 12,
     });
@@ -75,7 +79,8 @@ describe("layoutTemplates", () => {
     const layout = createDefaultPageLayoutTemplate({
       templateId: "twoColumn",
       moduleKeys,
-      paddingVertical: 24,
+      paddingTop: 24, // 页面上边距
+      paddingBottom: 24, // 页面下边距
       paddingHorizontal: 24,
       gap: 12,
     });
@@ -92,7 +97,8 @@ describe("layoutTemplates", () => {
     const layout = createDefaultPageLayoutTemplate({
       templateId: "topUserSingleColumn",
       moduleKeys,
-      paddingVertical: 24,
+      paddingTop: 24, // 页面上边距
+      paddingBottom: 24, // 页面下边距
       paddingHorizontal: 24,
       gap: 12,
     });
@@ -105,7 +111,8 @@ describe("layoutTemplates", () => {
     const layout = createDefaultPageLayoutTemplate({
       templateId: "topUserSingleColumn",
       moduleKeys: layoutWithSlogan,
-      paddingVertical: 24,
+      paddingTop: 24, // 页面上边距
+      paddingBottom: 24, // 页面下边距
       paddingHorizontal: 24,
       gap: 12,
     });

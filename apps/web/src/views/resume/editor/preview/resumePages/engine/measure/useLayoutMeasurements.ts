@@ -26,7 +26,8 @@ const resolveWatchSignature = (source: Record<string, any>): string => {
   const theme = source?.theme ?? {};
   const layout = source?.layout ?? {};
   return [
-    page.padding?.vertical,
+    page.padding?.top,
+    page.padding?.bottom,
     page.padding?.horizontal,
     source?.themeDecisions?.pageBorder?.width,
     spacing.module,

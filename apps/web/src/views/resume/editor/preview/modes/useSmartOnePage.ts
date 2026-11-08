@@ -23,7 +23,8 @@ import {
   defaultLineHeight,
   defaultModuleSpacing,
   defaultPaddingHorizontal,
-  defaultPaddingVertical,
+  defaultPaddingTop,
+  defaultPaddingBottom,
   defaultParagraphSpacing,
   defaultTitleFontSize,
   uiParamRanges,
@@ -32,7 +33,8 @@ import {
 /** 可被智能压缩的 ui 字段 */
 export type OnePageAdjustKey =
   | "moduleSpacing"
-  | "paddingVertical"
+  | "paddingTop"
+  | "paddingBottom"
   | "paddingHorizontal"
   | "paragraphSpacing"
   | "lineHeight"
@@ -55,7 +57,8 @@ export interface OnePageAdjustableItem {
 /** 默认可用参数（范围取自 uiConfig.uiParamRanges，与编辑器滑杆一致）：间距让路多、字号让路少 */
 export const defaultOnePageAdjustable: OnePageAdjustableItem[] = [
   { key: "moduleSpacing", ...uiParamRanges["page.spacing.module"], weight: 1 },
-  { key: "paddingVertical", ...uiParamRanges["page.padding.vertical"], weight: 1 },
+  { key: "paddingTop", ...uiParamRanges["page.padding.top"], weight: 1 }, // 上边距独立参与压缩
+  { key: "paddingBottom", ...uiParamRanges["page.padding.bottom"], weight: 1 }, // 下边距独立参与压缩
   { key: "paddingHorizontal", ...uiParamRanges["page.padding.horizontal"], weight: 1, remeasure: true },
   { key: "paragraphSpacing", ...uiParamRanges["page.spacing.paragraph"], weight: 1, remeasure: true },
   { key: "lineHeight", ...uiParamRanges["font.lineHeight"], weight: 0.7, remeasure: true },
@@ -70,7 +73,8 @@ const RESTORE_ORDER: OnePageAdjustKey[] = ["fontSize", "lineHeight"];
 /** 可调字段缺失时的兜底默认值 */
 const uiDefaults: Record<OnePageAdjustKey, number> = {
   moduleSpacing: defaultModuleSpacing,
-  paddingVertical: defaultPaddingVertical,
+  paddingTop: defaultPaddingTop, // 默认上边距
+  paddingBottom: defaultPaddingBottom, // 默认下边距
   paddingHorizontal: defaultPaddingHorizontal,
   paragraphSpacing: defaultParagraphSpacing,
   lineHeight: defaultLineHeight,
@@ -117,7 +121,8 @@ export const useSmartOnePage = ({
   const resumeStore = useResumeStore();
   const uiPaths: Record<OnePageAdjustKey, string> = {
     moduleSpacing: "page.spacing.module",
-    paddingVertical: "page.padding.vertical",
+    paddingTop: "page.padding.top", // 上边距独立读写
+    paddingBottom: "page.padding.bottom", // 下边距独立读写
     paddingHorizontal: "page.padding.horizontal",
     paragraphSpacing: "page.spacing.paragraph",
     lineHeight: "font.lineHeight",

@@ -9,7 +9,8 @@ export const createResumeLayout = ({
   ui,
   themeDecisions,
   moduleKeys,
-  paddingVertical,
+  paddingTop,
+  paddingBottom,
   paddingHorizontal,
   gap,
   leftColumnWidth,
@@ -20,8 +21,10 @@ export const createResumeLayout = ({
   themeDecisions: ThemeDecisions;
   /** 当前存在排版节点的模块 key。 */
   moduleKeys: string[];
-  /** 页面上下内边距。 */
-  paddingVertical: number;
+  /** 页面上内边距。 */
+  paddingTop: number;
+  /** 页面下内边距。 */
+  paddingBottom: number;
   /** 页面左右内边距。 */
   paddingHorizontal: number;
   /** 栏内节点间距。 */
@@ -34,7 +37,8 @@ export const createResumeLayout = ({
   const layout = createDefaultPageLayoutTemplate({
     templateId,
     moduleKeys,
-    paddingVertical,
+    paddingTop,
+    paddingBottom,
     paddingHorizontal,
     gap,
     leftWidthPercent: leftColumnWidth,
@@ -85,7 +89,7 @@ export const createResumeLayout = ({
         })),
         padding:
           region.id === topMarginRegionId
-            ? { ...padding, top: padding.top + paddingVertical }
+            ? { ...padding, top: padding.top + paddingTop }
             : padding,
         ...(slot ? { gapBefore: regionGapBefore } : {}),
       };

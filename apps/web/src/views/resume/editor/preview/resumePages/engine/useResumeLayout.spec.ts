@@ -52,7 +52,6 @@ describe("双栏模块顺序同步", () => {
         ...DEFAULT_THEME_DECISIONS,
         layoutType: type as ThemeDecisions["layoutType"], // 主题固定版式
       })), // 独立主题外观
-      showPageNumber: computed(() => false), // 不显示页码
       fontReadyVersion: ref(0), // 固定字体版本
       renderSignature: computed(() => ""), // 无额外字段测量签名
       isThumb: ref(false), // 使用完整预览
