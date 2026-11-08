@@ -25,7 +25,7 @@
 | 2025-11-22 | 升级 Vue 3 + Vite + TypeScript + NestJS，采用 pnpm Monorepo 架构。 |
 | 2026-08-15 | 轻舟简历 V1.0，完善简历制作体验。[版本截图](apps/web/src/assets/images/resume/v1.webp) |
 | 2026-09-16 | 启用新域名 qzcv.net。 |
-| 2026-11-22（计划） | 轻舟简历 V2.0，以 AI 串联简历生成、内容优化、岗位适配与面试训练。[版本截图](apps/web/src/assets/images/resume/v2.png) |
+| 2026-11-22（计划） | 轻舟简历 V2.0，以 AI 串联简历生成、内容优化、岗位适配与面试训练。[版本截图](apps/web/src/assets/images/resume/v2.webp) |
 
 ## 主要功能
 

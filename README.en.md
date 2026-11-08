@@ -25,7 +25,7 @@ Built with Vue 3, TypeScript, Vite, and NestJS, the project uses a pnpm workspac
 | 2025-11-22 | Upgraded to Vue 3 + Vite + TypeScript + NestJS with a pnpm monorepo architecture. |
 | 2026-08-15 | Skiff Resume V1.0, refining the resume creation experience. [Version screenshot](apps/web/src/assets/images/resume/v1.webp) |
 | 2026-09-16 | Introduced the new domain qzcv.net. |
-| 2026-11-22 (planned) | Skiff Resume V2.0, connecting AI-assisted drafting, refinement, job tailoring, and interview practice. [Version screenshot](apps/web/src/assets/images/resume/v2.png) |
+| 2026-11-22 (planned) | Skiff Resume V2.0, connecting AI-assisted drafting, refinement, job tailoring, and interview practice. [Version screenshot](apps/web/src/assets/images/resume/v2.webp) |
 
 ## Features
 
