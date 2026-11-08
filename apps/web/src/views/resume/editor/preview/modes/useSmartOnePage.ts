@@ -229,7 +229,8 @@ export const useSmartOnePage = ({
       for (const item of adjustable) {
         const span = base[item.key] - item.min;
         if (span <= 0) {
-          result[item.key] = item.min;
+          // 旧参数低于压缩下限时保持原值，智能一页不反向增大参数。
+          result[item.key] = base[item.key];
           continue;
         }
         // 权重决定前期让路比例；t 接近 1 时仍会走到下限，保证压缩能力不被削弱

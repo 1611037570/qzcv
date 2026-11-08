@@ -7,6 +7,7 @@
 import { onMounted, onUnmounted, type ComputedRef, type Ref } from "vue";
 import { ElMessage } from "element-plus";
 import eventBus from "@/utils/modules/eventBus";
+import { useResumeStore } from "@/stores";
 import { printResume } from "./useBrowserPrint";
 import { printServerPDF as exportServerPdf } from "./useServerPdfExport";
 import { printImage as exportImage, printLongImagePdf } from "./useImageExport";
@@ -52,6 +53,10 @@ export const useResumeExport = ({
   finishExport,
   onExportSuccess,
 }: UseResumeExportOptions) => {
+  const resumeStore = useResumeStore();
+  // 准备脱敏预览也属于导出过程，同一实例只能由一次请求持有。
+  let exporting = false;
+  let disposed = false;
   // 编辑器与云端打印共用判定规则，仅按输出布局区别分页与连续长图。
   const canExport = (mode: ExportLayoutMode) => {
     const status = getExportLayoutStatus(previewReady.value, pagePlan.value.status, mode);
@@ -88,13 +93,19 @@ export const useResumeExport = ({
     mode: ExportLayoutMode | null,
     task: (request: ResumeExportRequest, item?: any) => unknown,
   ) => {
+    if (exporting || disposed || resumeStore.isPrinting) return;
+    exporting = true;
+    const resumeId = resumeStore.currentItem?.id;
     const request = normalizeRequest(payload);
     try {
       const item = await prepareExport?.(request.desensitizeFields);
+      // 等待期间退出编辑器或切换简历时，停止使用本次临时预览。
+      if (disposed || resumeStore.currentItem?.id !== resumeId) return;
       if (mode && !canExport(mode)) return;
       return await task(request, item);
     } finally {
       finishExport?.();
+      exporting = false;
     }
   };
   // 长图 PDF 与 PNG 共用长图渲染结果，保持单页长图输出。
@@ -124,6 +135,7 @@ export const useResumeExport = ({
     }
   });
   onUnmounted(() => {
+    disposed = true;
     if (isEdit.value) {
       eventBus.off("resume-print-pdf", printPDF);
       eventBus.off("resume-print-browser-pdf", printBrowserPDF);

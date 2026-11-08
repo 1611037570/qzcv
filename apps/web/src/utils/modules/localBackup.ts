@@ -55,11 +55,31 @@ export async function initLocalBackup(): Promise<string | null> {
   return handle?.name ?? null;
 }
 
+// 同名文件依次写入，避免旧快照晚完成后覆盖新快照。
+const backupWrites = new Map<string, Promise<boolean>>();
+
 // 将备份内容写入本地目录文件，无句柄或写入失败返回 false
-export async function writeLocalBackup(filename: string, content: string): Promise<boolean> {
-  const handle = await getStoredHandle();
-  if (!handle) return false;
+export function writeLocalBackup(filename: string, content: string): Promise<boolean> {
+  // 发起时读取目录，排队等待期间切换目录也不改变本次备份的目标。
+  const handle = getStoredHandle().catch(() => undefined);
+  const previous = backupWrites.get(filename) ?? Promise.resolve(false);
+  const task = previous.then(() => writeBackupFile(filename, content, handle));
+  backupWrites.set(filename, task);
+  void task.then(() => {
+    if (backupWrites.get(filename) === task) backupWrites.delete(filename);
+  });
+  return task;
+}
+
+// 单次写入的失败转换为返回值，后续排队的快照仍可继续备份。
+async function writeBackupFile(
+  filename: string,
+  content: string,
+  handlePromise: Promise<FileSystemDirectoryHandle | undefined>,
+): Promise<boolean> {
   try {
+    const handle = await handlePromise;
+    if (!handle) return false;
     // 刷新后已授权的读写权限会退回 prompt，此时写入必被拒绝，标记为待重新授权
     if ((await handle.queryPermission({ mode: "readwrite" })) !== "granted") {
       localBackupNeedsAuth.value = true;

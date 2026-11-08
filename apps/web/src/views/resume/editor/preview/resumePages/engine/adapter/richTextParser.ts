@@ -158,13 +158,25 @@ export const sliceRichText = (parsed: ParsedRichText, start = 0, end?: number): 
     let sourceAncestor = first.startNode.nodeType === Node.ELEMENT_NODE
       ? first.startNode as Element
       : first.startNode.parentElement;
-    const firstContent = document.createTreeWalker(result, NodeFilter.SHOW_TEXT).nextNode();
-    let slicedAncestor = firstContent?.parentElement ?? result.querySelector("br")?.parentElement;
+    // 显式换行与文字按文档顺序定位，避免以换行开头时错配祖先。
+    const firstContent = document.createTreeWalker(result, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node) => node.nodeType === Node.TEXT_NODE || (node as Element).tagName === "BR"
+        ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
+    }).nextNode();
+    let slicedAncestor = firstContent?.parentElement;
     // 列表项的字符连续，只需检查前一个位置，无需复制并遍历全部前文。
     const previousPosition = positions[safeStart - 1];
     while (sourceAncestor && sourceAncestor !== container && slicedAncestor && slicedAncestor !== result) {
       if (sourceAncestor.tagName === "LI" && previousPosition && sourceAncestor.contains(previousPosition.startNode)) {
         (slicedAncestor as HTMLElement).style.listStyleType = "none";
+      }
+      // 裁掉前面的列表项后，为每一层有序列表续接原编号。
+      if (sourceAncestor.tagName === "LI" && sourceAncestor.parentElement?.tagName === "OL") {
+        const list = sourceAncestor.parentElement;
+        const index = Array.from(list.children).filter((child) => child.tagName === "LI").indexOf(sourceAncestor);
+        if (index > 0 && slicedAncestor.parentElement?.tagName === "OL") {
+          slicedAncestor.parentElement.setAttribute("start", String(Number(list.getAttribute("start") ?? 1) + index));
+        }
       }
       sourceAncestor = sourceAncestor.parentElement;
       slicedAncestor = slicedAncestor.parentElement;

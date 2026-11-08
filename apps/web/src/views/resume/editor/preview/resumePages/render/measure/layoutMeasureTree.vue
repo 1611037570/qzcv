@@ -48,7 +48,8 @@ const insetStyle = computed(() => {
   return {
     marginTop: inset(props.topRegionId ? 0 : props.pagePadding?.top),
     marginRight: inset(props.topRegionId ? 0 : props.pagePadding?.right),
-    marginBottom: inset(props.pagePadding?.bottom),
+    // 页尾与下边距共用底部空间，只补足超过页尾高度的留白。
+    marginBottom: inset(Math.max(0, (props.pagePadding?.bottom ?? 0) - (props.showPageNumber ? PAGE_NUMBER_HEIGHT : 0))),
     marginLeft: inset(props.topRegionId ? 0 : props.pagePadding?.left),
   };
 });
@@ -106,7 +107,7 @@ const regions = computed(() => {
     </div>
     <div
       v-if="showPageNumber"
-      class="flex flex-1 items-end justify-center py-3 text-xs opacity-50"
+      class="flex shrink-0 items-center justify-center py-3 text-xs opacity-50"
       :style="{ height: `${PAGE_NUMBER_HEIGHT}px` }"
     >
       <PageFooter :text="footerText || ''" :template-id="footerTemplate" />

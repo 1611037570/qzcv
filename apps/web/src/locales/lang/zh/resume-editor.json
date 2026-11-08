@@ -67,7 +67,7 @@
   "learningCenter_style_step1": "在左侧“模板”选择外观。",
   "learningCenter_style_step2": "在“设计”改颜色和背景，在“布局”改位置与对齐。",
   "learningCenter_style_step3": "在“细节”调整日期格式和信息分隔符。",
-  "learningCenter_style_tip": "重置恢复当前模板默认值；受限选项会显示原因。页尾默认关闭，显示状态随简历保存和备份；关闭时使用自定义下边距，开启时底部取下边距与页尾高度的较大值，可能改变分页。",
+  "learningCenter_style_tip": "重置恢复当前模板默认值；受限选项会显示原因。页尾默认关闭，显示状态随简历保存和备份，切换模板保留页尾设置；关闭时使用自定义下边距，开启时底部取下边距与页尾高度的较大值，可能改变分页。",
   "learningCenter_spacing_title": "调整字体与间距",
   "learningCenter_spacing_summary": "在预览工具栏调整文字大小、灰度和内容间距。",
   "learningCenter_spacing_step1": "最左侧点击字体名换字体，点击字号改大小，点击“A”改字体灰度。",
