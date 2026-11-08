@@ -8,8 +8,9 @@ editor/panel/index.vue（异步挂载助手）
        → flows（简历建议卡片与交互流程）
        → routing/registry（登记按需 AI 能力）
        → useResumeAssistant（装配本轮工具与简历上下文）
-       → chat/useChatRequest（维护会话展示、取消与撤回）
-            → packages/resume-agent（统一会话内建立任务契约、装配工具、执行 ReAct 并核对完成证据）
+       → chat/useChatRequest（共用消息、计时、取消与结束状态，按会话类型分发）
+            → Agent：resumeAgentSession（任务规划、写入、证据校验与撤回）
+            → Chat：chat/createChatResponse → resumeChatSession（只读资料与流式回答）
 ```
 
 目录职责：
@@ -25,6 +26,10 @@ editor/panel/index.vue（异步挂载助手）
 - `changes/`：捕获本地写入前后快照、提取富文本的可读内容并计算文字差异；只服务于改动查看，不参与模型决策。
 
 依赖约定：
+
+- 会话创建前可选择 Agent 或 Chat，默认 Agent；首条用户消息发送后固定模式，即使撤回消息也不重新开放切换。更换模式须新建会话，系统提示、消息与任务状态不跨会话继承；正文与历史摘要直接保存会话类型，按类型判断能力，不对旧记录补字段或迁移。
+- Chat 使用独立只读会话入口，不装配任务规划、写入工具、修改验收与撤回备份；与 Agent 共用本轮模块范围、脱敏适配器、基础编写规范和按需知识正文。任务技能在 Chat 中仅作写作参考，候选文案只在回复展示，空白页隐藏执行快捷入口；外部简历操作入口新建 Agent 会话。
+- 两类会话共用 `ResumeAssistantMode` 类型；宿主只向 Chat 提供读取接口，具体工具只在 `resumeChatSession` 装配。Chat 的流式展示维护在 `chat/createChatResponse.ts`，公共请求生命周期与最终状态维护在 `chat/useChatRequest.ts`；新增知识仍只修改原知识或技能目录，不复制正文、不改写技能注册类型。
 
 - 助手可以调用 `packages/resume-agent`，`packages/resume-agent` 不得依赖助手。
 - 简历专属技能、提示词、请求任务、工具与报告解析写入 `packages/resume-agent`；字段、富文本、脱敏和媒体等公共数据能力写入 `packages/resume-core`。

@@ -18,6 +18,7 @@ import { flows, suggestions } from "../flows";
 import type { Flow, FlowStep, SuggestCard } from "../types";
 import { useResumeAssistant } from "../useResumeAssistant";
 import eventBus from "@/utils/modules/eventBus";
+import type { ResumeAssistantMode } from "@snowflake/resume-agent";
 
 import AiMessage from "./aiMessage.vue";
 import ChatInput from "./chatInput/index.vue";
@@ -89,6 +90,16 @@ const chat = computed({
     else resumeAssistantChat.value = value as ResumeAssistantChatRecord;
   },
 });
+// 只有尚未发送消息的本地草稿可以选择模式，已保存会话始终固定。
+const chatMode = computed(() => chat.value?.mode === "chat" ? "chat" : "agent");
+// 首次发送即锁定，保存完成前撤回消息也不会重新开放模式选择。
+const startedDraftId = ref("");
+const modeLocked = computed(() => isChatLoading.value || !draftChat.value || startedDraftId.value === chat.value?.id || currentMessages.value.some((message) => message.role === "user"));
+function selectMode(mode: ResumeAssistantMode) {
+  if (modeLocked.value || generating.value || mode === chatMode.value) return;
+  // 重新创建空草稿，避免把另一种模式的系统提示带入新会话。
+  draftChat.value = aiStore.createNewResumeAssistantChat(mode) ?? null;
+}
 // 生成状态来自宿主注入的引用，模板与输入框共用
 const generating = assistantConfig.generating;
 const isGenerating = computed(() => generating.value);
@@ -139,6 +150,8 @@ function updateCollapsedStatus(index: number, type: "content" | "thought") {
  */
 function addMessage(msg: Partial<Message>) {
   if (!chat.value) return;
+  // 在异步持久化开始前固定本会话模式。
+  if (msg.role === "user") startedDraftId.value = chat.value.id;
   chat.value.messages.push({
     ...createDefaultMessage(),
     ...msg,
@@ -438,6 +451,8 @@ watch(
  */
 const handleSuggest = (payload: Pick<SuggestCard, "flow">) => {
   if (generating.value || isChatLoading.value) return;
+  // 聊天模式不进入任何简历执行流程。
+  if (chatMode.value === "chat") return;
   // 旧外部流程入口同样转到独立弹窗，不向聊天追加优化消息。
   if (payload?.flow === "oneKeyOptimize") {
     eventBus.emit("resume-open-optimize");
@@ -624,6 +639,9 @@ watch(
   <div class="relative flex h-full w-full flex-col overflow-hidden bg-sf-primary py-3 select-text">
     <ChatHeader
       :messages="navMessages"
+      :mode="chatMode"
+      :mode-locked="modeLocked"
+      @select-mode="selectMode"
       :is-generating="isGenerating"
       @open-chat-list="chatListVisible = true"
       @new-chat="createNewChat"
@@ -631,7 +649,8 @@ watch(
     />
     <SfScrollbar ref="chatContainer" class="w-full flex-1">
       <EmptyState
-        :suggestions="suggestions"
+        :suggestions="chatMode === 'agent' ? suggestions : []"
+        :mode="chatMode"
         :selected-modules="selectedModules"
         :remove-module="removeSelectedModule"
         @suggest="handleSuggest"

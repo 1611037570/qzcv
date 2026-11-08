@@ -6,10 +6,6 @@ vi.mock("@/stores/modules/resume/config/defaultConfig", () => ({
   ALL_MODULE_KEY: "all",
 }));
 
-vi.mock("./oneVOne.vue", () => ({
-  default: { template: "<div />" },
-}));
-
 const suggestions = [
   {
     icon: "ph:rocket-launch-duotone",

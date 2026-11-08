@@ -36,6 +36,7 @@ export type {
   SkillRegistration,
   SkillResource,
   SkillRole,
+  ResumeAssistantMode,
 } from "./types";
 export {
   resumeReferenceSkills,
@@ -49,6 +50,8 @@ export type { ResumeChatInput } from "./tasks/chat";
 export { resolveResumeAgentTaskProfile } from "./tasks/registry";
 export { createDefaultAssistantPrompt } from "./prompts/defaultAssistant";
 export { createResumeTools, RESUME_LANG_CODES } from "./tools";
+export { createResumeChatSession } from "./runtime/resumeChatSession";
+export type { ResumeChatContext, CreateResumeChatSessionOptions } from "./runtime/resumeChatSession";
 export type {
   ResumeAddedRecord,
   ResumeOperationResult,

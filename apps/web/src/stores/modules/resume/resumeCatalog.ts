@@ -1,4 +1,8 @@
+import type { ResumeAssistantMode } from "@snowflake/resume-agent";
+
 export type AiChatSummary = {
+  // 历史列表展示会话创建时确定的类型。
+  mode: ResumeAssistantMode;
   id: string;
   title: string;
   createTime: number;

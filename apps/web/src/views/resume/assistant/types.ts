@@ -1,6 +1,6 @@
 // AI 助手宿主配置类型：技能与工具由调用方提供，chat 引擎不内置业务内容
 import type { ReactConfig, ReactTool } from "@/apis/llm/react";
-import type { ResumeAgentTaskProfile, SkillResource } from "@snowflake/resume-agent";
+import type { ResumeAgentTaskProfile, ResumeChatContext, SkillResource } from "@snowflake/resume-agent";
 import type { Ref } from "vue";
 import type { ResumeChangeCallbacks } from "./changes/types";
 
@@ -61,6 +61,8 @@ export interface AssistantConfig {
   generating: Ref<boolean>;
   // 首次请求时解析工具与能力，可选回调仅接收本轮实际改动。
   resolveTools: (context?: Record<string, unknown>, changes?: ResumeChangeCallbacks) => Promise<AssistantResources>;
+  // 只读接口供 Chat 入口自行装配工具，不暴露写入能力。
+  chatContext: ResumeChatContext;
   // 工具执行错误回调：由宿主决定恢复或中断，引擎只负责转交
   onToolError?: ReactConfig["onToolError"];
   // 请求前准备本轮读取范围，与 afterRequest 成对使用

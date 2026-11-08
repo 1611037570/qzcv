@@ -18,6 +18,8 @@ import type { AssistantConfig } from "../types";
 // 导入默认提示词，每次请求提级到用户消息前避免遗忘规则
 import { defaultPrompt } from "../routing/defaultPrompt";
 import type { ResumeChangeState } from "../changes/types";
+import type { AgentRunResult } from "@snowflake/agent";
+import { createChatResponse } from "./createChatResponse";
 // 定义 useChatRequest 的配置选项接口
 interface UseChatRequestOptions {
   chat: Ref<Chat>; // 当前聊天会话
@@ -74,8 +76,8 @@ export const useChatRequest = ({
   watch(() => resumeStore.currentItem?.id, () => { messageChanges.value = {}; }, { flush: "sync" });
   // 用于取消当前请求的函数引用
   let abortRequest: (() => void) | null = null;
-  // 当前简历 Agent 会话引用，用于中止统一执行链。
-  let agentSession: ResumeAgentSession | null = null;
+  // 两类会话共用执行与取消入口，任务快照只属于 Agent。
+  let activeSession: ResumeAgentSession | ReturnType<typeof createChatResponse> | null = null;
   // 请求版本号，用于避免旧请求干扰
   let requestVersion = 0;
   // 组件是否已卸载标记
@@ -135,7 +137,7 @@ export const useChatRequest = ({
       if (!isCurrent() || !lastMsg) return;
       lastMsg.requestStatus = "generating";
       lastMsg.stepLabel = "正在生成回复…";
-      // 候选答案须经完成条件校验，正文只在 onFinal 中展示。
+      // 这里只更新状态与计时，正文由各模式的响应入口维护。
       if (!timers.reply) {
         if (timers.thinking) clearInterval(timers.thinking);
         timers.thinking = null;
@@ -167,8 +169,10 @@ export const useChatRequest = ({
     const requestResumeId = resumeStore.currentItem?.id || "";
     const requestChatId = chat.value?.id || "";
     const requestTaskId = `${requestResumeId}:${currentRequestVersion}`;
+    // 会话模式固定，本轮请求不跟随界面中的其他草稿变化。
+    const isChatMode = chat.value?.mode === "chat";
     // 请求前备份简历，撤回修改时恢复
-    const backup = captureBackup?.();
+    const backup = isChatMode ? null : captureBackup();
     // 辅助函数：检查当前请求是否仍为最新且组件未卸载
     const isCurrentRequest = () =>
       !isUnmounted &&
@@ -191,6 +195,19 @@ export const useChatRequest = ({
       totalTokenUsage += tokens;
       if (lastMsg) lastMsg.total_tokens = totalTokenUsage;
     };
+    // 两类回复统一处理结束状态，写入证据与任务快照由 Agent 单独维护。
+    const finishResponse = (result: AgentRunResult) => {
+      if (!isCurrentRequest() || !lastMsg) return;
+      if (result.status === "aborted") lastMsg.requestStatus = "stopped";
+      else {
+        lastMsg.content = result.status === "error"
+          ? describeResumeAiError(result.error ?? new Error(result.reason?.message || "AI 请求失败"))
+          : result.answer;
+        lastMsg.requestStatus = result.status === "error" || result.status === "incomplete" ? "error" : "success";
+      }
+      lastMsg.stepLabel = "";
+      scrollToBottom();
+    };
 
     try {
       // 请求前由调用方准备本轮读取范围
@@ -201,15 +218,16 @@ export const useChatRequest = ({
       const entryFlow = requestMessage?.requestContext?.entryFlow;
       beforeRequest?.(requestMessage?.requestContext, requestTaskId);
       // 构建消息列表（只复制 role 和 content，跳过带上下文标记的引导对话）
-      const defaultSkill = defaultPrompt();
+      const defaultSkill = defaultPrompt(isChatMode ? "chat" : "agent");
       // 最近任务状态交给同一个 Agent 承接“继续”“再短一点”等省略表达。
-      const previousTask = [...currentMessages.value]
+      const previousTask = isChatMode ? undefined : [...currentMessages.value]
         .reverse()
         .find((message) => message.resumeTask)?.resumeTask;
       let messages = currentMessages.value
         .filter(
           (message) =>
             !message.skipContext &&
+            (!isChatMode || message.role === "user" || message.role === "assistant") &&
             message.systemSkillId !== defaultSkill.id &&
             !message.systemSkillId &&
             !(
@@ -248,6 +266,23 @@ export const useChatRequest = ({
       lastMsg = currentMessages.value[currentMessages.value.length - 1] ?? null;
       if (lastMsg && backup != null) requestBackups.set(lastMsg, backup);
       state = createChatState(lastMsg, isCurrentRequest, addTokenUsage);
+      // Chat 走独立只读入口，不创建任务契约、写入观察或完成校验。
+      if (isChatMode) {
+        state.onReasoning();
+        if (!lastMsg) return;
+        activeSession = createChatResponse({
+          dataContext: config.chatContext, // 仅提供本轮的读取接口。
+          message: lastMsg, // 当前聊天回复。
+          isCurrent: isCurrentRequest, // 共用会话失效判断。
+          thinking: thinkMode.value, // 沿用思考设置。
+          state, // 共用计时、分析与用量更新。
+          onToolError, // 共用资料读取错误处理。
+          onFinal: finishResponse, // 共用回复状态处理。
+          scrollToBottom, // 跟随本轮输出。
+        });
+        await activeSession.run(messages);
+        return;
+      }
       // 运行观测：从请求开始记录任务契约、工具证据与完成校验结论
       if (lastMsg) {
         lastMsg.agentRun = {
@@ -294,7 +329,7 @@ export const useChatRequest = ({
       // 加载期间取消或切换会话时不再启动请求，工具执行前再次核对所属任务
       if (!isCurrentRequest()) return;
       // 简历 Agent 会话统一解析入口任务、装配工具并启动 ReAct。
-      agentSession = await createResumeAgentSession({
+      activeSession = await createResumeAgentSession({
         taskId: requestTaskId,
         source: typeof entryFlow === "string" ? entryFlow : "chat",
         // 规划缺省时用本轮用户原话回填任务目标
@@ -377,7 +412,7 @@ export const useChatRequest = ({
             }
             state?.onReasoning(delta);
           },
-          onContent: (data) => state?.onContent(data),
+          onContent: () => state?.onContent(),
           onToken: (totalTokens) => state?.onToken(totalTokens),
           onAct: (toolCall) => {
             if (!isCurrentRequest() || !lastMsg) return;
@@ -392,25 +427,14 @@ export const useChatRequest = ({
           if (!isCurrentRequest() || !lastMsg) return;
           // ReAct 自行依据任务理解与工具结果收口，写入记录只供撤回使用。
           lastMsg.resumeTask = task;
-          // 明确消费运行状态，取消保留当前显示，失败仍保留已写入改动与撤回入口。
-          if (result.status === "aborted") {
-            lastMsg.requestStatus = "stopped";
-          } else {
-            lastMsg.content = result.status === "error"
-              ? describeResumeAiError(result.error ?? new Error(result.reason?.message || "AI 请求失败"))
-              : result.answer;
-            lastMsg.requestStatus = result.status === "error" || result.status === "incomplete" ? "error" : "success";
-          }
-          lastMsg.stepLabel = "";
-          // 完成后保留过程区的展开状态，方便直接查看本次执行内容。
-          scrollToBottom();
+          finishResponse(result);
           setTimeout(() => {
             if (isCurrentRequest()) scrollToBottom();
           }, 10);
         },
       });
       // 会话内部注入任务上下文并执行完整工具循环。
-      await agentSession.run(messages);
+      await activeSession.run(messages);
     } catch (error: any) {
       // 若已卸载则忽略
       if (!isCurrentRequest()) return;
@@ -437,10 +461,10 @@ export const useChatRequest = ({
         if (lastMsg?.agentRun) {
           lastMsg.agentRun.durationMs = finishTime - lastMsg.agentRun.startedAt;
           lastMsg.agentRun.tokens = lastMsg.total_tokens;
-          lastMsg.agentRun.task = agentSession?.getTask() ?? lastMsg.agentRun.task;
+          if (activeSession && "getTask" in activeSession) lastMsg.agentRun.task = activeSession.getTask() ?? lastMsg.agentRun.task;
         }
         abortRequest = null;
-        agentSession = null;
+        activeSession = null;
         if (lastMsg?.typing) lastMsg.typing = false;
         if (chat.value) chat.value.updateTime = finishTime;
         // 按钮等尾部内容在 typing=false 后才渲染，收尾后补一次滚动避免被遮挡
@@ -458,8 +482,8 @@ export const useChatRequest = ({
     requestVersion += 1;
     abortRequest?.(); // 取消请求
     abortRequest = null;
-    agentSession?.abort();
-    agentSession = null;
+    activeSession?.abort();
+    activeSession = null;
     // 停止请求时同步停止耗时计数
     if (activeTimers) {
       clearTimers(activeTimers);
@@ -487,8 +511,8 @@ export const useChatRequest = ({
     requestVersion += 1; // 使所有旧请求失效
     abortRequest?.();
     abortRequest = null;
-    agentSession?.abort();
-    agentSession = null;
+    activeSession?.abort();
+    activeSession = null;
     if (activeTimers) {
       clearTimers(activeTimers);
       activeTimers = null;

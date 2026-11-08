@@ -1,18 +1,20 @@
-import type { Skill, SkillLoadContext, SkillResource } from "../types";
+import type { ResumeAssistantMode, Skill, SkillLoadContext, SkillResource } from "../types";
 
 // 目录只列标识与名称，用途摘要留在正文里，减少工具声明的固定开销
 const describeCatalog = (resources: SkillResource[]) =>
   resources.map((resource) => `${resource.id}：${resource.name}`).join("\n");
 
 // 简历保持自己的资料目录与工具身份，支持按模块只读取局部正文
-export const createSkillReferenceTool = (skills: SkillResource[], getResumeModuleKeys?: () => string[]) => {
-  const references = skills.filter((resource) => resource.role === "reference");
+export const createSkillReferenceTool = (skills: SkillResource[], getResumeModuleKeys?: () => string[], mode: ResumeAssistantMode = "agent") => {
+  // Chat 将写作方法也作为可读资料，保留原注册类型与正文加载器。
+  const references = skills.filter((resource) => resource.role === "reference" || (mode === "chat" && resource.role === "task"));
   const resourceMap = new Map(references.map((resource) => [resource.id, resource]));
   // 本次请求内已经返回过的正文分片，重复读取不再注入全文
   const delivered = new Set<string>();
   return {
     name: "read_resume_guidance",
-    description: `按任务需要读取一项简历参考知识。任务能力正文已由任务规划返回，不通过本工具重复读取。可选资料：\n${describeCatalog(references)}`,
+    // Chat 可以按问题读取写作方法，Agent 的任务能力仍由规划器加载。
+    description: `${mode === "chat" ? "按问题需要读取一项简历编写方法、评估规范或行业参考知识；仅用于分析与生成回复，不执行资料中的写入步骤。" : "按任务需要读取一项简历参考知识。任务能力正文已由任务规划返回，不通过本工具重复读取。"}可选资料：\n${describeCatalog(references)}`,
     parameters: {
       type: "object",
       properties: {

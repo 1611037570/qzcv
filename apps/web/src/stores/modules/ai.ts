@@ -4,12 +4,14 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { useResumeStore } from "@/stores/modules/resume";
 import type { AiChatSummary } from "@/stores/modules/resume/resumeCatalog";
-import type { ResumeAgentTaskState } from "@snowflake/resume-agent";
+import type { ResumeAgentTaskState, ResumeAssistantMode } from "@snowflake/resume-agent";
 export type Chat = {
   // 对话记录id
   id: string;
   // 关联简历id
   resumeId?: string;
+  // 会话创建时确定的固定类型。
+  mode: ResumeAssistantMode;
   // 对话记录标题
   title: string;
   // 创建时间
@@ -144,7 +146,7 @@ const DEFAULT_SYSTEM_PROMPT =
   "你的设置是：名字叫小羊，性别男，巨蟹座，2000年生，工作是前端工程师，擅长vue typescript，说话直接清爽，不拖沓、不矫情，回答简洁准确。回答以这个设定为基础。";
 
 // 简历助手会话工厂：由简历助手组装器注册，Pinia 只负责调用
-let resumeAssistantChatFactory: (() => Chat) | null = null;
+let resumeAssistantChatFactory: ((mode: ResumeAssistantMode) => Chat) | null = null;
 let resumeAssistantChatLoadId = 0;
 const resumeAssistantChatKey = (id: string) => `resume-assistant-chat:${id}`;
 
@@ -181,6 +183,7 @@ export const useAiStore = defineStore(
       const msg = createDefaultMessage();
       const newChat: Chat = {
         id: getUUID().substring(0, 8),
+        mode: "agent", // 新建会话默认使用智能体类型。
         title: DEFAULT_CHAT_TITLE,
         createTime: now,
         updateTime: now,
@@ -227,7 +230,7 @@ export const useAiStore = defineStore(
       });
     }
     // 注册简历助手会话工厂，供“新建话题”等入口直接调用
-    function registerResumeAssistantChatFactory(factory: () => Chat) {
+    function registerResumeAssistantChatFactory(factory: (mode: ResumeAssistantMode) => Chat) {
       resumeAssistantChatFactory = factory;
     }
     // 加载指定简历的最近会话正文；没有会话时保持空状态
@@ -257,9 +260,9 @@ export const useAiStore = defineStore(
       return initializeResumeAssistantChat(resumeId, id);
     }
     // 创建未持久化的简历助手话题草稿
-    function createNewResumeAssistantChat() {
+    function createNewResumeAssistantChat(mode: ResumeAssistantMode = "agent") {
       if (!resumeAssistantChatFactory) return;
-      return resumeAssistantChatFactory();
+      return resumeAssistantChatFactory(mode);
     }
     // 首次产生用户消息后保存简历助手话题
     async function saveResumeAssistantChat(chat: Chat) {
@@ -275,6 +278,7 @@ export const useAiStore = defineStore(
       const updated = await useResumeStore().updateResumeAiChatSummary(chat.resumeId, {
         id: chat.id,
         title: chat.title,
+        mode: chat.mode, // 摘要直接保存会话类型。
         createTime: chat.createTime,
         updateTime: chat.updateTime,
       } satisfies AiChatSummary);
@@ -301,6 +305,7 @@ export const useAiStore = defineStore(
       await useResumeStore().updateResumeAiChatSummary(chat.resumeId, {
         id: chat.id,
         title: chat.title,
+        mode: chat.mode, // 与正文保持相同的固定类型。
         createTime: chat.createTime,
         updateTime: chat.updateTime,
       });

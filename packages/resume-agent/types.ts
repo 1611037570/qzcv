@@ -1,6 +1,9 @@
 import type { ResumeAgentCompletionPolicy } from "./runtime/types";
 import type { AgentSkill } from "@snowflake/agent";
 
+// 简历助手会话创建后固定模式，聊天只读取，智能体可执行修改。
+export type ResumeAssistantMode = "agent" | "chat";
+
 export type SkillRole =
   // 每轮对话始终提供的基础规则。
   | "resident"

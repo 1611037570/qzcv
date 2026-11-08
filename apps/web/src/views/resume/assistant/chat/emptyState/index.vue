@@ -2,12 +2,13 @@
 import { ALL_MODULE_KEY } from "@/stores/modules/resume/config/defaultConfig";
 import { computed, ref } from "vue";
 import type { SuggestCard } from "../../types";
-import OneVOne from "./oneVOne.vue";
 import OneKeyIntro from "../../../editor/components/oneKeyIntro.vue";
 import { useOneKeyActions, type OneKeyFlow } from "../../../editor/hooks/useOneKeyActions";
+import type { ResumeAssistantMode } from "@snowflake/resume-agent";
 
 // 当前操作模块列表：选中哪些模块就遍历展示哪些模块
 const props = defineProps<{
+  mode?: ResumeAssistantMode; // 当前空白会话模式，聊天只展示建议能力。
   suggestions: SuggestCard[];
   selectedModules?: any[];
   removeModule?: (key: string) => void;
@@ -63,18 +64,18 @@ const startFeature = () => {
   <div
     class="relative flex h-full w-full flex-col items-center justify-center gap-3 text-center select-none"
   >
-    <!-- 1V1 人工优化入口 -->
-    <OneVOne />
-
     <div class="flex-c gap-3 text-2xl font-bold text-sf-base select-none">
       你好，我是 <span class="text-sf-theme">{{ $t("core.router.resumeAI") }}</span
       >AI助手
       <SfIcon icon="lucide:sparkles" class="text-sf-theme" size="6" />
     </div>
     <div class="flex flex-wrap items-center justify-center gap-3 text-sm font-medium text-sf-base">
-      <span>能通过对话帮你打造受HR青睐的专业简历。</span>
+      <span>{{ props.mode === 'chat' ? '结合所选简历与编写规范，为你分析问题、提供建议和候选文案。' : '能通过对话帮你打造受HR青睐的专业简历。' }}</span>
     </div>
-    <div class="flex flex-wrap items-center justify-center gap-x-3 text-sm">✨📄你可以这样问</div>
+    <div class="flex flex-wrap items-center justify-center gap-x-3 text-sm">
+      {{ props.mode === 'chat' ? '可以问：这段经历怎么表达更清楚？与目标岗位有哪些差距？' : '✨📄你可以这样问' }}
+    </div>
+    <p v-if="props.mode === 'chat'" class="text-sm text-sf-text-2">只提供分析和文案，不直接修改简历；会话开始后模式固定。</p>
     <!-- 一键优化与一键调整并排置顶并突出主题色 -->
     <div
       v-if="oneKeySuggestions.length"
@@ -91,7 +92,7 @@ const startFeature = () => {
       </button>
     </div>
     <!-- 建议操作按钮 -->
-    <div class="grid w-full max-w-md grid-cols-2 gap-3">
+    <div v-if="commonSuggestions.length" class="grid w-full max-w-md grid-cols-2 gap-3">
       <button
         v-for="card in commonSuggestions"
         :key="card.title"
@@ -124,7 +125,7 @@ const startFeature = () => {
           @click="props.removeModule?.(item.key)"
         />
       </div>
-      一键操作
+      {{ props.mode === 'chat' ? '提供分析与建议' : '一键操作' }}
     </div>
 
     <OneKeyIntro v-model="introVisible" @confirm="confirmOneKeyIntro" />

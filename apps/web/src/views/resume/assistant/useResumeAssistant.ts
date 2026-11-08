@@ -12,6 +12,7 @@ import { collectResumeAdjustmentIssues, useProgress } from "../editor/hooks/useP
 import { useResumeContext } from "./context/useResumeContext";
 import { createResumeChangeObserver } from "./changes/captureChanges";
 import type { ResumeChangeCallbacks } from "./changes/types";
+import { createDefaultAssistantPrompt, type ResumeAssistantMode } from "@snowflake/resume-agent";
 
 // 简历助手唯一组装器：入口只消费本模块产出的 config 与创建对话方法
 export const useResumeAssistant = () => {
@@ -90,6 +91,11 @@ export const useResumeAssistant = () => {
   const config: AssistantConfig = {
     generating: isGenerating,
     resolveTools,
+    // 两类会话共用读取范围与脱敏，Chat 的工具由领域入口维护。
+    chatContext: {
+      getResumeData: resumeContext.getResumeData, // 使用本轮冻结的读取范围。
+      getResumeModuleKeys, // 仅用于参考知识的字段归属。
+    },
     // 工具名未注册属可恢复错误：返回错误与可用工具清单让模型重调；其它执行错误保持中断
     onToolError: ({ error, tools }) => {
       if (error instanceof ToolNotFoundError) {
@@ -106,8 +112,10 @@ export const useResumeAssistant = () => {
   };
 
   // 创建对话：常驻技能按清单顺序作为系统消息注入
-  const createChat = () => {
-    const resident = residentSkills.map((createSkill) => createSkill());
+  const createChat = (mode: ResumeAssistantMode) => {
+    const resident = mode === "chat"
+      ? [createDefaultAssistantPrompt("chat")]
+      : residentSkills.map((createSkill) => createSkill());
     const [first, ...rest] = resident;
     // 常驻技能清单为空时明确中断，不生成缺少系统规则的对话
     if (!first) throw new Error("简历助手缺少常驻技能");
@@ -118,6 +126,8 @@ export const useResumeAssistant = () => {
       systemSkillId: first.id,
       typing: false,
     });
+    // 模式在首条消息前确定，随后随会话持久化。
+    newChat.mode = mode;
     // 简历助手对话仅服务于当前正在编辑的简历
     if (resumeStore.currentItem?.id) {
       newChat.resumeId = resumeStore.currentItem.id;
