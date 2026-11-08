@@ -127,6 +127,7 @@ export const useResumeStore = defineStore(
     } = runtime;
     const history = createResumeHistory({ currentItem, refreshRuntime: editor.refreshRuntime });
     const {
+      canUndo,
       undoStack,
       redoStack,
       onContentChange,
@@ -389,6 +390,7 @@ export const useResumeStore = defineStore(
       setFocusMode,
       undo,
       redo,
+      canUndo, // 历史基线与待入栈编辑共同决定的撤销可用状态
       undoStack,
       redoStack,
       resetHistoryBase,

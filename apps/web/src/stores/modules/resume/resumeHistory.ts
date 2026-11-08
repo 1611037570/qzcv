@@ -224,6 +224,10 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
     }
     return current;
   };
+  // 基线本身不可撤销，尚未防抖入栈的实际编辑仍应立即允许撤销。
+  const canUndo = computed(() => historyEnabled.value && !!currentItem.value && versions.value.length > 0 && (
+    versions.value.length > 1 || !sameCapture(captureCore(currentItem.value), versions.value[0])
+  ));
   const undo = () => {
     recordHistory.flush();
     pushHistory.flush();
@@ -263,6 +267,7 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
   };
 
   return {
+    canUndo, // 当前是否存在可撤销的实际编辑
     undoStack,
     redoStack,
     historyEnabled,
