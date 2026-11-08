@@ -27,18 +27,17 @@ defineExpose({} as ComponentInstance<typeof ElDatePicker>);
 </script>
 
 <style lang="scss">
-:deep(.el-input__wrapper) {
-  /* 移除阴影 */
+/* 日期输入容器去掉默认阴影与底色，跟随卡片背景，与输入框、下拉框保持一致。
+   说明：模板用 h() 渲染 ElDatePicker，作用域属性挂不到其根节点，:deep() 无法命中，
+   因此改用全局样式按 el-date-editor 类名限定范围；
+   单选日期的输入容器是后代节点，区间日期的根节点自身就是输入容器，两条分别命中。 */
+.el-date-editor .el-input__wrapper,
+.el-date-editor.el-input__wrapper {
   box-shadow: none;
-  /* 移除背景 */
-  background-color: transparent !important;
+  background-color: transparent;
 }
 
-.el-range-editor.el-input__wrapper {
-  //
-  background-color: revert-layer !important;
-}
-
+/* 日期弹层挂在 body 下，同样用全局样式设置圆角 */
 .el-date-picker {
   border-radius: 24px !important;
 }

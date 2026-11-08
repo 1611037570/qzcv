@@ -8,7 +8,7 @@ import {
 } from "@/stores";
 import { useScroll } from "@vueuse/core";
 import { ElMessage } from "element-plus";
-import { computed, inject, nextTick, onActivated, onBeforeUnmount, ref, watch } from "vue";
+import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { debounce } from "lodash-es";
 import { useChatRequest } from "./useChatRequest";
@@ -67,7 +67,6 @@ const { selectedModule } = storeToRefs(resumeStore);
 const draftChat = ref<Chat | null>(null);
 const isChatLoading = ref(false);
 let chatLoadToken = 0;
-let hasActivated = false;
 // 当前简历只展示自身的助手对话
 const resumeId = computed(() => resumeStore.currentItem?.id || "");
 const resumeAssistantChats = computed(
@@ -104,11 +103,7 @@ function createNewChat() {
   chatListVisible.value = false;
 }
 
-// AI 标签再次进入时始终回到空白话题，不沿用离开前的会话标识。
-onActivated(() => {
-  if (hasActivated) createNewChat();
-  hasActivated = true;
-});
+// 组件被 KeepAlive 缓存：切换标签返回时保留离开前的当前会话，仅刷新后从空白话题开始。
 
 async function selectChat(id: string) {
   if (generating.value) return;

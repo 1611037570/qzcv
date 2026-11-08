@@ -322,15 +322,15 @@ export const DEFAULT_USER_FORM = [
             key: "position",
             label: "求职岗位",
             category: "常用", // 常驻显示在常用字段入口。
-            component: "positionPicker",
+            component: "input", // 求职岗位改为直接输入，不再使用岗位级联下拉。
             iconKey: "work-briefcase",
             tip: "推荐必填",
             addable: true,
             defaultAdded: true,
             required: true,
-            dict: "position",
             props: {
-              placeholder: "请选择或输入求职岗位",
+              placeholder: "请输入求职岗位",
+              clearable: true,
             },
           }),
           // 年龄通过出生日期计算，也可切换为展示日期
