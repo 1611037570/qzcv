@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { useOverlayKeys } from "@/hooks/modules/useOverlayKeys";
 import resumeBeta from "@/assets/images/resume/resume-beta.awebp";
 import resumeBeta1 from "@/assets/images/resume/beta1.webp";
-import resumeV1 from "@/assets/images/resume/v1.webp";
+import resumeV1 from "@/assets/images/resume/v1.png";
 import resumeV2 from "@/assets/images/resume/v2.webp";
 
 const visible = ref(false);

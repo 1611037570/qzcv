@@ -23,7 +23,7 @@
 | 2024-02-28 | 从动态表单实验出发，成为轻舟简历的起点。[技术文章](https://juejin.cn/post/7349433271493034034) · [早期截图](apps/web/src/assets/images/resume/resume-beta.awebp) |
 | 2024-11-22 | 简历生成器 Beta1.0——让经历跃然纸上。[版本截图](apps/web/src/assets/images/resume/beta1.webp) |
 | 2025-11-22 | 升级 Vue 3 + Vite + TypeScript + NestJS，采用 pnpm Monorepo 架构。 |
-| 2026-08-15 | 轻舟简历 V1.0，完善简历制作体验。[版本截图](apps/web/src/assets/images/resume/v1.webp) |
+| 2026-08-15 | 轻舟简历 V1.0，完善简历制作体验。[版本截图](apps/web/src/assets/images/resume/v1.png) |
 | 2026-09-16 | 启用新域名 qzcv.net。 |
 | 2026-11-22（计划） | 轻舟简历 V2.0，以 AI 串联简历生成、内容优化、岗位适配与面试训练。[版本截图](apps/web/src/assets/images/resume/v2.webp) |
 
