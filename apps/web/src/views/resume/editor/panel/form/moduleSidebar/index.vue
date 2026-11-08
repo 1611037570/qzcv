@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useDraggable } from "vue-draggable-plus";
+import { useMediaQuery } from "@vueuse/core";
 import { useResumeStore } from "@/stores";
 import { moveFieldByKey } from "@/components/business/dynamicForm/api";
 import {
@@ -15,6 +16,11 @@ import MoreActions from "./moreActions.vue";
 import ResumeClosing from "@/views/resume/components/resumeClosing.vue";
 
 defineOptions({ name: "ModuleSidebar" });
+
+// 移动端强制使用紧凑模式，桌面端由按钮切换，两端共用同一套布局。
+const isMobile = useMediaQuery("(max-width: 767px)");
+const compact = ref(false);
+const isCompact = computed(() => isMobile.value || compact.value);
 
 // 模块名称最多显示的字数，超出截断，保证模块树宽度稳定
 const NAME_MAX = 6;
@@ -113,7 +119,32 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <aside class="module-tree flex h-full min-h-0 min-w-0 flex-col bg-sf-primary p-1.5">
+  <aside
+    class="module-tree group/module-tree flex h-full min-h-0 min-w-0 shrink-0 flex-col bg-sf-primary p-1.5"
+    :class="{ 'module-tree-compact': isCompact }"
+  >
+    <!-- 顶部用导航标题配合图标按钮控制宽度，移动端隐藏整行。 -->
+    <div
+      v-if="!isMobile"
+      class="flex h-9 shrink-0 items-center justify-between gap-3 group-[.module-tree-compact]/module-tree:justify-center"
+    >
+      <span class="text-xs font-medium text-sf-text-3 group-[.module-tree-compact]/module-tree:hidden">{{ $t('moduleNavigation') }}</span>
+      <SfTooltip
+        :content="$t(compact ? 'expandModuleTree' : 'collapseModuleTree')"
+        placement="right"
+        class="block shrink-0"
+      >
+        <button
+          type="button"
+          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-3xl p-0 text-sf-text-2 transition-colors hover:bg-sf-bg"
+          :aria-label="$t(compact ? 'expandModuleTree' : 'collapseModuleTree')"
+          :aria-expanded="!compact"
+          @click="compact = !compact"
+        >
+          <SfIcon :icon="compact ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="4" />
+        </button>
+      </SfTooltip>
+    </div>
     <!-- 完成度：固定在模块列表上方，随简历内容实时更新 -->
     <ModuleProgress />
     <SfScrollbar class="module-list-scroll min-h-0 min-w-0 flex-1">
@@ -183,7 +214,7 @@ onUnmounted(() => {
         @click="system.moreOperationsExpanded = false"
       >
         <SfIcon icon="fa-solid:caret-up" size="4" />
-        <span class="max-md:hidden">{{ $t("collapseSidebarMore") }}</span>
+        <span class="group-[.module-tree-compact]/module-tree:hidden">{{ $t("collapseSidebarMore") }}</span>
       </button>
       <button
         v-else
@@ -193,7 +224,7 @@ onUnmounted(() => {
         @click="system.moreOperationsExpanded = true"
       >
         <SfIcon icon="fa-solid:caret-down" size="4" />
-        <span class="max-md:hidden">{{ $t("expandSidebarMore") }}</span>
+        <span class="group-[.module-tree-compact]/module-tree:hidden">{{ $t("expandSidebarMore") }}</span>
       </button>
       <div v-if="system.moreOperationsExpanded" class="max-h-[50vh] min-h-0 overflow-y-auto">
         <MoreActions />
@@ -211,7 +242,7 @@ onUnmounted(() => {
           aria-haspopup="menu"
         >
           <SfIcon icon="mdi:dots-horizontal" size="4" />
-          <span class="max-md:hidden">{{ $t("moreOperations") }}</span>
+          <span class="group-[.module-tree-compact]/module-tree:hidden">{{ $t("moreOperations") }}</span>
         </button>
         <template #dropdown>
           <div class="flex w-40 flex-col gap-1.5 rounded-2xl border border-sf-b bg-sf-primary p-1.5">
@@ -221,9 +252,9 @@ onUnmounted(() => {
       </SfDropdown>
       <AddModule />
     </div>
-    <!-- 收尾文案覆盖共用组件的辅助色，与模块树统一；窄屏隐藏文案 -->
+    <!-- 收尾文案覆盖共用组件的辅助色，紧凑模式隐藏文案 -->
     <ResumeClosing
-      class="max-md:hidden shrink-0 border-t border-sf-b px-1 pt-1.5 text-center text-[11px] leading-4 text-sf-text!"
+      class="group-[.module-tree-compact]/module-tree:hidden shrink-0 border-t border-sf-b px-1 pt-1.5 text-center text-[11px] leading-4 text-sf-text!"
     />
   </aside>
 </template>
@@ -253,12 +284,9 @@ onUnmounted(() => {
   box-shadow: 0 14px 30px rgba(17, 24, 39, 0.18);
 }
 
-/* 移动端编辑区宽度有限，收回到只显示图标：名称、数量与内边距一并收起 */
-@media (max-width: 767px) {
-  .module-tree {
-    width: 48px;
-    padding: 6px;
-  }
+/* 紧凑模式统一收起名称、数量与行内留白，不按设备重复维护布局。 */
+.module-tree-compact {
+  width: 48px;
 
   .rail-row {
     justify-content: center;
@@ -272,7 +300,15 @@ onUnmounted(() => {
     display: none;
   }
 
-  /* 触屏端保留模块图标并关闭悬停拖拽层，单次点击直接交给模块行。 */
+  :deep(.rail-action) {
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+  }
+}
+
+/* 触屏端保留模块图标并关闭悬停拖拽层，单次点击直接交给模块行。 */
+@media (max-width: 767px) {
   .module-sidebar-icon {
     opacity: 1 !important;
   }
@@ -281,10 +317,5 @@ onUnmounted(() => {
     display: none;
   }
 
-  .rail-action {
-    justify-content: center;
-    gap: 0;
-    padding: 0;
-  }
 }
 </style>

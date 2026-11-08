@@ -138,7 +138,7 @@ const getTodoList = (item) => [
 <template>
   <!-- 操作按钮放在圆环旁，检查摘要下沉到原按钮所在的整行区域。 -->
   <div class="mb-1.5 flex w-full shrink-0 flex-col gap-1 border-b border-sf-b pb-1.5">
-    <div class="flex items-center gap-1 max-md:flex-col">
+    <div class="flex items-center gap-1 group-[.module-tree-compact]/module-tree:flex-col">
       <SfTooltip :content="tooltipText" placement="right" class="block shrink-0">
         <button
           type="button"
@@ -176,20 +176,20 @@ const getTodoList = (item) => [
       </SfTooltip>
       <button
         type="button"
-        class="flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-3xl px-1 text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-60 max-md:w-8 max-md:flex-none max-md:px-0"
+        class="flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-3xl px-1 text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-60 group-[.module-tree-compact]/module-tree:w-8 group-[.module-tree-compact]/module-tree:flex-none group-[.module-tree-compact]/module-tree:px-0"
         :class="aiActionClass"
         :disabled="isGenerating"
         @click="startAiAction"
       >
         <SfIcon :icon="isGenerating ? 'line-md:loading-twotone-loop' : 'lucide:sparkles'" size="3" />
-        <span class="truncate max-md:hidden">{{ aiActionLabel }}</span>
+        <span class="truncate group-[.module-tree-compact]/module-tree:hidden">{{ aiActionLabel }}</span>
       </button>
     </div>
     <!-- 完成时隐藏状态文字，仅展示待处理问题 -->
     <button
       v-if="needsAdjustment"
       type="button"
-      class="flex w-full cursor-pointer flex-col rounded-2xl px-2 text-left text-[10px] leading-4 text-sf-warning transition-colors max-md:hidden"
+      class="flex w-full cursor-pointer flex-col rounded-2xl px-2 text-left text-[10px] leading-4 text-sf-warning transition-colors group-[.module-tree-compact]/module-tree:hidden"
       :aria-label="$t('progressDetail')"
       @click="visible = true"
     >
