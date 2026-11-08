@@ -260,6 +260,8 @@
           </div>
         </div>
       </section>
+      <!-- 项目介绍与简历发展记录统一从首页页尾进入。 -->
+      <ProjectFooter />
     </main>
   </SfScrollbar>
 </template>
@@ -276,6 +278,7 @@ import { getAiServiceOverview } from "@/apis/llm/usage/storage";
 import { resumeTemplateList } from "../template/data/list";
 import HeroSwitcher from "./heroSwitcher.vue";
 import ResumeHomeFaq from "./faq.vue";
+import ProjectFooter from "./projectFooter.vue";
 import OnlineWriters from "../components/onlineWriters.vue";
 // 首页展示区共用真实截图，切换入口后展示对应功能页面。
 import editorShot from "@/assets/images/resume/editor.webp";
