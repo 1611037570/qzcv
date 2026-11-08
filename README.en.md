@@ -10,9 +10,22 @@ Skiff Resume is a free, open-source online resume builder for writing resumes, i
 
 Start with an example or import an existing resume, use AI to draft content, improve experience descriptions, and assess job fit, then continue with interview practice and application tracking.
 
+The project began as a dynamic form experiment in 2024 and gradually grew into a complete resume builder. V1 focused on templates, editing, layout, and export. V2 builds on that foundation with AI-assisted resume generation, content refinement, job tailoring, and interview practice, connecting your experience with the next steps in your job search.
+
 Built with Vue 3, TypeScript, Vite, and NestJS, the project uses a pnpm workspace for its frontend, backend, and shared packages. Resume data, the layout engine, and agent capabilities are maintained separately by responsibility.
 
 [Try Skiff Resume online](https://qzcv.net)
+
+## Project History
+
+| Date | Milestone |
+| --- | --- |
+| 2024-02-28 | A dynamic form experiment became the starting point for Skiff Resume. [Technical article](https://juejin.cn/post/7349433271493034034) · [Early screenshot](apps/web/src/assets/images/resume/resume-beta.awebp) |
+| 2024-11-22 | Resume Generator Beta1.0 — bringing experience to life on paper. [Version screenshot](apps/web/src/assets/images/resume/beta1.webp) |
+| 2025-11-22 | Upgraded to Vue 3 + Vite + TypeScript + NestJS with a pnpm monorepo architecture. |
+| 2026-08-15 | Skiff Resume V1.0, refining the resume creation experience. [Version screenshot](apps/web/src/assets/images/resume/v1.webp) |
+| 2026-09-16 | Introduced the new domain qzcv.net. |
+| 2026-11-22 (planned) | Skiff Resume V2.0, connecting AI-assisted drafting, refinement, job tailoring, and interview practice. [Version screenshot](apps/web/src/assets/images/resume/v2.webp) |
 
 ## Features
 

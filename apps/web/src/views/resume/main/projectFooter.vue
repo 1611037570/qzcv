@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useOverlayKeys } from "@/hooks/modules/useOverlayKeys";
 import resumeBeta from "@/assets/images/resume/resume-beta.awebp";
+import resumeBeta1 from "@/assets/images/resume/beta1.webp";
 import resumeV1 from "@/assets/images/resume/v1.webp";
 import resumeV2 from "@/assets/images/resume/v2.webp";
 
@@ -19,7 +20,7 @@ const milestones = [
   { date: "2026-09-16", /* 历史日期 */ text: "resumeProjectHistoryDomain", /* 历史文案标识 */ },
   { date: "2026-08-15", /* 历史日期 */ text: "resumeProjectHistoryRelease", /* 历史文案标识 */ image: resumeV1, /* 版本截图 */ },
   { date: "2025-11-22", /* 历史日期 */ text: "resumeProjectHistoryStack", /* 历史文案标识 */ },
-  { date: "2024-11-22", /* 历史日期 */ text: "resumeProjectHistoryBeta1", /* 历史文案标识 */ },
+  { date: "2024-11-22", /* 历史日期 */ text: "resumeProjectHistoryBeta1", /* 历史文案标识 */ image: resumeBeta1, /* 版本截图 */ },
   { date: "2024-02-28", /* 历史日期 */ text: "resumeProjectHistoryBeta", /* 历史文案标识 */ url: "https://juejin.cn/post/7349433271493034034", /* 文章发布地址 */ image: resumeBeta, /* 早期截图 */ },
 ];
 

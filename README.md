@@ -10,9 +10,22 @@
 
 你可以从范本开始填写，也可以导入已有简历，借助 AI 生成内容、优化经历、分析岗位匹配情况，并继续进行面试训练和投递记录管理。
 
+项目从 2024 年的一次动态表单实验起步，逐步发展为完整的简历制作工具。V1 围绕模板、编辑、排版与导出完善制作体验；V2 在此基础上，将 AI 简历生成、内容优化、岗位适配与面试训练串联起来，陪你从整理经历走向求职准备。
+
 项目采用 Vue 3、TypeScript、Vite 与 NestJS，使用 pnpm 工作区管理前后端及共享包，简历数据、排版引擎和智能体能力按职责独立维护。
 
 [在线使用轻舟简历](https://qzcv.net)
+
+## 发展历程
+
+| 时间 | 里程碑 |
+| --- | --- |
+| 2024-02-28 | 从动态表单实验出发，成为轻舟简历的起点。[技术文章](https://juejin.cn/post/7349433271493034034) · [早期截图](apps/web/src/assets/images/resume/resume-beta.awebp) |
+| 2024-11-22 | 简历生成器 Beta1.0——让经历跃然纸上。[版本截图](apps/web/src/assets/images/resume/beta1.webp) |
+| 2025-11-22 | 升级 Vue 3 + Vite + TypeScript + NestJS，采用 pnpm Monorepo 架构。 |
+| 2026-08-15 | 轻舟简历 V1.0，完善简历制作体验。[版本截图](apps/web/src/assets/images/resume/v1.webp) |
+| 2026-09-16 | 启用新域名 qzcv.net。 |
+| 2026-11-22（计划） | 轻舟简历 V2.0，以 AI 串联简历生成、内容优化、岗位适配与面试训练。[版本截图](apps/web/src/assets/images/resume/v2.webp) |
 
 ## 主要功能
 
