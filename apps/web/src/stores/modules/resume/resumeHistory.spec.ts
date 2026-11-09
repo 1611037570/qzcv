@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { createResumeHistory } from "./resumeHistory";
 
 // 头像与作品图的 base64 体积远大于正文，用例里用短字符串代替即可区分版本
@@ -29,7 +29,7 @@ describe("resumeHistory 媒体撤销", () => {
     item = createItem();
     currentItem = computed(() => item);
     refreshRuntime = vi.fn();
-    history = createResumeHistory({ currentItem, refreshRuntime });
+    history = createResumeHistory({ currentItem, refreshRuntime, isFittingOnePage: ref(false) });
     // 初始化基准：等价于编辑器完成配置同步后开启历史
     history.enableHistory();
   });

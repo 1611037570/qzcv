@@ -147,7 +147,7 @@ export const useResumeStore = defineStore(
       setFocusMode,
       initResumeStatus,
     } = runtime;
-    const history = createResumeHistory({ currentItem, refreshRuntime: editor.refreshRuntime });
+    const history = createResumeHistory({ currentItem, refreshRuntime: editor.refreshRuntime, isFittingOnePage });
     const {
       canUndo,
       undoStack,

@@ -43,8 +43,11 @@ export type OnePageAdjustKey =
 
 /** 单个可调参数的压缩配置 */
 export interface OnePageAdjustableItem {
+  /** 参与压缩的排版字段 */
   key: OnePageAdjustKey;
+  /** 参数允许压缩到的最小值 */
   min: number;
+  /** 参数调整步长 */
   step: number;
   /** 压缩权重：同一强度下按权重比例向下限靠拢，视觉越敏感权重越小，缺省按 1 处理 */
   weight?: number;
@@ -84,6 +87,11 @@ const uiDefaults: Record<OnePageAdjustKey, number> = {
 
 /** 压缩强度分档数：二分搜索在这个档位网格上找最小可行强度 */
 const COMPRESS_LEVELS = 20;
+
+/** 智能排版保留可读字号，不沿用手动调节的极限值 */
+const MIN_READABLE_FONT_SIZE = 14;
+/** 单次压缩最多减少两个像素，避免大字号直接降到最低值 */
+const MAX_FONT_SIZE_REDUCTION = 2;
 
 /** 等待重新测量的兜底时长：参数不影响测量时不会产生新数据，避免流程挂住 */
 const MEASURE_TIMEOUT = 5000;
@@ -204,7 +212,19 @@ export const useSmartOnePage = ({
     const isCurrentResume = () => resumeStore.currentItem?.id === resumeId;
     const isCurrentTask = () => !signal.aborted && isCurrentResume();
 
+    // 保留原始配置，失败时完整恢复，避免补入默认参数也形成历史变更。
+    const originalUI = currentUI.value;
     const base = pickBase(ui.value);
+    // 正文限制绝对字号与本次缩小幅度，行高保留默认阅读间距。
+    const getMinimum = (item: OnePageAdjustableItem) => {
+      if (item.key === "fontSize") {
+        const minimum = Math.max(item.min, MIN_READABLE_FONT_SIZE, base.fontSize - MAX_FONT_SIZE_REDUCTION);
+        return Number((Math.ceil(minimum / item.step - 1e-9) * item.step).toFixed(4));
+      }
+      if (item.key === "titleFontSize") return Math.max(item.min, MIN_READABLE_FONT_SIZE);
+      if (item.key === "lineHeight") return Math.max(item.min, defaultLineHeight);
+      return item.min;
+    };
     // 已应用的参数：用于判断本次是否需要等重新测量
     let applied = { ...base };
 
@@ -215,7 +235,7 @@ export const useSmartOnePage = ({
         const scale = params[item.ratioOf] / base[item.ratioOf];
         const target = base[item.key] * scale;
         params[item.key] = Math.min(
-          Math.max(floorByStep(target, item.step), item.min),
+          Math.max(floorByStep(target, item.step), getMinimum(item)),
           base[item.key],
         );
       }
@@ -227,18 +247,19 @@ export const useSmartOnePage = ({
       const t = level / COMPRESS_LEVELS;
       const result = {} as Record<OnePageAdjustKey, number>;
       for (const item of adjustable) {
-        const span = base[item.key] - item.min;
+        const minimum = getMinimum(item);
+        const span = base[item.key] - minimum;
         if (span <= 0) {
           // 旧参数低于压缩下限时保持原值，智能一页不反向增大参数。
           result[item.key] = base[item.key];
           continue;
         }
-        // 权重决定前期让路比例；t 接近 1 时仍会走到下限，保证压缩能力不被削弱
+        // 权重决定前期让路比例，最大强度仍受可读性下限约束。
         const weight = item.weight ?? 1;
         const strength = weight * t + (1 - weight) * t ** 3;
         const target = base[item.key] - span * strength;
         result[item.key] = Math.min(
-          Math.max(floorByStep(target, item.step), item.min),
+          Math.max(floorByStep(target, item.step), minimum),
           base[item.key],
         );
       }
@@ -265,7 +286,7 @@ export const useSmartOnePage = ({
 
     // 回退到压缩前的参数，避免失败或取消后留在半压缩状态
     const rollback = () => {
-      if (isCurrentResume()) currentUI.value = withParams(currentUI.value, base);
+      if (isCurrentResume()) currentUI.value = originalUI;
     };
 
     try {
@@ -274,7 +295,12 @@ export const useSmartOnePage = ({
         ElMessage.success("简历已压缩为一页");
         return;
       }
-      // 先探最大强度：压到极限仍放不下说明内容确实过长
+      // 已过小的正文不再压缩，避免用不可读的字号换取一页。
+      if (base.fontSize < MIN_READABLE_FONT_SIZE) {
+        ElMessage.warning("正文字号低于14像素，请先调大字号后再使用智能一页");
+        return;
+      }
+      // 只在可读范围内试排，放不下则保留原排版。
       const maxPageCount = await applyParams(paramsAtLevel(COMPRESS_LEVELS));
       if (!isCurrentTask()) {
         rollback();
@@ -282,7 +308,7 @@ export const useSmartOnePage = ({
       }
       if (maxPageCount !== 1) {
         rollback();
-        ElMessage.error("内容过长，无法压缩到一页");
+        ElMessage.warning("保持可读字号仍无法排入一页，已恢复原排版，请精简内容或保留多页");
         return;
       }
       // 二分最小可行强度：0 档（未压缩）已知不可行

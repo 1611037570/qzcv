@@ -40,9 +40,8 @@ export const createResumeRuntime = ({ clearSelectedModules }: ResumeRuntimeOptio
     return controller.signal;
   };
   const cancelFittingOnePage = () => {
+    // 中止后等待试算回滚，再由结束入口释放状态，避免历史提前捕获中间参数。
     onePageController?.abort();
-    onePageController = null;
-    isFittingOnePage.value = false;
   };
   const finishFittingOnePage = (signal: AbortSignal) => {
     if (onePageController?.signal !== signal) return;

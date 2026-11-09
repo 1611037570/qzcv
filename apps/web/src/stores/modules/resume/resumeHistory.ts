@@ -1,5 +1,5 @@
 import { debounce } from "lodash-es";
-import { computed, ref, type ComputedRef } from "vue";
+import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
 import {
   collectMediaBindings,
   getValueAtPath,
@@ -8,8 +8,12 @@ import {
 } from "@snowflake/resume-core/mediaFields";
 
 type ResumeHistoryOptions = {
+  /** 当前编辑的简历 */
   currentItem: ComputedRef<any>;
+  /** 还原结构变化后刷新表单配置 */
   refreshRuntime: () => void;
+  /** 智能一页试算期间暂停历史，只在结束时记录最终结果 */
+  isFittingOnePage: Ref<boolean>;
 };
 
 // 快照捕获结果：字符串承载文本与结构，媒体由媒体池按占位标识另行保存
@@ -20,7 +24,7 @@ type SnapshotCapture = {
   mediaEntries: Map<string, string>;
 };
 
-export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHistoryOptions) => {
+export const createResumeHistory = ({ currentItem, refreshRuntime, isFittingOnePage }: ResumeHistoryOptions) => {
   // 已提交版本序列：撤销的唯一真源，末项为当前内容
   const versions = ref<SnapshotCapture[]>([]);
   // 撤销后离开的版本序列：按撤销顺序保存，末项为最近一次撤销离开的版本
@@ -36,6 +40,8 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
   // 上一份快照及其媒体：撤销时据此还原媒体，避免撤销文字编辑时丢掉媒体
   let lastCapture: SnapshotCapture | null = null;
   const historyEnabled = ref(false);
+  // 记录试算所属简历，切换简历后不将旧任务结果写入新历史。
+  let fittingResumeId: string | null = null;
 
   const removeRuntimeIds = (value: any): any => {
     if (Array.isArray(value)) return value.map(removeRuntimeIds);
@@ -165,6 +171,8 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
   }, 300);
   const onContentChange = (item: any) => {
     if (!historyEnabled.value) return;
+    // 二分试算、局部恢复及失败回滚均不是独立编辑。
+    if (isFittingOnePage.value) return;
     if (skipNextWatch) {
       skipNextWatch = false;
       return;
@@ -172,6 +180,24 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
     if (!lastCapture) return;
     recordHistory(item);
   };
+  // 智能一页作为一次完整编辑：先提交已有编辑，结束时只提交最终参数。
+  watch(isFittingOnePage, (fitting) => {
+    if (fitting) {
+      recordHistory.flush();
+      pushHistory.flush();
+    } else {
+      recordHistory.cancel();
+      pushHistory.cancel();
+    }
+    const item = currentItem.value;
+    const resumeId = fittingResumeId;
+    fittingResumeId = null;
+    if (!historyEnabled.value || !item || (!fitting && item.id !== resumeId)) return;
+    const nextCapture = captureCore(item);
+    pushCapture(nextCapture, item.id);
+    lastCapture = nextCapture;
+    if (fitting) fittingResumeId = item.id;
+  }, { flush: "sync" });
   // 开启历史时把当前内容作为基线版本入栈，否则首次编辑后没有可撤销的目标
   const seedBaseline = () => {
     const baseline = captureCore(currentItem.value);
@@ -179,6 +205,7 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
     return baseline;
   };
   const resetHistoryBase = () => {
+    fittingResumeId = null;
     recordHistory.cancel();
     pushHistory.cancel();
     versions.value = [];
@@ -193,6 +220,7 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
     historyEnabled.value = true;
   };
   const disableHistory = () => {
+    fittingResumeId = null;
     recordHistory.cancel();
     pushHistory.cancel();
     versions.value = [];
@@ -225,10 +253,12 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
     return current;
   };
   // 基线本身不可撤销，尚未防抖入栈的实际编辑仍应立即允许撤销。
-  const canUndo = computed(() => historyEnabled.value && !!currentItem.value && versions.value.length > 0 && (
+  const canUndo = computed(() => !isFittingOnePage.value && historyEnabled.value && !!currentItem.value && versions.value.length > 0 && (
     versions.value.length > 1 || !sameCapture(captureCore(currentItem.value), versions.value[0])
   ));
   const undo = () => {
+    // 试算结束前不允许把中间参数登记为可撤销版本。
+    if (isFittingOnePage.value) return;
     recordHistory.flush();
     pushHistory.flush();
     const item = currentItem.value;
@@ -251,6 +281,8 @@ export const createResumeHistory = ({ currentItem, refreshRuntime }: ResumeHisto
     pruneMediaPool();
   };
   const redo = () => {
+    // 试算期间保持已有重做序列不变。
+    if (isFittingOnePage.value) return;
     recordHistory.flush();
     pushHistory.flush();
     const item = currentItem.value;
