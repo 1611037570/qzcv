@@ -1,4 +1,7 @@
 import { normalizeResumeTags } from "@/domain/resume/resumeTags";
+import { collectResumeComments, addResumeComment, updateResumeComment, removeResumeComment } from "@/domain/resume/comments";
+import type { ResumeCommentEntry, ResumeCommentPatch, ResumeCommentTarget } from "@/domain/resume/comments";
+import { getModelBindings } from "@/components/business/dynamicForm/api";
 import confirm from "@/components/business/confirm";
 import { ElMessage } from "element-plus";
 import router from "@/routers";
@@ -80,6 +83,25 @@ export const useResumeStore = defineStore(
     });
 
     const editor = createResumeEditor({ currentItem, currentData, itemDefaultCollapsed });
+    // 批注字段和持有者操作统一由领域入口维护，页面不直接拼接存储路径。
+    const getCommentTitle = (target: ResumeCommentTarget): string => {
+      const field = editor.runtimeFields.value.find((item: any) => item.key === target.moduleKey);
+      if (!field) return "";
+      const module = currentData.value?.[target.moduleKey];
+      const titleBinding = getModelBindings(field).find((binding) => binding.prop === "title");
+      const moduleTitle = titleBinding?.source.reduce((value: any, key) => value?.[key], module) ?? titleBinding?.defaultValue ?? "";
+      if (target.itemIndex < 0) return String(moduleTitle);
+      // 独立记录按表单 name 绑定取标题，普通模块始终使用模块 title 绑定。
+      const itemSchema = field.fields?.find((item: any) => item.type === "array")?.itemSchema;
+      const nameBinding = itemSchema && getModelBindings(itemSchema).find((binding) => binding.prop === "name");
+      const record = module?.list?.[target.itemIndex];
+      const recordTitle = nameBinding?.source.reduce((value: any, key) => value?.[key], record);
+      return String(recordTitle || moduleTitle);
+    };
+    const currentComments = computed(() => collectResumeComments(currentData.value, getCommentTitle));
+    const createComment = (target: ResumeCommentTarget, content: string) => addResumeComment(currentData.value, target, content, getCommentTitle);
+    const updateComment = (entry: ResumeCommentEntry, patch: ResumeCommentPatch) => updateResumeComment(currentData.value, entry, patch);
+    const deleteComment = (entry: ResumeCommentEntry) => removeResumeComment(currentData.value, entry);
     const {
       currentConfig,
       runtimeConfig,
@@ -351,6 +373,11 @@ export const useResumeStore = defineStore(
       getModel,
       currentItem,
       currentData,
+      currentComments, // 各持有者批注的统一展示集合。
+      getCommentTitle, // 按表单绑定取得模块或独立记录的批注标题。
+      createComment, // 在所属模块或条目创建批注。
+      updateComment, // 修改批注正文或解决状态。
+      deleteComment, // 从所属模块或条目删除批注。
       currentConfig,
       runtimeConfig,
       runtimeFields,

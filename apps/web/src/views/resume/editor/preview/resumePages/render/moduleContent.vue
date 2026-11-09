@@ -68,6 +68,8 @@ const getFragmentClass = (fragment: FragmentPlan) => [
       :leading-on-page="fragment.leadingOnPage"
       :class="isTitleNode(getNode(fragment)!) || getNode(fragment)!.type === 'spacer' ? undefined : getFragmentClass(fragment)"
       :data-editing-label="fragment.fragmentId === editingLabelFragmentId ? $t('editingModule') : undefined"
+      :data-comment-module="isEdit ? moduleKey : undefined"
+      :data-comment-item="isEdit ? (getNode(fragment)?.sourceItemIndex ?? -1) : undefined"
       @click.stop="handleContentClick(getNode(fragment)!)"
     />
   </template>

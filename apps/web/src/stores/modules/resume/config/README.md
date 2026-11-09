@@ -6,6 +6,7 @@
 - `formConfig.ts`：字段定义与表单绑定；`allConfig`（全部模块表单配置）通过 `ResumeModuleKey`（已登记模块标识）约束，登记和表单必须一一对应。
 - `defaultConfig.ts`：简历和编辑器默认值；模块名称列表与自定义图标从统一登记派生，不另写名单。
 - `resumeOptions.ts`：字段枚举选项。
+- 批注属于模块或条目的编辑信息，不登记为投递正文表单字段；字段类型和读写规则统一维护在 `domain/resume/comments.ts`（批注领域入口），使用方经简历 Store 访问，不在各模块表单中重复声明。
 
 ## 登记字段
 

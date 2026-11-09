@@ -1,6 +1,6 @@
 <script setup>
 import { TransitionPresets, useDebounceFn, useResizeObserver, useTransition } from "@vueuse/core";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import i18n, { $t } from "@/locales";
 import eventBus from "@/utils/modules/eventBus";
@@ -20,12 +20,16 @@ import PrintMode from "./toolbar/printMode.vue";
 
 defineOptions({ name: "ScaleContainer" });
 
-defineProps({
+const props = defineProps({
   /** 是否显示缩放操作栏 */
   showToolbar: { type: Boolean, default: true },
+  /** 不参与纸张缩放的批注列屏幕宽度 */
+  commentWidth: { type: Number, default: 0 },
 });
 
-defineEmits(["fullscreen"]);
+const emit = defineEmits(["fullscreen", "scale-change"]);
+// 工具栏仅切换批注展示，状态由预览容器持有。
+const commentsVisible = defineModel("commentsVisible", { type: Boolean, default: true });
 
 const containerRef = ref(null);
 const resumeStore = useResumeStore();
@@ -44,6 +48,9 @@ const scaleMode = ref("onePage");
 const PADDING = 20;
 const BACK_TOP_THRESHOLD = 200;
 const MIN_SCALE = 0.5;
+// 批注占用固定屏幕宽度，只用剩余空间计算纸张比例，避免反向补偿导致循环缩放。
+const widthScale = (width) => Math.max(0.1, (width - PADDING - props.commentWidth) /
+  (props.commentWidth ? RESUME_WIDTH + 12 : Math.max(RESUME_WIDTH, contentSize.value.width)));
 const percent = (value) => `${Math.round(value * 100)}%`;
 const SCALE_LIST = computed(() => {
   i18n.global.locale.value;
@@ -85,7 +92,8 @@ const SCALE_LIST = computed(() => {
 const onePageScale = computed(() => {
   const { width, height } = availableSize.value;
   if (width <= PADDING || height <= PADDING) return 0.1;
-  return Math.min((width - PADDING) / RESUME_WIDTH, (height - PADDING) / RESUME_HEIGHT);
+  // 为固定尺寸批注预留空间，仅缩放简历纸张。
+  return Math.min(widthScale(width), (height - PADDING) / RESUME_HEIGHT);
 });
 
 const scale = computed(() => {
@@ -94,6 +102,12 @@ const scale = computed(() => {
   if (scaleMode.value === "auto") return maxScale.value;
   if (scaleMode.value === "onePage") return onePageScale.value;
   return manualScale.value;
+});
+// 将实际纸张比例交给批注层抵消缩放，字号与按钮始终保持屏幕原始尺寸。
+watch(scale, (value) => emit("scale-change", value), { immediate: true });
+watch(() => props.commentWidth, () => {
+  maxScale.value = widthScale(availableSize.value.width);
+  manualScale.value = clampScale(manualScale.value);
 });
 const transitionScale = useTransition(scale, {
   duration: 200,
@@ -174,7 +188,7 @@ const updateScale = useDebounceFn(([entry]) => {
   }
 
   // 只根据宽度计算缩放比例，让内容在垂直方向可以滚动
-  maxScale.value = (width - PADDING) / RESUME_WIDTH;
+  maxScale.value = widthScale(width);
   manualScale.value = clampScale(manualScale.value);
 }, 50);
 
@@ -193,6 +207,11 @@ useResizeObserver(contentRef, ([entry]) => {
     width: entry.contentRect.width,
     height: entry.contentRect.height,
   };
+  // 添加或删除批注改变画布宽度时，同步自适应缩放上限。
+  if (availableSize.value.width > PADDING) {
+    maxScale.value = widthScale(availableSize.value.width);
+    manualScale.value = clampScale(manualScale.value);
+  }
   // 页面数量随内容高度变化一并更新
   syncPageCount();
 });
@@ -252,6 +271,13 @@ onUnmounted(() => eventBus.off("resume-standard-a4", setStandardA4));
               </SfList>
             </template>
           </SfDropdown>
+          <button
+            type="button"
+            class="h-6 shrink-0 cursor-pointer rounded-full px-3 text-[11px] whitespace-nowrap transition-colors hover:bg-sf-bg"
+            :class="commentsVisible ? 'text-sf-theme' : 'text-sf-text-2'"
+            :aria-pressed="commentsVisible"
+            @click="commentsVisible = !commentsVisible"
+          >{{ $t(commentsVisible ? "resumeCommentsHide" : "resumeCommentsShow") }}</button>
           <span class="px-3 text-[11px] whitespace-nowrap text-sf-text-3">{{
             $t("paperPageCount", { count: pageCount })
           }}</span>
