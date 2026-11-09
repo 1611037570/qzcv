@@ -10,6 +10,7 @@ import {
 } from "@/components/business/dynamicForm/api";
 import { $t } from "@/locales";
 import { isContentEmpty } from "../../shared/validData";
+import { formatResumeCheckIssue, type ResumeCheckIssue, type ResumeCheckTarget } from "./resumeChecks";
 
 // ==================== 工具函数 ====================
 
@@ -44,12 +45,27 @@ const isDeepEmpty = (val: any): boolean =>
   (Array.isArray(val) && val.every(isDeepEmpty)) ||
   (typeof val === "object" && !Array.isArray(val) && Object.values(val).every(isDeepEmpty));
 
-const getLabel = (field: any, prop: string): string => getFieldLabel(field) || prop || $t("field");
-
 // 完成度只统计字段上手动标记的必填口径，不由校验规则或所在分组推导。
 const isRequiredField = (field: any): boolean => field?.required === true;
 
-const getRuleIssues = (rules: any[], value: unknown, label: string) => {
+// 所有检查从同一入口生成问题，界面与助手不再分别拼装问题来源。
+const createIssue = (
+  kind: ResumeCheckIssue["kind"],
+  ruleId: string,
+  label: string,
+  message: string,
+  target: ResumeCheckTarget,
+  severity: ResumeCheckIssue["severity"] = "warning",
+): ResumeCheckIssue => ({
+  ruleId, // 检查规则编号
+  kind, // 检查分类
+  label, // 问题显示名称
+  message, // 问题说明
+  severity, // 提示等级
+  target, // 编辑位置
+});
+
+const getRuleIssues = (rules: any[], value: unknown, label: string, target: ResumeCheckTarget): ResumeCheckIssue[] => {
   if (isDeepEmpty(value)) return [];
   return rules.flatMap((rule) => {
     if (rule?.pattern instanceof RegExp) {
@@ -57,13 +73,13 @@ const getRuleIssues = (rules: any[], value: unknown, label: string) => {
       rule.pattern.lastIndex = 0;
       return rule.pattern.test(String(value))
         ? []
-        : [{ label, message: rule.message || $t("invalidFormat"), severity: "error" }];
+        : [createIssue("format", `pattern:${rule.pattern.source}/${rule.pattern.flags}`, label, rule.message || $t("invalidFormat"), target, "error")];
     }
 
     const atsRule = rule?.ats;
     if (!atsRule?.type) return [];
     const addIssue = (message: string, issueLabel = label) => [
-      { label: issueLabel, message, severity: atsRule.severity || "warning" },
+      createIssue("format", `ats:${atsRule.type}`, issueLabel, message, target, atsRule.severity || "warning"),
     ];
     if (atsRule.type === "wechat") {
       return /^[a-zA-Z][-_a-zA-Z0-9]{5,19}$/.test(String(value))
@@ -150,12 +166,6 @@ const isInternalField = (field: any) => {
   return src.includes("ui") || INTERNAL_FIELD_KEYS.has(prop);
 };
 
-// 字段必须带有中文标签才展示给用户，未配置标签的内部字段直接跳过
-const hasFieldLabel = (field: any, inheritedLabel?: string) => {
-  const target = unwrapField(field) ?? field;
-  return Boolean(getFieldLabel(field) || getFieldLabel(target) || inheritedLabel);
-};
-
 // 记录项模型字段没有配置标签，按编辑组件映射到对应的中文文案
 const ITEM_FIELD_LABELS: Record<string, Record<string, string>> = {
   // 社交账号：平台与链接
@@ -168,15 +178,18 @@ const ITEM_FIELD_LABELS: Record<string, Record<string, string>> = {
 
 function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
   if (!moduleConfig?.fields?.length) {
-    return { missing: [], issues: [], score: 0 };
+    return { issues: [] as ResumeCheckIssue[] /* 模块问题 */, score: 0 /* 模块完成度 */, done: 0 /* 已填必填项 */, total: 0 /* 必填项总数 */ };
   }
 
   // 同时声明对象与数组字段时，按表单配置的布局开关判断当前生效形态
   const listLayout = moduleConfig.props?.addWhenLayout;
   const activeLayout = ui?.[moduleConfig.key]?.layout;
 
-  const missing: string[] = [];
-  const issues: Array<{ label: string; message: string; severity?: "error" | "warning" }> = [];
+  const issues: ResumeCheckIssue[] = [];
+  const moduleTarget: ResumeCheckTarget = { moduleKey: moduleConfig.key /* 所属模块编号 */ };
+  const addMissing = (label: string, target = moduleTarget) => {
+    issues.push(createIssue("missing", "required", label, `${$t("missingPrefix")}${label}`, target));
+  };
   let done = 0;
   let total = 0;
   // 模块字段统一从分组上下文解析相对路径
@@ -217,8 +230,6 @@ function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
         const key = itemLabelKeys[getFieldMeta(def.target).prop];
         return key ? $t(key) : "";
       };
-      // 记录容器级别的必填只表示「至少填一条记录」，不再下沉到每个子字段
-      const itemSchemaRequired = isRequiredField(itemSchema) || isRequiredField(field);
       const itemDefs: Array<{ field: any; target: any; required: boolean }> = [];
       const collectItemFields = (fields: any[], inheritedRequired: boolean) => {
         for (const candidate of fields) {
@@ -257,6 +268,10 @@ function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
 
       const listPath = getArrayDataPath(field, moduleContext) || [];
       const list = getValueByPath(rootData, listPath);
+      const listTarget: ResumeCheckTarget = {
+        moduleKey: moduleConfig.key, // 所属模块编号
+        listPath, // 数组容器路径
+      };
 
       if (!Array.isArray(list) || list.length === 0) {
         let hasRequired = false;
@@ -267,22 +282,27 @@ function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
           if (!def.required) continue;
           hasRequired = true;
           total += 1;
-          if (!missing.includes(label)) missing.push(label);
+          addMissing(label, listTarget);
         }
         if (hasRequired) {
           // 记录项本身配置了标签时一并提示，未配置标签时不再用通用文案占位
           const groupLabel = getFieldLabel(itemSchema);
-          if (groupLabel && !missing.includes(groupLabel)) missing.push(groupLabel);
+          if (groupLabel) addMissing(groupLabel, listTarget);
         }
         continue;
       }
 
       list.forEach((_: any, idx: number) => {
+        const recordTarget: ResumeCheckTarget = {
+          ...listTarget, // 所属模块与数组路径
+          record: list[idx], // 当前记录引用，不把下标当作身份保存
+        };
         issues.push(
           ...getRuleIssues(
             itemSchema.rules ?? [],
             { name: list[idx]?.data?.name, url: list[idx]?.data?.url },
             `${getFieldLabel(itemSchema) || $t("socialAccounts")} · ${$t("recordIndex", { index: idx + 1 })}`,
+            recordTarget,
           ),
         );
         for (const def of itemDefs) {
@@ -305,6 +325,7 @@ function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
               rules,
               value,
               `${itemLabel} · ${$t("recordIndex", { index: idx + 1 })}`,
+              recordTarget,
             ),
           );
           if (!def.required) continue;
@@ -316,8 +337,8 @@ function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
           total += 1;
           if (filled) {
             done += 1;
-          } else if (!missing.includes(itemLabel)) {
-            missing.push(itemLabel);
+          } else {
+            addMissing(`${itemLabel} · ${$t("recordIndex", { index: idx + 1 })}`, recordTarget);
           }
         }
       });
@@ -347,7 +368,7 @@ function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
     const isContentField = ["wangEditor", "resumeContentEditor"].includes(target.component);
     const fieldLabel = getFieldLabel(field) || inheritedLabel || "";
     if (!fieldLabel && !isContentField) continue;
-    issues.push(...getRuleIssues(rules, value, fieldLabel || $t("content")));
+    issues.push(...getRuleIssues(rules, value, fieldLabel || $t("content"), moduleTarget));
 
     // 修改：使用 src 最后一个元素判断是否为 content
     const filled = src[src.length - 1] === "content" ? !isContentEmpty(value) : !isEmpty(value);
@@ -359,22 +380,23 @@ function analyzeModule(moduleConfig: any, rootData: any, ui?: any) {
       done += 1;
     } else {
       const label = isContentField ? $t("content") : fieldLabel;
-      if (!missing.includes(label)) missing.push(label);
+      addMissing(label);
     }
   }
 
   // 模块没有必填项时视为已填完，避免出现「0% 但无可填项」
   const score = total ? Math.round((done / total) * 10) : 10;
-  const uniqueIssues = [
-    ...new Map(issues.map((issue) => [`${issue.label}:${issue.message}`, issue])).values(),
-  ];
+  // 同一记录的同类提示去重，不合并不同记录上相同的缺失或格式问题。
+  const uniqueIssues = issues.filter((issue, index) => issues.findIndex((other) =>
+    other.ruleId === issue.ruleId && other.kind === issue.kind && other.label === issue.label &&
+    other.message === issue.message && other.target.record === issue.target.record &&
+    JSON.stringify(other.target.listPath) === JSON.stringify(issue.target.listPath),
+  ) === index);
   return {
-    missing,
-    issues: uniqueIssues,
-    score,
-    done,
-    total,
-    hasError: uniqueIssues.some((issue) => issue.severity === "error"),
+    issues: uniqueIssues, // 统一模块问题
+    score, // 模块完成度
+    done, // 已填必填项数量
+    total, // 必填项总数
   };
 }
 
@@ -403,8 +425,8 @@ const formatGap = (months: number) => {
   return $t("gapMonths", { months: rest });
 };
 
-function checkTimeline(modules: Array<{ key: string; config: any }>, rootData: any) {
-  const issuesList: any[] = [];
+function checkTimeline(modules: Array<{ key: string /* 模块编号 */; config: any /* 表单配置 */ }>, rootData: any) {
+  const issues: ResumeCheckIssue[] = [];
 
   for (const { key, config } of modules) {
     const arrayField = config.fields?.find((field: any) => field.type === "array");
@@ -447,49 +469,43 @@ function checkTimeline(modules: Array<{ key: string; config: any }>, rootData: a
     if (!entries.length) continue;
 
     const sorted = entries.filter((entry: any) => entry.end >= entry.start).sort((a: any, b: any) => a.start - b.start);
-    const issues: any[] = [];
+    const getTarget = (entry: any): ResumeCheckTarget => ({
+      moduleKey: key, // 所属模块编号
+      listPath, // 时间线记录容器路径
+      record: entry.item, // 时间线问题对应的记录引用
+    });
 
     for (const entry of entries) {
       const entryLabel = `${entry.name || $t("unnamed")} · ${$t("recordIndex", { index: entry.index + 1 })}`;
       if (entry.start > entry.end) {
-        issues.push({ type: "range", text: $t("timelineRangeMessage", { entry: entryLabel }) });
+        issues.push(createIssue("timeline", "timeline:range", $t("issueRange"), $t("timelineRangeMessage", { entry: entryLabel /* 问题记录名称 */ }), getTarget(entry)));
       }
       if (
         // 实习经历沿用工作经历的未来日期检查。
         ["work", "internship", "project"].includes(key) &&
         (entry.start > currentMonth() || entry.end > currentMonth())
       ) {
-        issues.push({ type: "future", text: $t("timelineFutureMessage", { entry: entryLabel }) });
+        issues.push(createIssue("timeline", "timeline:future", $t("issueFuture"), $t("timelineFutureMessage", { entry: entryLabel /* 问题记录名称 */ }), getTarget(entry)));
       }
     }
 
     for (let i = 0; i < sorted.length - 1; i++) {
       const gap = sorted[i + 1].start - sorted[i].end;
       if (gap > GAP_THRESHOLD_MONTHS) {
-        issues.push({
-          type: "gap",
-          text: $t("timelineGapMessage", {
-            current: sorted[i + 1].name || $t("unnamed"),
-            previous: sorted[i].name || $t("unnamed"),
-            gap: formatGap(gap),
-          }),
-        });
+        issues.push(createIssue(
+          "timeline", "timeline:gap", $t("issueGap"),
+          $t("timelineGapMessage", {
+            current: sorted[i + 1].name || $t("unnamed"), // 空档后的记录名称
+            previous: sorted[i].name || $t("unnamed"), // 空档前的记录名称
+            gap: formatGap(gap), // 空档时长说明
+          }), getTarget(sorted[i + 1]),
+        ));
       }
     }
 
-    if (issues.length) {
-      issuesList.push({
-        key,
-        name: getModuleTitle(config, rootData, key),
-        issues,
-      });
-    }
   }
 
-  return {
-    list: issuesList,
-    issueCount: issuesList.reduce((total, m) => total + m.issues.length, 0),
-  };
+  return issues;
 }
 
 // ==================== useProgress ====================
@@ -510,63 +526,61 @@ export function useProgress(
   }
 
   const progressItems: Array<{
-    key: string;
-    name: string;
-    progress: number;
-    missing: string[];
-    issues: Array<{ label: string; message: string; severity?: "error" | "warning" }>;
-    hasError: boolean;
+    key: string; // 模块编号
+    name: string; // 模块显示名称
+    progress: number; // 必填项完成百分比
+    issues: ResumeCheckIssue[]; // 模块的统一问题清单
   }> = [];
   // 必填项累计：总完成度按必填项数量加权，而不是模块等权
   let requiredDone = 0;
   let requiredTotal = 0;
-  const timelineModules: Array<{ key: string; config: any }> = [];
+  const timelineModules: Array<{ key: string /* 模块编号 */; config: any /* 表单配置 */ }> = [];
 
   for (const [key, config] of moduleMap) {
-    const { missing, issues, score, done, total, hasError } = analyzeModule(
+    const { issues, score, done, total } = analyzeModule(
       config,
       rootData,
       uiConfig,
     );
     progressItems.push({
-      key,
-      name: getModuleTitle(config, rootData, key),
-      progress: score * 10,
-      missing,
-      issues,
-      hasError,
+      key, // 模块编号
+      name: getModuleTitle(config, rootData, key), // 模块显示名称
+      progress: score * 10, // 必填项完成百分比
+      issues, // 模块问题清单
     });
     requiredDone += done;
     requiredTotal += total;
 
     if (config.fields?.some((f: any) => f.type === "array" && f.itemSchema)) {
-      timelineModules.push({ key, config });
+      timelineModules.push({ key /* 模块编号 */, config /* 表单配置 */ });
     }
   }
 
   // 总完成度 = 已填必填项 ÷ 必填项总数
   const totalProgress = requiredTotal ? Math.round((requiredDone / requiredTotal) * 100) : 0;
-  const timeline = checkTimeline(timelineModules, rootData);
+  const timelineIssues = checkTimeline(timelineModules, rootData);
+  // 时间线问题归回对应模块，界面与助手只消费这一份问题结果。
+  progressItems.forEach((item) => {
+    item.issues = [
+      ...item.issues.filter((issue) => issue.kind === "format"),
+      ...item.issues.filter((issue) => issue.kind === "missing"),
+      ...timelineIssues.filter((issue) => issue.target.moduleKey === item.key),
+    ];
+  });
+  const issues = progressItems.flatMap((item) => item.issues);
 
   return {
-    list: progressItems,
-    requiredDone,
-    requiredTotal,
-    progress: totalProgress,
+    list: progressItems, // 各模块完成度与问题清单
+    requiredDone, // 已填写的必填项数量
+    requiredTotal, // 必填项总数
+    progress: totalProgress, // 总完成百分比
     // 存在格式错误时供入口切换警示状态
-    hasError: progressItems.some((item) => item.hasError),
-    timeline,
+    hasError: issues.some((issue) => issue.severity === "error"),
+    issues, // 全部问题的统一列表
   };
 }
 
 // 将完成度与时间线检查统一整理为一键调整可复用的问题清单
 export const collectResumeAdjustmentIssues = (result: ReturnType<typeof useProgress>): string[] => {
-  const issues = result.list.flatMap((item) => [
-    ...(item.missing || []).map((field) => `${item.name}：${field}未填写`),
-    ...(item.issues || []).map((issue) => `${item.name}：${issue.label}，${issue.message}`),
-  ]);
-  result.timeline.list.forEach((item) => {
-    item.issues.forEach((issue) => issues.push(`${item.name}：${issue.text}`));
-  });
-  return issues;
+  return result.list.flatMap((item) => item.issues.map((issue) => `${item.name}：${formatResumeCheckIssue(issue)}`));
 };

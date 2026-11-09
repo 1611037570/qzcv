@@ -5,7 +5,8 @@ import { storeToRefs } from "pinia";
 import { TransitionPresets, useTransition } from "@vueuse/core";
 import { useResumeStore } from "@/stores";
 import { useProgress } from "../../../../hooks/useProgress";
-import { jumpToEditor } from "../../../../hooks/useModuleNav";
+import { formatResumeCheckIssue } from "../../../../hooks/resumeChecks";
+import { jumpToCheckTarget } from "../../../../hooks/useModuleNav";
 import { useResumeStats } from "../../../../hooks/useResumeStats";
 import { $t } from "@/locales";
 import eventBus from "@/utils/modules/eventBus";
@@ -29,17 +30,20 @@ const progressData = computed(() =>
 );
 // 保留数据引用，切换简历及撤销替换数据后重新统计当前内容
 const resumeStats = useResumeStats(computed(() => currentData.value || {}), currentUI);
-// 时间线一致性检查结果（随进度一起返回）
-const timelineData = computed(() => progressData.value.timeline);
-
-// 按模块 key 聚合时间线问题，供模块进度卡片内联展示
-const timelineByModule = computed(() => {
-  const map = {};
-  timelineData.value.list.forEach((module) => {
-    map[module.key] = module.issues;
-  });
-  return map;
+// 分类计数只遍历一次，入口摘要与提示共用同一结果。
+const issueCounts = computed(() => {
+  const counts = { missing: 0 /* 缺失项数量 */, format: 0 /* 格式问题数量 */, timeline: 0 /* 时间问题数量 */ };
+  progressData.value.issues.forEach((issue) => counts[issue.kind]++);
+  return counts;
 });
+const issueSummary = computed(() => Object.entries({
+  missing: "resumeMissingCount", // 缺失项摘要文案
+  format: "resumeFormatIssueCount", // 格式问题摘要文案
+  timeline: "resumeTimelineIssueCount", // 时间问题摘要文案
+}).flatMap(([kind, label]) => {
+  const count = issueCounts.value[kind];
+  return count ? [$t(label, { count /* 当前分类的问题数量 */ })] : [];
+}));
 
 // 总进度数字过渡动画
 const animatedProgress = useTransition(computed(() => progressData.value.progress), {
@@ -47,30 +51,13 @@ const animatedProgress = useTransition(computed(() => progressData.value.progres
   transition: TransitionPresets.easeOutCubic,
 });
 
-// 缺失字段总数：用于入口第二行提示还差多少项
-const missingCount = computed(() =>
-  progressData.value.list.reduce((total, item) => total + (item.missing?.length || 0), 0),
-);
-
-// 格式问题总数：用于入口摘要文案
-const formatIssueCount = computed(() =>
-  progressData.value.list.reduce((total, item) => total + (item.issues?.length || 0), 0),
-);
-
 // 缺失、格式或时间线任一检查未通过时先调整，全部通过后才进入内容优化。
 const needsAdjustment = computed(
-  () =>
-    progressData.value.progress < 100 ||
-    missingCount.value > 0 ||
-    formatIssueCount.value > 0 ||
-    timelineData.value.issueCount > 0,
+  () => progressData.value.progress < 100 || progressData.value.issues.length > 0,
 );
-const aiActionLabel = computed(() => {
-  if (isGenerating.value) {
-    return $t(needsAdjustment.value ? "adjustingResume" : "optimizingResume");
-  }
-  return $t(needsAdjustment.value ? "oneClickAdjust" : "oneClickOptimize");
-});
+const aiActionLabel = computed(() => $t(isGenerating.value
+  ? needsAdjustment.value ? "adjustingResume" : "optimizingResume"
+  : needsAdjustment.value ? "oneClickAdjust" : "oneClickOptimize"));
 // 调整使用警示色提示尚有问题，全部通过后的优化使用成功色。
 const aiActionClass = computed(() =>
   needsAdjustment.value
@@ -85,54 +72,20 @@ const startAiAction = () => {
   openOneKeyIntro(needsAdjustment.value ? "oneKeyAdjust" : "oneKeyOptimize");
 };
 
-// 环形进度与待处理状态保持一致，所有检查通过后才显示成功色。
-const ringColorClass = computed(() => {
-  return needsAdjustment.value ? "text-sf-warning" : "text-sf-success";
-});
-
 // 入口提示：格式错误 > 时间线问题 > 查看详情
 const tooltipText = computed(() => {
   if (progressData.value.hasError) return $t("formatIssues");
-  return timelineData.value.issueCount
-    ? $t("timelineIssue", { count: timelineData.value.issueCount })
+  return issueCounts.value.timeline
+    ? $t("timelineIssue", { count: issueCounts.value.timeline /* 时间问题数量 */ })
     : $t("viewProgressDetail");
 });
 
-// 跳转编辑对应模块：复用模块导航的编辑区跳转逻辑（不处理预览区）
-const goFill = (item) => {
-  jumpToEditor(item.key);
-  visible.value = false;
+// 点击前核对仍属于当前检查结果，切换简历或删除问题记录后不使用旧目标。
+const goFill = (issue) => {
+  if (!progressData.value.issues.includes(issue)) return;
+  if (jumpToCheckTarget(issue.target)) visible.value = false;
 };
 
-// 时间线仍会返回日期冲突与未来日期，按真实问题类型展示标签
-const getTypeLabel = (issue) =>
-  $t(
-    {
-      // 经历之间的时间空档
-      gap: "issueGap",
-      // 开始与结束时间冲突
-      range: "issueRange",
-      // 超出当前日期
-      future: "issueFuture",
-    }[issue.type] || "issueGap",
-  );
-
-// 按进度区间返回进度条颜色
-const getProgressColor = (progress) => {
-  if (progress >= 80) return "bg-sf-success";
-  if (progress >= 50) return "bg-sf-theme";
-  if (progress >= 30) return "bg-sf-warning";
-  return "bg-sf-error";
-};
-
-// 待处理项：格式问题置顶，其次缺失字段，最后时间线问题
-const getTodoList = (item) => [
-  ...(item.issues || []).map((issue) => `${issue.label}：${issue.message}`),
-  ...(item.missing || []).map((field) => `${$t("missingPrefix")}${field}`),
-  ...(timelineByModule.value[item.key] || []).map(
-    (issue) => `${getTypeLabel(issue)}：${issue.text}`,
-  ),
-];
 </script>
 
 <template>
@@ -165,7 +118,7 @@ const getTodoList = (item) => [
               stroke-width="6"
               stroke-linecap="round"
               stroke-dasharray="119.38"
-              :class="ringColorClass"
+              :class="needsAdjustment ? 'text-sf-warning' : 'text-sf-success'"
               :stroke-dashoffset="119.38 - (119.38 * Math.round(animatedProgress)) / 100"
             />
           </svg>
@@ -193,57 +146,33 @@ const getTodoList = (item) => [
       :aria-label="$t('progressDetail')"
       @click="visible = true"
     >
-      <span v-if="missingCount > 0">{{ $t("resumeMissingCount", { count: missingCount }) }}</span>
-      <span v-if="formatIssueCount > 0">
-        {{ $t("resumeFormatIssueCount", { count: formatIssueCount }) }}
-      </span>
-      <span v-if="timelineData.issueCount > 0">
-        {{ $t("resumeTimelineIssueCount", { count: timelineData.issueCount }) }}
-      </span>
+      <span v-for="summary in issueSummary" :key="summary">{{ summary }}</span>
     </button>
   </div>
 
-  <SfModal v-model="visible" :title="$t('progressDetail')">
-    <div class="flex w-full max-w-[400px] flex-col gap-1.5">
-      <p class="mb-2 text-sm text-sf-text-2">{{ $t("atsScoreDisclaimer") }}</p>
-      <!-- 列表过长时在滚动区域内查看。 -->
-      <SfScrollbar max-height="60vh">
-        <template v-for="item in progressData.list" :key="item.key">
-          <div class="rounded-3xl border border-sf-b p-3">
-            <div class="flex items-center justify-between">
-              <div class="text-lg">
-                {{ item.name }}
-                <span class="text-sm text-sf-text-2">
-                  {{ $t("writingWords", { count: resumeStats[item.key]?.total ?? 0 }) }}
-                </span>
-              </div>
-              <div class="text-lg font-bold">{{ item.progress }}%</div>
-            </div>
-            <div class="mt-2 h-2 w-full rounded-full bg-sf-bg-2">
-              <div
-                class="h-2 rounded-full transition-all duration-300"
-                :class="getProgressColor(item.progress)"
-                :style="{ width: item.progress + '%' }"
-              ></div>
-            </div>
-            <!-- 待处理项：格式问题、缺失字段与时间线问题统一成同一套条目 -->
-            <div
-              v-if="getTodoList(item).length"
-              class="mt-3 flex flex-col gap-1 rounded-xl bg-sf-bg-2 p-2"
-            >
-              <div
-                v-for="(todo, index) in getTodoList(item)"
-                :key="index"
-                class="text-xs leading-5 text-sf-text-2"
-              >
-                {{ todo }}
-              </div>
-              <div class="mt-1 cursor-pointer text-sm text-sf-theme" @click="goFill(item)">
-                {{ $t("modify") }}
-              </div>
-            </div>
-          </div>
-        </template>
+  <SfModal v-model="visible" :title="$t('progressDetail')" width="560px" title-class="justify-start! text-base!">
+    <div class="flex flex-col gap-3">
+      <p class="text-xs leading-5 text-sf-text-3">{{ $t("atsScoreDisclaimer") }}</p>
+      <!-- 弹窗负责横向留白，模块用分隔线组织，避免卡片和底色逐层叠加。 -->
+      <SfScrollbar max-height="60vh" flush view-class="divide-y divide-sf-b" class="h-auto! flex-none!">
+        <section v-for="item in progressData.list" :key="item.key" class="shrink-0 py-3 first:pt-0 last:pb-0">
+          <header class="flex items-center gap-3 px-3">
+            <h3 class="min-w-0 flex-1 break-words text-sm font-medium text-sf-text">{{ item.name }}</h3>
+            <span class="text-xs text-sf-text-3">{{ $t("writingWords", { count: resumeStats[item.key]?.total ?? 0 }) }}</span>
+            <span class="text-xs tabular-nums text-sf-text-2">{{ item.progress }}%</span>
+          </header>
+          <!-- 问题行只提供边框反馈，去修改始终可见，换行后仍保持完整点击区域。 -->
+          <button
+            v-for="(issue, index) in item.issues"
+            :key="index"
+            type="button"
+            class="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg border border-transparent p-3 text-left text-xs leading-5 text-sf-text-2 transition-colors hover:border-sf-b focus-visible:border-sf-theme focus-visible:outline-none"
+            @click="goFill(issue)"
+          >
+            <span class="min-w-0 break-words">{{ formatResumeCheckIssue(issue) }}</span>
+            <span class="shrink-0 text-sf-theme">{{ $t("modify") }}</span>
+          </button>
+        </section>
       </SfScrollbar>
     </div>
   </SfModal>

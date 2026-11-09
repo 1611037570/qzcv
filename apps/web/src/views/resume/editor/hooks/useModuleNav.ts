@@ -11,6 +11,7 @@ import {
 } from "@/components/business/dynamicForm/api";
 import { stripHtml } from "./useResumeStats";
 import { useScrollEditorTo } from "./useScrollEditorTo";
+import type { ResumeCheckTarget } from "./resumeChecks";
 
 // 搜索命中项：携带定位所需的层级信息
 export interface ResumeSearchHit {
@@ -243,7 +244,7 @@ export const jumpPreview = (key: string) => {
 };
 
 // 展开模块折叠面板并触发编辑区选中闪烁：定位类跳转的公共前置动作
-const activateModule = (key: string) => {
+const activateModule = (key: string, highlight = true) => {
   // 切换到编辑标签，避免停留设计/模板标签时编辑区不可见
   eventBus.emit("switch-builder-tab", 0);
   // 展开模块折叠面板
@@ -253,7 +254,7 @@ const activateModule = (key: string) => {
     moduleData.ui.collapsed = ["1"];
   }
   // 触发编辑区模块选中闪烁
-  scheduleEditorHighlight(key);
+  if (highlight) scheduleEditorHighlight(key);
 };
 
 // 模块外圈锚点：命中字段时优先字段所在模块，缺失时回退目标模块
@@ -351,6 +352,40 @@ export const jumpToEditor = (key: string) => {
     resumeStore.setModuleHidden(key, false);
   }
   jumpEditor(key);
+};
+
+// 检查定位按记录引用解析最新下标，排序后仍指向原记录，失效目标不继续跳转。
+export const jumpToCheckTarget = (target: ResumeCheckTarget): boolean => {
+  const item = resumeStore.currentItem;
+  const key = target.moduleKey;
+  if (!item || !moduleList.value.some((module) => module.key === key)) return false;
+  const getRecordIndex = () => {
+    const list = target.listPath?.reduce<any>((value, part) => value?.[part], currentData.value);
+    return Array.isArray(list) ? list.indexOf(target.record) : -1;
+  };
+  if (target.record && getRecordIndex() < 0) return false;
+  if (moduleList.value.find((module) => module.key === key)?.hidden) {
+    resumeStore.setModuleHidden(key, false);
+  }
+  activateModule(key, false);
+  if (target.record) {
+    const record = target.record as { ui?: { collapsed?: string[] /* 记录折叠状态 */ } /* 记录展示状态 */ };
+    record.ui ??= {};
+    record.ui.collapsed = ["1"];
+  }
+  pendingEditorLocation = () => {
+    if (resumeStore.currentItem !== item || !currentData.value?.[key]) return true;
+    const itemIndex = getRecordIndex();
+    if (target.record && itemIndex < 0) return true;
+    // 记录锚点尚未挂载时继续等待，不提前回退模块并结束定位。
+    if (target.record && !findEditorRecordAnchor(key, itemIndex)) return false;
+    const hit = target.record ? { itemIndex /* 记录当前下标 */ } : undefined;
+    if (!scrollEditorTarget(key, hit)) return false;
+    scheduleEditorHighlight(key, hit);
+    return true;
+  };
+  nextTick(() => retryEditorLocation(EDITOR_LOCATE_RETRY_FRAMES));
+  return true;
 };
 
 // 联动跳转：编辑区 + 预览区（模块导航使用）
