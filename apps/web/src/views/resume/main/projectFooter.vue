@@ -5,6 +5,7 @@ import resumeBeta from "@/assets/images/resume/resume-beta.awebp";
 import resumeBeta1 from "@/assets/images/resume/beta1.webp";
 import resumeV1 from "@/assets/images/resume/v1.png";
 import resumeV2 from "@/assets/images/resume/v2.webp";
+import resumeStart from "@/assets/images/resume/start.png";
 
 const visible = ref(false);
 const previewVisible = ref(false);
@@ -21,7 +22,8 @@ const milestones = [
   { date: "2026-08-15", /* 历史日期 */ text: "resumeProjectHistoryRelease", /* 历史文案标识 */ image: resumeV1, /* 版本截图 */ },
   { date: "2025-11-22", /* 历史日期 */ text: "resumeProjectHistoryStack", /* 历史文案标识 */ },
   { date: "2024-11-22", /* 历史日期 */ text: "resumeProjectHistoryBeta1", /* 历史文案标识 */ image: resumeBeta1, /* 版本截图 */ },
-  { date: "2024-02-28", /* 历史日期 */ text: "resumeProjectHistoryBeta", /* 历史文案标识 */ url: "https://juejin.cn/post/7349433271493034034", /* 文章发布地址 */ image: resumeBeta, /* 早期截图 */ },
+  { date: "2024-03-24", /* 历史日期 */ text: "resumeProjectHistoryCopywriting", /* 历史文案标识 */ url: "https://juejin.cn/post/7349433271493034034", /* 文章发布地址 */ image: resumeBeta, /* 早期截图 */ },
+  { date: "2024-02-28", /* 历史日期 */ text: "resumeProjectHistoryStart", /* 历史文案标识 */ image: resumeStart, /* 立项截图 */ },
 ];
 
 </script>
@@ -78,10 +80,12 @@ const milestones = [
             <article class="min-w-0 pb-3">
               <time :datetime="item.date" class="block text-xs font-medium leading-[18px] tabular-nums" :class="index === 0 ? 'text-sf-theme' : 'text-sf-text-3'">{{ item.date }}</time>
               <p class="mt-[6px] text-[13px] leading-6 text-sf-text-2">{{ $t(item.text) }}</p>
-              <!-- 文章与图片使用下划线文字入口，截图按需打开预览。 -->
-              <div v-if="item.url || item.image" class="mt-3 flex flex-wrap items-center gap-3 text-xs text-sf-theme">
+              <!-- 文章保留下划线文字入口，截图以缩略图点缀时间轴，点击打开大图预览。 -->
+              <div v-if="item.url || item.image" class="mt-[6px] flex flex-wrap items-center gap-3 text-xs text-sf-theme">
+                <button v-if="item.image" type="button" class="cursor-pointer overflow-hidden rounded-lg border border-sf-b transition-colors hover:border-sf-theme-2 focus-visible:outline-sf-theme" @click="previewImage = item.image; previewVisible = true">
+                  <img :src="item.image" :alt="$t(item.text)" loading="lazy" class="h-14 w-24 object-cover object-top" />
+                </button>
                 <a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer" class="underline decoration-sf-theme-2 underline-offset-4 transition-colors hover:decoration-sf-theme focus-visible:outline-sf-theme">{{ $t("resumeProjectArticleUrl") }}</a>
-                <button v-if="item.image" type="button" class="cursor-pointer underline decoration-sf-theme-2 underline-offset-4 transition-colors hover:decoration-sf-theme focus-visible:outline-sf-theme" @click="previewImage = item.image; previewVisible = true">{{ $t("resumeProjectViewImage") }}</button>
               </div>
             </article>
           </li>
