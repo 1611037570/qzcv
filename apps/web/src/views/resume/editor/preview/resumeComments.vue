@@ -24,6 +24,11 @@ const mobileOpened = ref(false); // 移动端按需打开的批注列表。
 const mobileModuleKey = ref(""); // 移动端筛选模块，空值显示全部批注。
 const pending = ref(null); // 待添加批注的模块或记录归属。
 const activeId = ref(""); // 当前选中批注编号。
+const expandedId = ref(""); // 全部卡片共用唯一展开编号，默认只显示摘要。
+const toggleComment = (entry) => {
+  expandedId.value = expandedId.value === entry.key ? "" : entry.key;
+  activeId.value = entry.key;
+};
 const opened = ref(false); // 添加批注时显示填写弹窗。
 const draft = ref(""); // 提交前的批注草稿，取消时不写入简历。
 const positions = ref([]); // 卡片位置与连接线的画布坐标。
@@ -55,6 +60,7 @@ let disposed = false; // 离开编辑器后禁止延迟布局任务重新执行�
 watch(() => store.currentData, () => {
   pending.value = null;
   activeId.value = "";
+  expandedId.value = "";
   opened.value = false;
   mobileOpened.value = false;
   mobileModuleKey.value = "";
@@ -193,6 +199,7 @@ const viewModuleComments = async (moduleKey) => {
   // 点击数量展开内容，待卡片布局完成后定位。
   contentVisible.value = true;
   activeId.value = entry.key;
+  expandedId.value = entry.key;
   await layoutCards();
   await nextTick();
   sidebar.value?.querySelector(`[data-comment-id="${entry.key}"]`)?.scrollIntoView({ block: "nearest" });
@@ -217,6 +224,7 @@ const addComment = async () => {
   const entry = store.createComment(pending.value, draft.value);
   if (!entry) return;
   activeId.value = entry.key;
+  expandedId.value = entry.key;
   opened.value = false;
   draft.value = "";
   pending.value = null;
@@ -239,6 +247,7 @@ const locate = (comment) => {
 const remove = (comment) => {
   store.deleteComment(comment);
   if (activeId.value === comment.key) activeId.value = "";
+  if (expandedId.value === comment.key) expandedId.value = "";
 };
 onBeforeUnmount(() => {
   disposed = true;
@@ -275,7 +284,7 @@ onBeforeUnmount(() => {
       <SfScrollbar class="min-h-0 flex-1" flush>
         <div class="flex flex-col gap-3">
           <p v-if="!mobileComments.length" class="text-sm text-sf-text-2">{{ $t("resumeCommentsEmpty") }}</p>
-          <CommentCard v-for="entry in mobileComments" :key="entry.key" :entry="entry" :active="activeId === entry.key" @focusin="activeId = entry.key" @locate="locate(entry)" @remove="remove(entry)" />
+          <CommentCard v-for="entry in mobileComments" :key="entry.key" :entry="entry" :active="activeId === entry.key" :expanded="expandedId === entry.key" @toggle="toggleComment(entry)" @focusin="activeId = entry.key" @locate="locate(entry)" @remove="remove(entry)" />
         </div>
       </SfScrollbar>
     </div>
@@ -336,6 +345,8 @@ onBeforeUnmount(() => {
           :style="{ left: `${36 / scale}px`, top: `${cardTop(comment.key)}px`, transform: `scale(${1 / scale})`, transformOrigin: 'top left' }"
           :entry="comment"
           :active="activeId === comment.key"
+          :expanded="expandedId === comment.key"
+          @toggle="toggleComment(comment)"
           @focusin="activeId = comment.key"
           @locate="locate(comment)"
           @remove="remove(comment)"
