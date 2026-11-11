@@ -117,7 +117,7 @@ const handleConfirm = () => {
 </script>
 
 <template>
-  <!-- 添加入口使用主文字色，间距统一由侧栏容器控制。 -->
+  <!-- 添加模块是侧栏高频入口，用浅底加粗与其余纯文字操作区分，不占主题色 -->
   <div class="w-full">
     <SfDropdown
       class="w-full"
@@ -128,7 +128,7 @@ const handleConfirm = () => {
     >
       <button
         type="button"
-        class="rail-action flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-3xl p-1 text-[12px] text-sf-text transition-colors select-none hover:bg-sf-bg"
+        class="rail-action flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-3xl border border-transparent bg-sf-bg p-1 text-[12px] font-medium text-sf-text transition-colors select-none hover:bg-sf-bg-2"
       >
         <SfIcon icon="ic:round-add" size="4" />
         <span>{{ $t("addModule") }}</span>

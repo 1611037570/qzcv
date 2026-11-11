@@ -4,7 +4,12 @@ import { storeToRefs } from "pinia";
 import { useDraggable } from "vue-draggable-plus";
 import { useResumeStore } from "@/stores";
 import { moveFieldByKey } from "@/components/business/dynamicForm/api";
-import { editorProgress, editorViewMode, jumpEditor, jumpPreview } from "../../../hooks/useModuleNav";
+import {
+  editorProgress,
+  editorViewMode,
+  jumpEditor,
+  jumpPreview,
+} from "../../../hooks/useModuleNav";
 import { $t } from "@/locales";
 import eventBus from "@/utils/modules/eventBus";
 import AddModule from "./add.vue";
@@ -33,7 +38,7 @@ const VIEW_MODES = [
 ];
 
 // 模块名称最多显示的字数，超出截断，保证模块树宽度稳定
-const NAME_MAX = 6;
+const NAME_MAX = 8;
 // 模块树当前高亮项：进入时默认个人信息，之后只由点击决定
 const activeKey = ref("user");
 
@@ -45,8 +50,7 @@ let draggedKeys = [];
 let draggable = null;
 
 // 名称超过上限时截断并补省略号，让「还有内容」看得出来
-const shortName = (name) =>
-  name.length > NAME_MAX ? `${name.slice(0, NAME_MAX)}…` : name;
+const shortName = (name) => (name.length > NAME_MAX ? `${name.slice(0, NAME_MAX)}…` : name);
 
 // 点击模块树同步定位编辑区与预览区；抽屉形态下选中后收起，并通知工作区切回编辑面板
 function handleModuleJump(key) {
@@ -94,9 +98,9 @@ const moduleDoneMap = computed(() => {
   return map;
 });
 
-// 模块行状态样式：选中高亮优先，隐藏降灰，其余默认悬停反馈
+// 模块行状态样式：选中用浅背景加粗，隐藏降灰，其余默认悬停反馈
 const rowClass = (item) => {
-  if (item.key === activeKey.value) return "bg-sf-theme-3 text-sf-theme";
+  if (item.key === activeKey.value) return "bg-sf-bg font-medium text-sf-text";
   if (item.hidden) return "text-sf-text-3";
   return "text-sf-text hover:bg-sf-bg";
 };
@@ -185,7 +189,10 @@ onUnmounted(() => {
   <!-- 抽屉容器：展开时占位模块树宽度，收起后完全不占据布局宽度，把手以浮层形式挂在屏幕左缘 -->
   <div
     class="module-tree-root relative shrink-0"
-    :class="[floating ? 'fixed inset-y-0 left-0 z-50' : 'h-full', { 'module-tree-collapsed': collapsed }]"
+    :class="[
+      floating ? 'fixed inset-y-0 left-0 z-50' : 'h-full',
+      { 'module-tree-collapsed': collapsed },
+    ]"
   >
     <!-- 移动端抽屉展开时的遮罩：点击空白区域收起，与右侧工具栏一致 -->
     <div
@@ -196,14 +203,21 @@ onUnmounted(() => {
     />
     <!-- 滑块：模块树整体滑动，收起后完全滑出屏幕 -->
     <div class="module-tree-slider absolute inset-y-0 left-0 z-50">
-      <aside class="module-tree flex h-full min-h-0 min-w-0 flex-col bg-sf-primary p-1.5" :class="floating ? 'shadow-xl' : ''">
+      <aside
+        class="module-tree flex h-full min-h-0 min-w-0 flex-col bg-sf-primary p-1.5"
+        :class="floating ? 'shadow-xl' : ''"
+      >
         <!-- 完成度：模块树最上方，随简历内容实时更新 -->
         <ModuleProgress @navigate="handleNavigate" />
         <!-- 模块标题行：左侧标题与拖动排序提示，右侧收起入口合并为一行 -->
         <div class="flex items-center gap-1 px-1 pb-1.5 text-xs text-sf-text">
           <span class="font-medium">{{ $t("resumeModuleTitle") }}</span>
           <span>· {{ $t("dragSortHint") }}</span>
-          <SfTooltip :content="$t('collapseModuleTree')" placement="bottom" class="ml-auto block shrink-0">
+          <SfTooltip
+            :content="$t('collapseModuleTree')"
+            placement="bottom"
+            class="ml-auto block shrink-0"
+          >
             <button
               type="button"
               class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-3xl p-0 text-sf-text-2 transition-colors hover:bg-sf-bg"
@@ -214,9 +228,9 @@ onUnmounted(() => {
             </button>
           </SfTooltip>
         </div>
-        <!-- 编辑区展示切换：样式与编辑 AI 模板标签一致 -->
+        <!-- 编辑区展示切换：轨道固定边框，悬停与选中都不引入主题色 -->
         <div
-          class="flex h-8 shrink-0 items-center rounded-3xl border border-sf-b bg-sf-bg p-1 transition-colors hover:border-sf-theme"
+          class="flex h-8 shrink-0 items-center rounded-3xl border border-sf-b bg-sf-bg p-1"
           role="tablist"
           :aria-label="$t('moduleNavigation')"
         >
@@ -228,8 +242,8 @@ onUnmounted(() => {
             class="flex h-6 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-2xl px-1 text-[12px] transition-all duration-100 select-none"
             :class="
               editorViewMode === mode.value
-                ? 'bg-sf-theme font-medium text-sf-theme-text'
-                : 'text-sf-text hover:bg-sf-theme-2'
+                ? 'bg-sf-primary font-medium text-sf-text'
+                : 'text-sf-text hover:bg-sf-bg-2'
             "
             :aria-selected="editorViewMode === mode.value"
             @click="editorViewMode = mode.value"
@@ -239,9 +253,9 @@ onUnmounted(() => {
           </button>
         </div>
         <SfScrollbar class="module-list-scroll mt-1.5 min-h-0 min-w-0 flex-1">
-          <!-- 模块行固定高度，名称最多显示六个字，正常状态使用主文字色 -->
+          <!-- 模块列表：行高固定，名称超长截断，保证窄栏宽度稳定 -->
           <div ref="listRef" class="flex min-h-full shrink-0 flex-col gap-1.5">
-            <!-- 模块行固定高度，名称最多显示六个字，正常状态使用主文字色 -->
+            <!-- 模块行固定高度，名称最多显示八个字，正常状态使用主文字色 -->
             <div
               v-for="item in draggableItems"
               :key="item.key"
@@ -257,7 +271,9 @@ onUnmounted(() => {
                 class="shrink-0 transition-colors"
                 :class="checkClass(item)"
               />
-              <span class="module-name max-w-21 truncate text-[12px]">{{ shortName(item.name) }}</span>
+              <span class="module-name max-w-25 truncate text-[12px]">{{
+                shortName(item.name)
+              }}</span>
               <!-- 右侧为完成状态与拖拽把手：未完成显示待补充，完成后显示数量徽标，两者互斥 -->
               <span class="rail-meta ml-auto flex shrink-0 items-center gap-1">
                 <span v-if="item.hidden" class="h-1.5 w-1.5 rounded-full bg-sf-text-3"></span>
@@ -274,17 +290,14 @@ onUnmounted(() => {
                     class="flex h-6 cursor-pointer items-center rounded-3xl px-1 text-[11px] leading-none transition-colors hover:underline"
                     :class="pendingClass(item)"
                     @click.stop="openProgressDetail"
-                  >{{ $t("toBeFilled") }}</button>
+                  >
+                    {{ $t("toBeFilled") }}
+                  </button>
                 </SfTooltip>
-                <!-- 完成后的记录数量徽标，不加悬停提示 -->
+                <!-- 完成后的记录数量徽标，不加悬停提示；不铺底色，只留数字 -->
                 <span
                   v-else-if="item.count !== null"
-                  class="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] leading-none tabular-nums"
-                  :class="
-                    item.key === activeKey
-                      ? 'bg-sf-theme text-sf-theme-text'
-                      : 'bg-sf-bg-2 text-sf-text-3'
-                  "
+                  class="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] leading-none text-sf-text-2 tabular-nums"
                   >{{ item.count }}</span
                 >
                 <span
@@ -296,15 +309,17 @@ onUnmounted(() => {
                   <SfIcon
                     icon="icon-park-outline:drag"
                     size="4"
-                    class="cursor-grab! text-sf-text-3 active:cursor-grabbing!"
+                    class="cursor-grab! text-sf-text-3 transition-colors group-hover/rail:text-sf-text-2 active:cursor-grabbing!"
                   />
                 </span>
               </span>
             </div>
           </div>
         </SfScrollbar>
-        <!-- 底部操作与模块行、寄语统一使用主文字色 -->
-        <div class="flex shrink-0 flex-col gap-1.5 border-t border-sf-b pt-1.5">
+        <!-- 底部操作与上方模块列表用分割线隔开，操作区自成一块 -->
+        <div class="flex shrink-0 flex-col gap-1.5 border-t border-sf-b py-1.5">
+          <!-- 添加模块紧邻模块列表，展开更多与更多操作排在其后 -->
+          <AddModule />
           <button
             v-if="system.moreOperationsExpanded"
             type="button"
@@ -325,9 +340,15 @@ onUnmounted(() => {
             <SfIcon icon="fa-solid:caret-down" size="4" />
             <span>{{ $t("expandSidebarMore") }}</span>
           </button>
-          <div v-if="system.moreOperationsExpanded" class="max-h-[50vh] min-h-0 overflow-y-auto">
+          <!-- 更多操作高度随内容，超出后滚动；滚动区域统一交给 SfScrollbar -->
+          <SfScrollbar
+            v-if="system.moreOperationsExpanded"
+            max-height="50vh"
+            flush
+            class="h-auto! flex-none!"
+          >
             <MoreActions />
-          </div>
+          </SfScrollbar>
           <SfDropdown
             v-else
             trigger="click"
@@ -344,12 +365,13 @@ onUnmounted(() => {
               <span>{{ $t("moreOperations") }}</span>
             </button>
             <template #dropdown>
-              <div class="flex w-40 flex-col gap-1.5 rounded-2xl border border-sf-b bg-sf-primary p-1.5">
+              <div
+                class="flex w-40 flex-col gap-1.5 rounded-2xl border border-sf-b bg-sf-primary p-1.5"
+              >
                 <MoreActions />
               </div>
             </template>
           </SfDropdown>
-          <AddModule />
         </div>
         <!-- 收尾文案覆盖共用组件的辅助色 -->
         <ResumeClosing
@@ -358,7 +380,11 @@ onUnmounted(() => {
       </aside>
     </div>
     <!-- 左缘把手：绝对定位浮层，展开时隐藏，收起后才出现，不占据任何布局宽度 -->
-    <SfTooltip :content="$t('expandModuleTree')" placement="right" class="absolute left-0 top-1/2 z-50 -translate-y-1/2">
+    <SfTooltip
+      :content="$t('expandModuleTree')"
+      placement="right"
+      class="absolute top-1/2 left-0 z-50 -translate-y-1/2"
+    >
       <button
         type="button"
         class="flex h-12 w-6 cursor-pointer items-center justify-center overflow-hidden rounded-r-2xl border border-l-0 border-sf-b bg-sf-primary text-sf-text-2 transition-all duration-300 hover:text-sf-theme"
@@ -377,7 +403,7 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 /* 抽屉容器：移动端与桌面端固定同一宽度，宽度全部由变量统一管理 */
 .module-tree-root {
-  --module-tree-width: 184px; /* 模块树固定宽度 */
+  --module-tree-width: 200px; /* 模块树固定宽度 */
 
   width: var(--module-tree-width);
   transition: width 0.3s ease-out;
