@@ -276,7 +276,6 @@ onUnmounted(() => {
               }}</span>
               <!-- 右侧为完成状态与拖拽把手：未完成显示待补充，完成后显示数量徽标，两者互斥 -->
               <span class="rail-meta ml-auto flex shrink-0 items-center gap-1">
-                <span v-if="item.hidden" class="h-1.5 w-1.5 rounded-full bg-sf-text-3"></span>
                 <!-- 待补充仅未完成时渲染（SfTooltip 默认插槽为空会兜底出问号图标，故完成态不包 tooltip）；
                      悬停可看到还差几处必填项，点击直接打开完成度详情 -->
                 <SfTooltip
@@ -300,6 +299,20 @@ onUnmounted(() => {
                   class="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] leading-none text-sf-text-2 tabular-nums"
                   >{{ item.count }}</span
                 >
+                <!-- 隐藏/显示模块：与模块折叠面板同款眼睛图标，点击切换预览显隐 -->
+                <SfTooltip :content="item.hidden ? $t('show') : $t('hide')" placement="top">
+                  <button
+                    type="button"
+                    class="flex cursor-pointer items-center"
+                    @click.stop="resumeStore.setModuleHidden(item.key, !item.hidden)"
+                  >
+                    <SfIcon
+                      :icon="item.hidden ? 'lucide:eye' : 'lucide:eye-off'"
+                      size="4"
+                      class="text-sf-text-3 transition-colors hover:text-sf-text"
+                    />
+                  </button>
+                </SfTooltip>
                 <span
                   v-if="!item.fixed"
                   class="module-sidebar-drag flex cursor-grab! items-center active:cursor-grabbing!"
