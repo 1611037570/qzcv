@@ -1,6 +1,6 @@
 <script setup>
 // 完成度入口：挂在模块树顶部，显示总进度并可打开完成度详情
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { TransitionPresets, useTransition } from "@vueuse/core";
 import { useResumeStore } from "@/stores";
@@ -23,14 +23,11 @@ const { introVisible, openOneKeyIntro, confirmOneKeyIntro } = useOneKeyActions(
   (flow) => eventBus.emit("resume-start-assistant-flow", flow),
 );
 
-// 详情弹窗显隐
+// 详情弹窗显隐：完成度卡片点击打开
 const visible = ref(false);
-// 打开详情：卡片点击与模块树「待补充」提示（事件总线）共用同一入口
 const openDetail = () => {
   visible.value = true;
 };
-onMounted(() => eventBus.on("open-progress-detail", openDetail));
-onUnmounted(() => eventBus.off("open-progress-detail", openDetail));
 
 // 总进度与各模块进度（含时间线一致性检查结果）使用编辑器共享计算，模块树勾选与这里消费同一份数据
 const progressData = editorProgress;

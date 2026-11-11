@@ -1,5 +1,13 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
 import { storeToRefs } from "pinia";
 import { useDraggable } from "vue-draggable-plus";
 import { useResumeStore } from "@/stores";
@@ -9,9 +17,9 @@ import {
   editorViewMode,
   jumpEditor,
   jumpPreview,
+  jumpToCheckTarget,
 } from "../../../hooks/useModuleNav";
 import { $t } from "@/locales";
-import eventBus from "@/utils/modules/eventBus";
 import AddModule from "./add.vue";
 import ModuleProgress from "./progress/index.vue";
 import MoreActions from "./moreActions.vue";
@@ -44,6 +52,8 @@ const activeKey = ref("user");
 
 const resumeStore = useResumeStore();
 const { runtimeConfig, system } = storeToRefs(resumeStore);
+// 确认弹窗与模块折叠面板同源，走全局 $confirm
+const { proxy } = getCurrentInstance();
 const listRef = ref(null);
 const draggableItems = ref([]);
 let draggedKeys = [];
@@ -114,23 +124,41 @@ const checkClass = (item) => {
 // 待补充文案样式：随模块行一起降灰
 const pendingClass = (item) => (item.hidden ? "text-sf-text-3" : "text-sf-warning");
 
-// 待补充点击：打开完成度详情，用户可直接看到该模块缺了哪些必填项
-const openProgressDetail = () => {
-  eventBus.emit("open-progress-detail");
-};
-
-// 待补充原因提示：只对未完成模块生成，悬停「待补充」可看到还差几处必填项
-const moduleTipMap = computed(() => {
+// 待补充提示与定位目标：悬停解释还差几处必填项，点击直接跳到第一个缺失字段
+const pendingModuleMap = computed(() => {
   const map = new Map();
   editorProgress.value.list.forEach((item) => {
     // 只统计缺失类问题，格式与时间线问题在完成度详情中查看
-    const missing = item.issues.filter((issue) => issue.kind === "missing").length;
-    if (missing > 0) {
-      map.set(item.key, $t("moduleProgressTip", { progress: item.progress, count: missing }));
-    }
+    const missing = item.issues.filter((issue) => issue.kind === "missing");
+    if (!missing.length) return;
+    map.set(item.key, {
+      tip: $t("moduleProgressTip", { progress: item.progress, count: missing.length }),
+      target: missing[0].target, // 第一个缺失必填项的编辑位置
+    });
   });
   return map;
 });
+
+// 待补充点击：直接定位到第一个缺失的必填项，省去打开详情弹窗再跳转的一步
+function goFillMissing(key) {
+  const target = pendingModuleMap.value.get(key)?.target;
+  if (!target || !jumpToCheckTarget(target)) return;
+  // 抽屉形态下定位成功后收起并切回编辑面板
+  handleNavigate();
+}
+
+// 删除模块：与模块折叠面板共用确认文案与删除流程
+function delModule(item) {
+  const message =
+    item.key === "jobIntent"
+      ? $t("deleteJobIntentConfirm")
+      : $t("deleteModuleConfirm", {
+          name: resumeStore.currentData?.[item.key]?.ui?.title || item.name,
+        });
+  proxy.$confirm(message, $t("deleteConfirm")).then(() => {
+    resumeStore.removeModule(item.key);
+  });
+}
 
 // 表单进入模块编辑状态时，同步更新模块树高亮项。
 watch(
@@ -277,10 +305,10 @@ onUnmounted(() => {
               <!-- 右侧为完成状态与拖拽把手：未完成显示待补充，完成后显示数量徽标，两者互斥 -->
               <span class="rail-meta ml-auto flex shrink-0 items-center gap-1">
                 <!-- 待补充仅未完成时渲染（SfTooltip 默认插槽为空会兜底出问号图标，故完成态不包 tooltip）；
-                     悬停可看到还差几处必填项，点击直接打开完成度详情 -->
+                     悬停可看到还差几处必填项，点击直接定位到第一个缺失字段 -->
                 <SfTooltip
                   v-if="!moduleDoneMap.get(item.key)"
-                  :content="moduleTipMap.get(item.key)"
+                  :content="pendingModuleMap.get(item.key)?.tip"
                   placement="top"
                   class="flex min-w-0 items-center"
                 >
@@ -288,7 +316,7 @@ onUnmounted(() => {
                     type="button"
                     class="flex h-6 cursor-pointer items-center rounded-3xl px-1 text-[11px] leading-none transition-colors hover:underline"
                     :class="pendingClass(item)"
-                    @click.stop="openProgressDetail"
+                    @click.stop="goFillMissing(item.key)"
                   >
                     {{ $t("toBeFilled") }}
                   </button>
@@ -308,6 +336,20 @@ onUnmounted(() => {
                   >
                     <SfIcon
                       :icon="item.hidden ? 'lucide:eye' : 'lucide:eye-off'"
+                      size="4"
+                      class="text-sf-text-3 transition-colors hover:text-sf-text"
+                    />
+                  </button>
+                </SfTooltip>
+                <!-- 删除模块：固定模块不可删，确认流程与模块折叠面板一致 -->
+                <SfTooltip v-if="!item.fixed" :content="$t('delete')" placement="top">
+                  <button
+                    type="button"
+                    class="flex cursor-pointer items-center"
+                    @click.stop="delModule(item)"
+                  >
+                    <SfIcon
+                      icon="ic:round-delete"
                       size="4"
                       class="text-sf-text-3 transition-colors hover:text-sf-text"
                     />
