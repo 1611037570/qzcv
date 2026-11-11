@@ -32,6 +32,13 @@ const props = defineProps({
 // ESC 关闭走弹层仲裁：弹窗或确认框盖在本层之上时，按键只作用于最上层。
 // 关闭由父组件统一处理，发送 close 由父复位 visible。
 useOverlayKeys({ escape: () => emit("close") }, () => props.visible);
+
+// 点击纸张外的任意空白关闭全屏：根层被顶栏与内容区完全铺满，
+// @click.self 永远无法命中自身，改为按点击目标是否落在纸张内判断。
+const handleBackdropClick = (event) => {
+  if (event.target.closest(".resume-page-item")) return;
+  emit("close");
+};
 </script>
 
 <template>
@@ -39,7 +46,7 @@ useOverlayKeys({ escape: () => emit("close") }, () => props.visible);
     <div
       v-if="visible"
       class="fixed inset-0 z-50 flex flex-col backdrop-blur-[10px]"
-      @click.self="emit('close')"
+      @click="handleBackdropClick"
     >
       <!-- 顶部栏 -->
       <div class="flex h-12 shrink-0 items-center justify-between px-4">
@@ -47,7 +54,7 @@ useOverlayKeys({ escape: () => emit("close") }, () => props.visible);
         <button
           type="button"
           class="flex h-8 w-8 cursor-pointer! items-center justify-center rounded-full text-sf-text transition-colors hover:bg-sf-bg-2"
-          @click="emit('close')"
+          @click.stop="emit('close')"
         >
           <SfIcon icon="lucide:x" size="4" />
         </button>

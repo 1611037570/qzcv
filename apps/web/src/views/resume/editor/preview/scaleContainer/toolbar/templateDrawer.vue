@@ -35,10 +35,10 @@ const drawerStyle = computed(() => ({
     </button>
   </SfTooltip>
   <!-- 抽屉浮层：fixed 相对视口，从屏幕最左缘滑出（与模块树抽屉同款），移动端也可用 -->
-  <!-- 遮罩仅移动端显示：桌面端抽屉打开时工具栏与预览仍可正常点击 -->
+  <!-- 遮罩在抽屉打开期间常驻：点击空白收起；全屏预览层级更高，不受遮罩影响 -->
   <Transition name="template-drawer-mask">
     <div
-      v-if="visible && isMobile"
+      v-if="visible"
       class="fixed inset-0 z-40 bg-sf-text"
       style="opacity: 0.2"
       @click="visible = false"
@@ -51,16 +51,19 @@ const drawerStyle = computed(() => ({
       :style="drawerStyle"
     >
       <div class="flex h-full min-h-0 flex-col border-r border-sf-b bg-sf-primary shadow-xl">
+        <!-- 顶部栏：标题与关闭入口独立于模板列表，浮层按钮与卡片热区不再重叠 -->
+        <div class="flex h-12 shrink-0 items-center justify-between px-4">
+          <span class="text-sm font-medium text-sf-text">{{ $t("template") }}</span>
+          <button
+            type="button"
+            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-sf-text transition-colors hover:bg-sf-bg-2"
+            :aria-label="$t('template')"
+            @click="visible = false"
+          >
+            <SfIcon icon="lucide:x" size="4" />
+          </button>
+        </div>
         <AsyncTemplate class="min-h-0 w-full flex-1" />
-        <!-- 关闭按钮：浮在面板右上角，与滑出方向相反的 chevron 表示收回 -->
-        <button
-          type="button"
-          class="absolute top-2 right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-sf-b bg-sf-primary text-sf-text-2 transition-colors hover:text-sf-theme"
-          :aria-label="$t('template')"
-          @click="visible = false"
-        >
-          <SfIcon icon="mdi:chevron-left" size="4" />
-        </button>
       </div>
     </div>
   </Transition>
