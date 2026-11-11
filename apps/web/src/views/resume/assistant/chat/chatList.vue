@@ -80,7 +80,7 @@ function formatTime(time: number) {
               {{ chat.title }}
             </p>
             <div class="flex flex-wrap items-center gap-x-3 text-xs leading-6 text-sf-text-3">
-              <span class="font-medium text-sf-text-2">{{ chat.mode === 'chat' ? 'Chat' : 'Agent' }}</span>
+              <span class="font-medium text-sf-text-2">{{ chat.mode === 'chat' ? '聊天' : '智能体' }}</span>
               <span aria-hidden="true">·</span>
               <time :datetime="new Date(chat.updateTime).toISOString()">{{ formatTime(chat.updateTime) }}</time>
             </div>

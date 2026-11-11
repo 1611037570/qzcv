@@ -26,11 +26,11 @@ const emit = defineEmits(["select", "openChatList", "newChat", "selectMode"]);
 // 模式选择复用统一 Tab，首条消息后的锁定规则由会话宿主维护。
 const modeTabs = [
   {
-    name: "Agent", // 智能体标签名称。
+    name: "智能体", // 智能体标签名称。
     value: "agent", // 智能体会话类型。
   },
   {
-    name: "Chat", // 只读聊天标签名称。
+    name: "聊天", // 只读聊天标签名称。
     value: "chat", // 只读聊天会话类型。
   },
 ];
@@ -55,8 +55,12 @@ function createNewChat() {
           aria-label="新会话模式"
           @update:model-value="emit('selectMode', $event)"
         />
-        <span v-else class="flex h-9 items-center rounded-full bg-sf-bg-2 px-3 text-sm font-medium text-sf-text-2">
-          {{ props.mode === 'chat' ? 'Chat' : 'Agent' }}
+        <!-- 锁定后只做轻量标识：小号胶囊避免占用过多头部空间 -->
+        <span
+          v-else
+          class="flex h-6 items-center rounded-full bg-sf-bg-2 px-2 text-xs font-medium text-sf-text-2"
+        >
+          {{ props.mode === 'chat' ? '聊天' : '智能体' }}
         </span>
         <MessageNav
           v-if="props.messages.length"
