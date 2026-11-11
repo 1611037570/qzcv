@@ -971,7 +971,7 @@ export const DEFAULT_EDUCATION_FORM = {
             type: "object",
             label: "经历",
             component: "resumeContentEditor",
-            required: true,
+            required: false, // 经历描述不强制填写，避免 education 模块因它显示「待补充」
             rules: [contentQualityRule()],
             span: 24,
             props: {

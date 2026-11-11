@@ -47,7 +47,7 @@ function showAll() {
           @click="open"
         >
           <SfIcon icon="fa6-solid:file-import" size="4" />
-          <span class="group-[.module-tree-compact]/module-tree:hidden">导入简历</span>
+          <span>导入简历</span>
         </button>
       </template>
     </ImportResume>
@@ -60,7 +60,7 @@ function showAll() {
       @click="showAll"
     >
       <SfIcon icon="lucide:eye" size="4" />
-      <span class="group-[.module-tree-compact]/module-tree:hidden">{{ $t("showAllContent") }}</span>
+      <span>{{ $t("showAllContent") }}</span>
     </button>
     <button
       type="button"
@@ -69,7 +69,7 @@ function showAll() {
       @click="collapseAll"
     >
       <SfIcon icon="fa-solid:caret-up" size="4" />
-      <span class="group-[.module-tree-compact]/module-tree:hidden">{{ $t("collapseAllModules") }}</span>
+      <span>{{ $t("collapseAllModules") }}</span>
     </button>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup>
 // 显式命名编辑组件，供父级 KeepAlive 按 include 命中缓存
 defineOptions({ name: "BuilderEditor" });
-import { useResumeStore } from "@/stores";
+import { useResumeStore, useSystemStore } from "@/stores";
 import SfSkeleton from "@/components/el/skeleton";
 import FormLoading from "./components/formLoading.vue";
 import { storeToRefs } from "pinia";
@@ -34,7 +34,7 @@ import RowSkill from "./components/row/skill.vue";
 import FormActionIcon from "./components/icon.vue";
 import { localizeResumeOptions } from "@/stores/modules/resume/hooks/useResumeEditorLocale";
 import i18n from "@/locales";
-import { flushPendingEditorLocation } from "../../hooks/useModuleNav";
+import { editorViewMode, flushPendingEditorLocation } from "../../hooks/useModuleNav";
 
 const loadDynamicForm = () => import("@/components/business/dynamicForm/index");
 // 动态表单加载期间立即显示骨架，避免编辑区只剩增加模块
@@ -70,6 +70,8 @@ const AsyncCityPicker = defineAsyncComponent({
 
 const resumeStore = useResumeStore();
 const { currentData, runtimeConfig } = storeToRefs(resumeStore);
+// 模块导航在移动端改挂工作区层抽屉，编辑区内仅在桌面端内联
+const { isMobile } = storeToRefs(useSystemStore());
 let keyboardFocusPending = false;
 // 触摸与手写笔直接操作表单时不更新预览提示，避免辅助重绘干扰控件激活。
 const isDirectPointerInteraction = (event) => {
@@ -131,6 +133,21 @@ const localizedResumeOptions = computed(() => {
   // 读取当前语言建立依赖，选项显示文案随语言切换更新，保存值保持不变
   i18n.global.locale.value;
   return localizeResumeOptions(RESUME_OPTIONS);
+});
+// 编辑区展示配置：单个模块模式只渲染当前定位的模块，整页模式与未选中模块时回退完整表单。
+// 字段对象与原始配置共享引用，记录增删等嵌套操作仍直接作用于真实数据。
+const displayConfig = computed({
+  get: () => {
+    if (editorViewMode.value !== "single" || !runtimeConfig.value) return runtimeConfig.value;
+    const field = (runtimeConfig.value.fields || []).find(
+      (item) => item.key === resumeStore.editingModuleKey,
+    );
+    return field ? { ...runtimeConfig.value, fields: [field] } : runtimeConfig.value;
+  },
+  // 表单配置整体替换时写回运行时配置，保持双向绑定语义
+  set: (value) => {
+    runtimeConfig.value = value;
+  },
 });
 const { markEditorStart, markEditorEnd } = useRuntimeData();
 // 编辑区加载开始：组件初始化即记录，作为编辑区加载耗时起点
@@ -239,14 +256,14 @@ onBeforeUnmount(() => {
     @focusin.capture="markKeyboardEditingModule"
   >
     <div class="flex h-full min-h-0 w-full">
-      <ModuleSidebar />
+      <ModuleSidebar v-if="!isMobile" />
       <SfScrollbar class="resume-editor-form relative h-full min-h-0">
         <FormLoading v-if="!showDynamicForm || !runtimeConfig" />
         <!-- 顶层模块列表增加间距 -->
         <AsyncDynamicForm
           v-else
           class="py-3 [&>.el-row]:gap-3"
-          v-model:form="runtimeConfig"
+          v-model:form="displayConfig"
           v-model:data="currentData"
           :components="dynamicComponents"
           :options="localizedResumeOptions"

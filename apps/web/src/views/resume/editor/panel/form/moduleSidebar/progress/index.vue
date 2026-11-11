@@ -1,12 +1,11 @@
 <script setup>
 // 完成度入口：挂在模块树顶部，显示总进度并可打开完成度详情
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { TransitionPresets, useTransition } from "@vueuse/core";
 import { useResumeStore } from "@/stores";
-import { useProgress } from "../../../../hooks/useProgress";
+import { editorProgress, jumpAll, jumpToCheckTarget } from "../../../../hooks/useModuleNav";
 import { formatResumeCheckIssue } from "../../../../hooks/resumeChecks";
-import { jumpToCheckTarget } from "../../../../hooks/useModuleNav";
 import { useResumeStats } from "../../../../hooks/useResumeStats";
 import { $t } from "@/locales";
 import eventBus from "@/utils/modules/eventBus";
@@ -14,7 +13,10 @@ import OneKeyIntro from "../../../../components/oneKeyIntro.vue";
 import { useOneKeyActions } from "../../../../hooks/useOneKeyActions";
 
 const resumeStore = useResumeStore();
-const { currentData, runtimeFields, currentUI, isGenerating } = storeToRefs(resumeStore);
+const { currentData, currentUI, isGenerating } = storeToRefs(resumeStore);
+
+// 抽屉形态下跳转后通知外层收起抽屉并切回编辑面板
+const emit = defineEmits(["navigate"]);
 
 // 优化交给独立弹窗，调整仍在确认说明后启动助手流程。
 const { introVisible, openOneKeyIntro, confirmOneKeyIntro } = useOneKeyActions(
@@ -23,33 +25,25 @@ const { introVisible, openOneKeyIntro, confirmOneKeyIntro } = useOneKeyActions(
 
 // 详情弹窗显隐
 const visible = ref(false);
+// 打开详情：卡片点击与模块树「待补充」提示（事件总线）共用同一入口
+const openDetail = () => {
+  visible.value = true;
+};
+onMounted(() => eventBus.on("open-progress-detail", openDetail));
+onUnmounted(() => eventBus.off("open-progress-detail", openDetail));
 
-// 总进度与各模块进度（含时间线一致性检查结果），传入界面配置用于判断双形态模块布局
-const progressData = computed(() =>
-  useProgress(runtimeFields.value || [], currentData.value, currentUI.value),
-);
+// 总进度与各模块进度（含时间线一致性检查结果）使用编辑器共享计算，模块树勾选与这里消费同一份数据
+const progressData = editorProgress;
 // 保留数据引用，切换简历及撤销替换数据后重新统计当前内容
 const resumeStats = useResumeStats(computed(() => currentData.value || {}), currentUI);
-// 分类计数只遍历一次，入口摘要与提示共用同一结果。
-const issueCounts = computed(() => {
-  const counts = { missing: 0 /* 缺失项数量 */, format: 0 /* 格式问题数量 */, timeline: 0 /* 时间问题数量 */ };
-  progressData.value.issues.forEach((issue) => counts[issue.kind]++);
-  return counts;
-});
-const issueSummary = computed(() => Object.entries({
-  missing: "resumeMissingCount", // 缺失项摘要文案
-  format: "resumeFormatIssueCount", // 格式问题摘要文案
-  timeline: "resumeTimelineIssueCount", // 时间问题摘要文案
-}).flatMap(([kind, label]) => {
-  const count = issueCounts.value[kind];
-  return count ? [$t(label, { count /* 当前分类的问题数量 */ })] : [];
-}));
 
 // 总进度数字过渡动画
 const animatedProgress = useTransition(computed(() => progressData.value.progress), {
   duration: 500,
   transition: TransitionPresets.easeOutCubic,
 });
+// 界面统一消费取整后的百分比，避免多处重复取整
+const displayProgress = computed(() => Math.round(animatedProgress.value));
 
 // 缺失、格式或时间线任一检查未通过时先调整，全部通过后才进入内容优化。
 const needsAdjustment = computed(
@@ -72,82 +66,81 @@ const startAiAction = () => {
   openOneKeyIntro(needsAdjustment.value ? "oneKeyAdjust" : "oneKeyOptimize");
 };
 
-// 入口提示：格式错误 > 时间线问题 > 查看详情
-const tooltipText = computed(() => {
-  if (progressData.value.hasError) return $t("formatIssues");
-  return issueCounts.value.timeline
-    ? $t("timelineIssue", { count: issueCounts.value.timeline /* 时间问题数量 */ })
-    : $t("viewProgressDetail");
-});
-
 // 点击前核对仍属于当前检查结果，切换简历或删除问题记录后不使用旧目标。
 const goFill = (issue) => {
   if (!progressData.value.issues.includes(issue)) return;
-  if (jumpToCheckTarget(issue.target)) visible.value = false;
+  if (jumpToCheckTarget(issue.target)) {
+    visible.value = false;
+    emit("navigate");
+  }
+};
+
+// 全部未填完的模块：卡片上的「还差」逐个展示，点击直接定位填写
+const incompleteModules = computed(
+  () => progressData.value.list.filter((item) => item.progress < 100),
+);
+// 还差模块跳转：编辑区与预览区同步定位，隐藏模块自动恢复
+const goFillModule = (key) => {
+  jumpAll(key);
+  emit("navigate");
 };
 
 </script>
 
 <template>
-  <!-- 操作按钮放在圆环旁，检查摘要下沉到原按钮所在的整行区域。 -->
-  <div class="mb-1.5 flex w-full shrink-0 flex-col gap-1 border-b border-sf-b pb-1.5">
-    <div class="flex items-center gap-1 group-[.module-tree-compact]/module-tree:flex-col">
-      <SfTooltip :content="tooltipText" placement="right" class="block shrink-0">
-        <button
-          type="button"
-          class="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-sf-bg"
-          :aria-label="$t('progressDetail')"
-          @click="visible = true"
-        >
-          <svg class="h-8 w-8 -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
-            <circle
-              cx="24"
-              cy="24"
-              r="19"
-              fill="none"
-              stroke="currentColor"
-              class="text-sf-bg-2"
-              stroke-width="6"
-            />
-            <circle
-              cx="24"
-              cy="24"
-              r="19"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="6"
-              stroke-linecap="round"
-              stroke-dasharray="119.38"
-              :class="needsAdjustment ? 'text-sf-warning' : 'text-sf-success'"
-              :stroke-dashoffset="119.38 - (119.38 * Math.round(animatedProgress)) / 100"
-            />
-          </svg>
-          <span class="absolute inset-0 grid place-content-center text-[10px] font-bold text-sf-text">
-            {{ Math.round(animatedProgress) }}
-          </span>
-        </button>
-      </SfTooltip>
+  <!-- 完成度区块：背景与模块树一致，一键调整收纳在区块内，点击空白处打开详情 -->
+  <div class="mb-1.5 w-full shrink-0">
+    <div
+      class="cursor-pointer rounded-2xl border border-sf-b p-3 transition-colors hover:border-sf-theme"
+      :aria-label="$t('progressDetail')"
+      @click="openDetail"
+    >
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="text-xs text-sf-text-3">{{ $t("completionRate") }}</span>
+        <!-- chevron 提示整张卡片可点击查看详情 -->
+        <span class="flex items-center gap-0.5 text-sm font-bold tabular-nums text-sf-text">
+          {{ displayProgress }}%
+          <SfIcon icon="mdi:chevron-right" size="3" class="font-normal text-sf-text-3" />
+        </span>
+      </div>
+      <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-sf-bg">
+        <div
+          class="h-full rounded-full transition-[width] duration-500"
+          :class="needsAdjustment ? 'bg-sf-warning' : 'bg-sf-success'"
+          :style="{ width: `${displayProgress}%` }"
+        />
+      </div>
+      <!-- 还差：展示全部未填完的模块名，点击直接定位填写，不触发卡片打开详情 -->
+      <div
+        v-if="incompleteModules.length"
+        class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] leading-4"
+        @click.stop
+      >
+        <span class="shrink-0 text-sf-text-3">{{ $t("progressRemainingPrefix") }}</span>
+        <template v-for="(item, index) in incompleteModules" :key="item.key">
+          <button
+            type="button"
+            class="min-w-0 max-w-full cursor-pointer truncate text-left text-sf-theme transition-colors hover:underline"
+            @click="goFillModule(item.key)"
+          >{{ item.name }}</button>
+          <span
+            v-if="index < incompleteModules.length - 1"
+            class="shrink-0 text-sf-text-3"
+          >{{ $t("enumSeparator") }}</span>
+        </template>
+      </div>
+      <!-- 一键调整收纳在完成度区块内：阻止冒泡避免同时打开详情 -->
       <button
         type="button"
-        class="flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-3xl px-1 text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-60 group-[.module-tree-compact]/module-tree:w-8 group-[.module-tree-compact]/module-tree:flex-none group-[.module-tree-compact]/module-tree:px-0"
+        class="mt-1.5 flex h-8 min-w-0 w-full cursor-pointer items-center justify-center gap-1 rounded-3xl px-1 text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-60"
         :class="aiActionClass"
         :disabled="isGenerating"
-        @click="startAiAction"
+        @click.stop="startAiAction"
       >
         <SfIcon :icon="isGenerating ? 'line-md:loading-twotone-loop' : 'lucide:sparkles'" size="3" />
-        <span class="truncate group-[.module-tree-compact]/module-tree:hidden">{{ aiActionLabel }}</span>
+        <span class="truncate">{{ aiActionLabel }}</span>
       </button>
     </div>
-    <!-- 完成时隐藏状态文字，仅展示待处理问题 -->
-    <button
-      v-if="needsAdjustment"
-      type="button"
-      class="flex w-full cursor-pointer flex-col rounded-2xl px-2 text-left text-[10px] leading-4 text-sf-warning transition-colors group-[.module-tree-compact]/module-tree:hidden"
-      :aria-label="$t('progressDetail')"
-      @click="visible = true"
-    >
-      <span v-for="summary in issueSummary" :key="summary">{{ summary }}</span>
-    </button>
   </div>
 
   <SfModal v-model="visible" :title="$t('progressDetail')" width="560px" title-class="justify-start! text-base!">

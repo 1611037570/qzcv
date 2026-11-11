@@ -44,6 +44,12 @@
       </Transition>
       <!-- 移动端工具栏独立于面板显隐，编辑区与预览区均可打开。 -->
       <Toolbar v-if="isMobile && !focusMode" />
+      <!-- 移动端模块导航抽屉：与右侧工具栏同款交互，点击左缘把手从左侧滑出 -->
+      <ModuleSidebar
+        v-if="isMobile && !focusMode"
+        floating
+        @navigate="mobilePanel = 'edit'"
+      />
       <!-- 导出加载浮层：teleport 到 body 全屏展示 -->
       <Teleport to="body">
         <ExportMask v-if="isPrinting" @cancel="cancelPrinting" />
@@ -97,6 +103,7 @@ import DetectTip from "./components/detectTip.vue";
 import MobileWorkspaceNav from "./components/mobileWorkspaceNav.vue";
 import Preview from "./preview/index.vue";
 import Toolbar from "./toolbar/index.vue";
+import ModuleSidebar from "./panel/form/moduleSidebar/index.vue";
 import { PROJECT_ICON_LIST } from "./data/localIcons";
 
 const router = useRouter();

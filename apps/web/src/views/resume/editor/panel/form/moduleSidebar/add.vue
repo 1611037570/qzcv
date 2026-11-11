@@ -131,7 +131,7 @@ const handleConfirm = () => {
         class="rail-action flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-3xl p-1 text-[12px] text-sf-text transition-colors select-none hover:bg-sf-bg"
       >
         <SfIcon icon="ic:round-add" size="4" />
-        <span class="group-[.module-tree-compact]/module-tree:hidden">{{ $t("addModule") }}</span>
+        <span>{{ $t("addModule") }}</span>
       </button>
       <template #dropdown>
         <div

@@ -195,6 +195,7 @@ export const ICON_LIST: Record<string, IconItem> = {
   "mdi:check-circle": { icon: "mdi:check-circle" },
   "mdi:chevron-left": { icon: "mdi:chevron-left" },
   "mdi:chevron-right": { icon: "mdi:chevron-right" },
+  "mdi:circle-outline": { icon: "mdi:circle-outline", name: "待补充" },
   "mdi:clock-outline": { icon: "mdi:clock-outline" },
   "mdi:content-copy": { icon: "mdi:content-copy" },
   "mdi:database": { icon: "mdi:database" },

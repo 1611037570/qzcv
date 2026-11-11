@@ -10,6 +10,7 @@ import {
   walkFormFields,
 } from "@/components/business/dynamicForm/api";
 import { stripHtml } from "./useResumeStats";
+import { useProgress } from "./useProgress";
 import { useScrollEditorTo } from "./useScrollEditorTo";
 import type { ResumeCheckTarget } from "./resumeChecks";
 
@@ -136,8 +137,17 @@ export function useResumeSearch() {
 
 // store 为全局单例：模块列表与跳转逻辑无组件级状态，抽为模块级共享，避免各组件重复创建 hook
 const resumeStore = useResumeStore();
-const { currentData, runtimeFields } = storeToRefs(resumeStore);
+const { currentData, runtimeFields, currentUI } = storeToRefs(resumeStore);
 const { searchIndex } = useResumeSearch();
+
+// 编辑区展示模式：page 为整页编辑（全部模块连续展示），single 为单个模块（只展示当前点击的模块）
+export const editorViewMode = ref<"page" | "single">("page");
+
+// 编辑器共享的完成度结果：模块树勾选与完成度入口消费同一份数据，内容变化只计算一次
+export const editorProgress = computed(() =>
+  useProgress(runtimeFields.value || [], currentData.value, currentUI.value),
+);
+
 const PREVIEW_HIGHLIGHT_DELAY = 10;
 const EDITOR_HIGHLIGHT_DELAY = 0;
 // 定位重试帧数：模块折叠内容与表单节点可能晚于本次定位才挂载
@@ -311,8 +321,17 @@ export const jumpEditor = (key: string) => {
   locateEditor(key);
 };
 
+// 单个模块模式下编辑区只渲染当前定位的模块：定位到其他模块前先切换展示目标
+const syncSingleModeModule = (key: string) => {
+  if (editorViewMode.value !== "single") return;
+  if (resumeStore.editingModuleKey === key) return;
+  resumeStore.editingModuleKey = key;
+  resumeStore.editingItemIndex = null;
+};
+
 // 定位到搜索命中行：展开模块与命中记录，滚动到最精确的锚点
 export const jumpToHit = (moduleKey: string, hit?: ResumeSearchHit) => {
+  syncSingleModeModule(moduleKey);
   activateModule(moduleKey);
   // 数组模块：展开命中所在的记录，记录处于折叠状态时看不到命中内容
   const record =
@@ -326,6 +345,7 @@ export const jumpToHit = (moduleKey: string, hit?: ResumeSearchHit) => {
 
 // 预览区定位编辑区：切标签、选中闪烁与滚动定位，不展开折叠，避免点击改变编辑区折叠状态
 export const locateEditor = (key: string, hit?: Pick<ResumeSearchHit, "itemIndex">) => {
+  syncSingleModeModule(key);
   pendingEditorLocation = () => {
     // 模块收起时即使子记录节点曾经挂载，也应回退到大模块定位与高亮。
     const moduleCollapsed = currentData.value?.[key]?.ui?.collapsed;
@@ -359,6 +379,7 @@ export const jumpToCheckTarget = (target: ResumeCheckTarget): boolean => {
   const item = resumeStore.currentItem;
   const key = target.moduleKey;
   if (!item || !moduleList.value.some((module) => module.key === key)) return false;
+  syncSingleModeModule(key);
   const getRecordIndex = () => {
     const list = target.listPath?.reduce<any>((value, part) => value?.[part], currentData.value);
     return Array.isArray(list) ? list.indexOf(target.record) : -1;
