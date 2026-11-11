@@ -35,9 +35,10 @@ const drawerStyle = computed(() => ({
     </button>
   </SfTooltip>
   <!-- 抽屉浮层：fixed 相对视口，从屏幕最左缘滑出（与模块树抽屉同款），移动端也可用 -->
+  <!-- 遮罩仅移动端显示：桌面端抽屉打开时工具栏与预览仍可正常点击 -->
   <Transition name="template-drawer-mask">
     <div
-      v-if="visible"
+      v-if="visible && isMobile"
       class="fixed inset-0 z-40 bg-sf-text"
       style="opacity: 0.2"
       @click="visible = false"

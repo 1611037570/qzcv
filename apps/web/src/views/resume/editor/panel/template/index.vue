@@ -27,6 +27,16 @@ const toggleLayout = (key) => {
 const toggleTier = (key) => {
   selectedTier.value = selectedTier.value === key ? "" : key;
 };
+// 筛选行滚轮横移：滚动条已隐藏，纵向滚轮与触控板横滑都能移动选项行
+const onFilterWheel = (event) => {
+  const row = event.currentTarget;
+  // 无横向溢出时不拦截，滚轮继续滚动列表本身
+  if (!row || row.scrollWidth <= row.clientWidth) return;
+  const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+  if (!delta) return;
+  event.preventDefault();
+  row.scrollLeft += delta;
+};
 // 筛选行配置：布局与类型两行共用同一渲染结构
 const filterRows = computed(() => [
   {
@@ -135,7 +145,10 @@ const applyTemplate = (template) => {
     <div class="mb-3 flex flex-col gap-3">
       <div v-for="row in filterRows" :key="row.label" class="flex items-center gap-3">
         <span class="w-[36px] shrink-0 text-sm text-sf-text-2">{{ row.label }}</span>
-        <div class="filter-row flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
+        <div
+          class="filter-row flex min-w-0 flex-1 flex-nowrap items-center gap-1.5"
+          @wheel="onFilterWheel"
+        >
           <button
             v-for="option in row.options"
             :key="option.key"
