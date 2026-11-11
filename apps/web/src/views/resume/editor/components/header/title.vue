@@ -1,34 +1,13 @@
 <script setup>
-import { useResumeStore } from "@/stores";
+import { ref } from "vue";
 import { storeToRefs } from "pinia";
-import { computed, ref } from "vue";
+import { useResumeStore } from "@/stores";
 import { useResumeName } from "../../../hooks/useResumeName";
 import RenameResumeModal from "../../../components/renameResumeModal.vue";
 const resumeStore = useResumeStore();
-const { currentItem, saveStates } = storeToRefs(resumeStore);
+const { currentItem } = storeToRefs(resumeStore);
 const { resumeTitle } = useResumeName();
-
 const title = resumeTitle;
-// 标题旁只展示当前简历的真实落库状态，未产生写入时视为已保存。
-const saveStatus = computed(() => {
-  const id = currentItem.value?.id;
-  if (!id) return "";
-  return saveStates.value[id]?.status ?? "saved";
-});
-const saveStatusText = computed(() => {
-  if (saveStatus.value === "error") return $t("resumeSaveFailed");
-  if (saveStatus.value === "pending" || saveStatus.value === "saving") {
-    return $t("resumeSaving");
-  }
-  return $t("resumeSaved");
-});
-const saveStatusClass = computed(() => {
-  if (saveStatus.value === "error") return "text-sf-error";
-  if (saveStatus.value === "pending" || saveStatus.value === "saving") {
-    return "animate-pulse text-sf-text-3";
-  }
-  return "text-sf-success";
-});
 // 编辑器标题入口复用与我的简历相同的重命名弹窗。
 const editTitleVisible = ref(false);
 
@@ -54,13 +33,6 @@ function openModal() {
         class="shrink-0 text-sf-text-3"
       />
     </button>
-    <span
-      v-if="saveStatus"
-      class="shrink-0 text-xs transition-colors"
-      :class="saveStatusClass"
-    >
-      {{ saveStatusText }}
-    </span>
     <RenameResumeModal v-model="editTitleVisible" :item="currentItem" />
   </div>
 </template>
