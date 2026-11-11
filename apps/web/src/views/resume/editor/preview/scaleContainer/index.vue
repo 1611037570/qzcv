@@ -7,6 +7,7 @@ import eventBus from "@/utils/modules/eventBus";
 import { useResumeStore } from "@/stores";
 import { RESUME_HEIGHT, RESUME_WIDTH } from "../shared/constants";
 import Language from "./toolbar/language.vue";
+import TemplateDrawer from "./toolbar/templateDrawer.vue";
 import TemplateSettings from "./toolbar/templateSettings.vue";
 import Settings from "./toolbar/settings.vue";
 import MoreSettings from "./toolbar/moreSettings.vue";
@@ -286,6 +287,8 @@ onUnmounted(() => eventBus.off("resume-standard-a4", setStandardA4));
       <!-- 下行设置与预览操作两端分组，按钮沿用自身内边距，移除分割线。 -->
       <div class="toolbar-row flex min-h-0 items-center justify-between gap-3 overflow-x-auto">
         <div class="flex items-center">
+          <!-- 模板抽屉入口：点击后模板面板从预览区左缘滑出 -->
+          <TemplateDrawer />
           <TemplateSettings />
           <Settings />
           <MoreSettings />

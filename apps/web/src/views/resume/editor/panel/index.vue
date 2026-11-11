@@ -15,9 +15,10 @@ import eventBus from "@/utils/modules/eventBus";
 import { $t } from "@/locales";
 import { DEFAULT_EDITOR } from "@/stores/modules/resume/config/defaultConfig";
 import BuilderEditorComponent from "./form/index.vue";
+import SaveStatus from "./saveStatus.vue";
+import LocalBackup from "../components/header/localBackup.vue";
 // 编辑标签页外壳同步加载，动态表单在首帧后异步挂载
 const BuilderEditor = markRaw(BuilderEditorComponent);
-const AsyncTemplate = markRaw(defineAsyncComponent(() => import("./template/index.vue")));
 const AsyncAi = markRaw(defineAsyncComponent(() => import("../../assistant/chat/index.vue")));
 // 进入简历编辑器时默认打开编辑标签。
 const activeIndex = ref(0);
@@ -31,7 +32,7 @@ activeEditorTab.value = "edit";
 const direction = ref("right");
 watch(activeIndex, (val, old) => {
   direction.value = val > old ? "right" : "left";
-  activeEditorTab.value = ["edit", "ai", "template"][val] ?? "edit";
+  activeEditorTab.value = ["edit", "ai"][val] ?? "edit";
 });
 provide("bg", "bg-sf-bg");
 
@@ -59,7 +60,7 @@ const { editorWidth, isGenerating } = storeToRefs(resumeStore);
 // 模块树改为加宽列表后需要最小横向空间，旧配置过窄时提升到默认宽度
 if (editorWidth.value < 560) editorWidth.value = DEFAULT_EDITOR.editorWidth;
 
-// 菜单配置
+// 菜单配置：模板入口已迁至预览工具栏抽屉
 const menuList = computed(() => [
   {
     name: $t("edit"),
@@ -70,11 +71,6 @@ const menuList = computed(() => [
     name: $t("ai"),
     icon: "lucide:sparkles",
     component: AsyncAi,
-  },
-  {
-    name: $t("template"),
-    icon: "lucide:layout-template",
-    component: AsyncTemplate,
   },
 ]);
 
@@ -89,13 +85,18 @@ const activeMenu = computed(() => menuList.value[activeIndex.value] || menuList.
     position="right"
     class="mobile-resume-builder relative flex h-full flex-col border-r border-sf-b"
   >
-    <!-- 栏头：与预览区视图条同高，标签控件保持自身尺寸居中，不做拉伸 -->
-    <div class="flex h-14 shrink-0 items-center border-b border-sf-b bg-sf-primary px-3">
+    <!-- 栏头：与预览区视图条同高，左侧为落库状态与本地备份，右侧为编辑/AI/模板标签 -->
+    <div class="flex h-14 shrink-0 items-center gap-1.5 border-b border-sf-b bg-sf-primary px-3">
+      <!-- 保存状态区：迁自顶部文件栏，落库状态与本地备份并排 -->
+      <div class="flex shrink-0 items-center">
+        <SaveStatus />
+        <LocalBackup />
+      </div>
       <SfTab
         :list="menuList"
         v-model:index="activeIndex"
         v-model:disabled="isGenerating"
-        class="w-full"
+        class="ml-auto min-w-0 w-60"
       />
     </div>
     <div class="relative flex min-h-0 w-full flex-1 flex-col text-sf-base">

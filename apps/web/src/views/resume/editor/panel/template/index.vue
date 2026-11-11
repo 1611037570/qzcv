@@ -27,6 +27,23 @@ const toggleLayout = (key) => {
 const toggleTier = (key) => {
   selectedTier.value = selectedTier.value === key ? "" : key;
 };
+// 筛选行配置：布局与类型两行共用同一渲染结构
+const filterRows = computed(() => [
+  {
+    label: $t("resumeTemplateCategory_layout"), // 行首标签
+    options: resumeTemplateLayoutOptions, // 布局选项
+    selected: selectedLayout.value, // 当前选中项
+    toggle: toggleLayout, // 点击切换函数
+    withCount: false, // 是否展示模板数量
+  },
+  {
+    label: $t("resumeTemplateCategory_tier"),
+    options: resumeTemplateTierOptions,
+    selected: selectedTier.value,
+    toggle: toggleTier,
+    withCount: true,
+  },
+]);
 // 模板类型数量与模板页使用同一主题清单统计。
 const getTemplateTypeCount = (key) =>
   resumeStyleTemplateList.filter((template) => template.design.includes(key)).length;
@@ -114,40 +131,28 @@ const applyTemplate = (template) => {
     :load-more="loadNextTemplates"
     :reset-key="filterKey"
   >
-    <!-- 布局与类型各占一行，两行筛选条件可以叠加。 -->
+    <!-- 布局与类型各占一行：标签固定在行首，选项行内横向滚动，不再撑开列表宽度 -->
     <div class="mb-3 flex flex-col gap-3">
-      <div class="flex items-center gap-3">
-        <span class="w-[36px] shrink-0 text-sm text-sf-text-2">{{
-          $t("resumeTemplateCategory_layout")
-        }}</span>
-        <div class="flex min-w-0 flex-nowrap gap-3 whitespace-nowrap">
-          <SfButton
-            v-for="option in resumeTemplateLayoutOptions"
+      <div v-for="row in filterRows" :key="row.label" class="flex items-center gap-3">
+        <span class="w-[36px] shrink-0 text-sm text-sf-text-2">{{ row.label }}</span>
+        <div class="filter-row flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
+          <button
+            v-for="option in row.options"
             :key="option.key"
-            :plain="selectedLayout !== option.key"
-            round
-            :aria-pressed="selectedLayout === option.key"
-            @click="toggleLayout(option.key)"
+            type="button"
+            class="h-7 shrink-0 cursor-pointer rounded-full px-3 text-xs whitespace-nowrap transition-colors"
+            :class="
+              row.selected === option.key
+                ? 'bg-sf-theme font-medium text-sf-theme-text'
+                : 'text-sf-text-2 hover:bg-sf-bg'
+            "
+            :aria-pressed="row.selected === option.key"
+            @click="row.toggle(option.key)"
           >
-            {{ $t(`resumeTemplateOption_design_${option.key}`) }}
-          </SfButton>
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <span class="w-[36px] shrink-0 text-sm text-sf-text-2">{{
-          $t("resumeTemplateCategory_tier")
-        }}</span>
-        <div class="flex min-w-0 flex-nowrap gap-3 whitespace-nowrap">
-          <SfButton
-            v-for="option in resumeTemplateTierOptions"
-            :key="option.key"
-            :plain="selectedTier !== option.key"
-            round
-            :aria-pressed="selectedTier === option.key"
-            @click="toggleTier(option.key)"
-          >
-            {{ $t(`resumeTemplateOption_design_${option.key}`) }}（{{ getTemplateTypeCount(option.key) }}）
-          </SfButton>
+            {{ $t(`resumeTemplateOption_design_${option.key}`) }}<span
+              v-if="row.withCount"
+            >（{{ getTemplateTypeCount(option.key) }}）</span>
+          </button>
         </div>
       </div>
     </div>
@@ -188,4 +193,13 @@ const applyTemplate = (template) => {
   </ListScroll>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+/* 筛选选项行内横向滚动：隐藏滚动条，触控板或按住滚轮横移，宽度不足时不撑开列表 */
+.filter-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filter-row::-webkit-scrollbar {
+  display: none;
+}
+</style>
