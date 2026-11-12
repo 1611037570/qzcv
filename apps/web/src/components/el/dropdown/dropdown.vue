@@ -3,7 +3,7 @@
     ref="dropdownRef"
     v-bind="$attrs"
     :effect="theme"
-    :trigger="trigger"
+    :trigger="resolvedTrigger"
     :max-height="resolvedMaxHeight"
     @visible-change="handleVisibleChange"
   >
@@ -22,7 +22,7 @@ import type { ComponentInstance } from "vue";
 import { computed, provide, ref, watch } from "vue";
 import { useWindowSize } from "@vueuse/core";
 
-import { useThemeStore } from "@/stores";
+import { useThemeStore, useSystemStore } from "@/stores";
 import { storeToRefs } from "pinia";
 
 const props = withDefaults(
@@ -41,6 +41,12 @@ const props = withDefaults(
 defineOptions({ inheritAttrs: false, name: "SfDropdown" });
 const themeStore = useThemeStore();
 const { theme } = storeToRefs(themeStore);
+// 触屏与无悬停能力的设备没有 hover 交互，hover 触发一律降级为点击打开。
+const systemStore = useSystemStore();
+const { isMobile, canHover } = storeToRefs(systemStore);
+const resolvedTrigger = computed<"hover" | "click" | "contextmenu">(() =>
+  props.trigger === "hover" && (isMobile.value || !canHover.value) ? "click" : props.trigger,
+);
 const { height: viewportHeight } = useWindowSize();
 
 // 使用稳定的模板 ref，避免渲染期间通过回调 ref 修改响应式状态。
