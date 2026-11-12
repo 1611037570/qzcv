@@ -437,33 +437,25 @@ onUnmounted(() => {
           class="shrink-0 border-t border-sf-b px-1 pt-1.5 text-center text-[11px] leading-4 text-sf-text!"
         />
       </aside>
-    </div>
-    <!-- 边缘把手：收起时挂在屏幕左缘用于展开；移动端展开时挂到抽屉右缘充当收起按钮（与右侧工具栏把手一致），不占布局宽度 -->
-    <SfTooltip
-      :content="collapsed ? $t('expandModuleTree') : $t('collapseModuleTree')"
-      placement="right"
-      :class="[
-        'absolute top-1/2 z-50 -translate-y-1/2',
-        floating && !collapsed ? 'left-full' : 'left-0',
-      ]"
-    >
-      <button
-        type="button"
-        class="flex h-12 w-6 cursor-pointer items-center justify-center overflow-hidden bg-sf-primary text-sf-text-2 transition-all duration-300 hover:text-sf-theme"
-        :class="[
-          collapsed || !floating
-            ? 'rounded-r-2xl border border-l-0 border-sf-b'
-            : 'rounded-l-2xl border border-r-0 border-sf-b',
-          collapsed || floating ? 'opacity-100' : 'pointer-events-none opacity-0',
-        ]"
-        :aria-hidden="!(collapsed || floating)"
-        :aria-label="collapsed ? $t('expandModuleTree') : $t('collapseModuleTree')"
-        tabindex="-1"
-        @click="collapsed = !collapsed"
+      <!-- 边缘把手：固定在抽屉右缘，随滑块一起平移；收起后正好停在屏幕左缘，展开时充当收起按钮，不占布局宽度 -->
+      <SfTooltip
+        :content="collapsed ? $t('expandModuleTree') : $t('collapseModuleTree')"
+        placement="right"
+        class="absolute top-1/2 left-full z-50 -translate-y-1/2"
       >
-        <SfIcon :icon="collapsed ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="4" />
-      </button>
-    </SfTooltip>
+        <button
+          type="button"
+          class="flex h-12 w-6 cursor-pointer items-center justify-center overflow-hidden rounded-r-2xl border border-l-0 border-sf-b bg-sf-primary text-sf-text-2 transition-all duration-300 hover:text-sf-theme"
+          :class="collapsed || floating ? 'opacity-100' : 'pointer-events-none opacity-0'"
+          :aria-hidden="!(collapsed || floating)"
+          :aria-label="collapsed ? $t('expandModuleTree') : $t('collapseModuleTree')"
+          tabindex="-1"
+          @click="collapsed = !collapsed"
+        >
+          <SfIcon :icon="collapsed ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="4" />
+        </button>
+      </SfTooltip>
+    </div>
   </div>
 </template>
 
