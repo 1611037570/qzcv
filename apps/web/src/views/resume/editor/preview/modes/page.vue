@@ -1,5 +1,5 @@
 <script setup>
-import { useResumeStore } from "@/stores";
+import { useResumeStore, useSystemStore } from "@/stores";
 import { storeToRefs } from "pinia";
 import { computed, inject, nextTick, onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { useDebounceFn } from "@vueuse/core";
@@ -176,14 +176,23 @@ watch(
   { immediate: true },
 );
 
+// 移动端预览与编辑是分屏的两个面板：点击预览模块要先切回编辑面板，定位与滚动才有可见容器可算。
+const systemStore = useSystemStore();
+const { isMobile } = storeToRefs(systemStore);
+const openEditorPanelOnMobile = () => {
+  if (isMobile.value) eventBus.emit("resume-mobile-open-editor");
+};
+
 const handleModuleClick = ({ moduleKey }) => {
   if (!system.value.previewClickLocate) return;
+  openEditorPanelOnMobile();
   resumeStore.editingModuleKey = moduleKey;
   resumeStore.editingItemIndex = null;
   locateEditor(moduleKey);
 };
 const handleModuleItemClick = ({ moduleKey, itemIndex }) => {
   if (!system.value.previewClickLocate) return;
+  openEditorPanelOnMobile();
   resumeStore.editingModuleKey = moduleKey;
   resumeStore.editingItemIndex = itemIndex ?? null;
   locateEditor(moduleKey, itemIndex == null ? undefined : { itemIndex });

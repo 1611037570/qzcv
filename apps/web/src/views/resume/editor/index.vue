@@ -89,7 +89,8 @@ import { useResumeStore, useSystemStore } from "@/stores";
 import { SF_ICON_LIST_KEY } from "@/components/base/icon";
 import { onKeyStroke, useResizeObserver } from "@vueuse/core";
 import { storeToRefs } from "pinia";
-import { provide, ref, watch } from "vue";
+import { provide, ref, watch, onMounted } from "vue";
+import eventBus from "@/utils/modules/eventBus";
 import { ElMessage } from "element-plus";
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import { useRuntimeData } from "./hooks/useRuntimeData";
@@ -195,7 +196,14 @@ onBeforeRouteLeave(async () => {
   catch { ElMessage.error($t("editorMisc_saveFailedLeave")); return false; }
 });
 
+// 移动端预览点击模块时由预览侧通知切回编辑面板，模块定位随后在可见容器内执行。
+function openEditorPanel() {
+  mobilePanel.value = "edit";
+}
+onMounted(() => eventBus.on("resume-mobile-open-editor", openEditorPanel));
+
 onUnmounted(() => {
+  eventBus.off("resume-mobile-open-editor", openEditorPanel);
   // 离开编辑器时取消未完成的打印任务
   cancelPrinting();
   // 离开编辑器时取消未完成的智能一页压缩
