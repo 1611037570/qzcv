@@ -112,9 +112,18 @@ export const createResumeEditor = ({
       if (item) item.ui = resolveResumeUi(compactResumeUi(newUI));
     },
   });
-  const currentUsage = computed(() => {
-    const item = currentItem.value;
-    return item ? item.usage : undefined;
+  // 使用信息：预览的批注显隐与缩放比例存在这里，随简历一起持久化
+  const currentUsage = computed({
+    get() {
+      const item = currentItem.value;
+      return item ? item.usage : undefined;
+    },
+    set(patch: Record<string, any>) {
+      const item = currentItem.value;
+      if (!item) return;
+      // 合并写入，避免覆盖标签、时间戳等其他使用信息
+      item.usage = { ...item.usage, ...patch };
+    },
   });
   // 选中模块的名称列表
   const selectedModule = ref<any[]>([]);

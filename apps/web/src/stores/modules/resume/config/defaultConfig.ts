@@ -40,6 +40,12 @@ export const DEFAULT_RESUME_ITEM = {
     titleMode: "auto" as const,
     // 自定义标题内容
     customTitle: "",
+    // 预览是否显示批注层，随简历保存
+    commentsVisible: true,
+    // 预览缩放模式：onePage 单页 / auto 自适应 / a4 标准 / manual 手动
+    scaleMode: "onePage" as string,
+    // 手动缩放比例，仅 scaleMode 为 manual 时生效
+    manualScale: 1,
     // 最后使用时间
     lastUseTime: Date.now(),
     // 创建时间

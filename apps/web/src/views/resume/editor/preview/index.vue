@@ -15,7 +15,25 @@ const resumeStore = useResumeStore();
 const previewHost = ref(null);
 const previewViewport = ref(null); // 移动端批注入口挂在未缩放的预览视口。
 const previewScale = ref(1); // 当前纸张比例，用于保持批注的屏幕尺寸。
-const commentsVisible = ref(true); // 本次编辑时是否展示批注，隐藏不删除批注内容。
+// 批注显隐与缩放状态属于简历自己的使用信息，初始化时从当前简历读取。
+const commentsVisible = ref(resumeStore.currentUsage?.commentsVisible ?? true); // 本次编辑时是否展示批注，隐藏不删除批注内容。
+const scaleMode = ref(resumeStore.currentUsage?.scaleMode ?? "onePage"); // 缩放模式
+const manualScale = ref(resumeStore.currentUsage?.manualScale ?? 1); // 手动缩放比例
+const currentUsage = computed(() => resumeStore.currentUsage);
+// 切换简历时恢复该简历上次保存的预览状态
+watch(currentUsage, (usage) => {
+  commentsVisible.value = usage?.commentsVisible ?? true;
+  scaleMode.value = usage?.scaleMode ?? "onePage";
+  manualScale.value = usage?.manualScale ?? 1;
+});
+// 状态变化写回当前简历，由 store 的深层监听统一排队持久化
+watch([commentsVisible, scaleMode, manualScale], ([visible, mode, scale]) => {
+  const usage = currentUsage.value;
+  if (!usage) return;
+  // 与已保存值一致时不写回，避免切换简历时反复触发保存
+  if (usage.commentsVisible === visible && usage.scaleMode === mode && usage.manualScale === scale) return;
+  resumeStore.currentUsage = { commentsVisible: visible, scaleMode: mode, manualScale: scale };
+});
 const systemStore = useSystemStore();
 // 隐藏内容时仍为添加按钮和数量保留入口列，触屏弹层不占纸张宽度。
 const commentWidth = computed(() => systemStore.isMobile || !systemStore.canHover
@@ -50,7 +68,7 @@ const openFullscreen = () => {
 
 <template>
   <div ref="previewViewport" class="relative flex h-full min-w-0 flex-1 overflow-hidden">
-    <ScaleContainer v-model:comments-visible="commentsVisible" class="min-w-0 flex-1" :comment-width="commentWidth" @scale-change="previewScale = $event" @fullscreen="openFullscreen">
+    <ScaleContainer v-model:comments-visible="commentsVisible" v-model:scale-mode="scaleMode" v-model:manual-scale="manualScale" class="min-w-0 flex-1" :comment-width="commentWidth" @scale-change="previewScale = $event" @fullscreen="openFullscreen">
       <!-- 纸张与页边批注共用缩放和滚动坐标，批注列位于纸张之外。 -->
       <div ref="previewHost" class="relative flex items-start gap-3">
         <div class="shrink-0"><ResumePage /></div>

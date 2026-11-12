@@ -26,9 +26,13 @@ const props = defineProps({
   showToolbar: { type: Boolean, default: true },
   /** 不参与纸张缩放的批注列屏幕宽度 */
   commentWidth: { type: Number, default: 0 },
+  /** 初始缩放模式：onePage 单页 / auto 自适应 / a4 标准 / manual 手动 */
+  scaleMode: { type: String, default: "onePage" },
+  /** 初始手动缩放比例 */
+  manualScale: { type: Number, default: 1 },
 });
 
-const emit = defineEmits(["fullscreen", "scale-change"]);
+const emit = defineEmits(["fullscreen", "scale-change", "update:scaleMode", "update:manualScale"]);
 // 工具栏仅切换批注展示，状态由预览容器持有。
 const commentsVisible = defineModel("commentsVisible", { type: Boolean, default: true });
 
@@ -42,9 +46,16 @@ const contentSize = ref({ width: 0, height: 0 });
 const availableSize = ref({ width: 0, height: 0 });
 const showBackTop = ref(false);
 const scaleDropdownVisible = ref(false); // 缩放下拉展开时保持入口高亮
-const manualScale = ref(1);
+// 缩放模式与手动比例以 props 为初值，变化时通知父组件随简历保存
+const scaleMode = ref(props.scaleMode);
+const manualScale = ref(props.manualScale);
+// 父组件恢复其他简历的状态时同步回内部
+watch(() => props.scaleMode, (value) => (scaleMode.value = value));
+watch(() => props.manualScale, (value) => (manualScale.value = value));
+// 内部切换后通知父组件写回
+watch(scaleMode, (value) => emit("update:scaleMode", value));
+watch(manualScale, (value) => emit("update:manualScale", value));
 const maxScale = ref(1);
-const scaleMode = ref("onePage");
 
 const PADDING = 20;
 const BACK_TOP_THRESHOLD = 200;
