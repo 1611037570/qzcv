@@ -5,13 +5,13 @@
         class="resume-home__hero relative mx-auto grid max-w-[1440px] items-center gap-x-12 gap-y-12 px-6 pt-24 pb-12 sm:pb-32 lg:min-h-screen lg:grid-cols-2 lg:px-12"
       >
         <article class="relative z-10 mx-auto max-w-xl text-center lg:mx-0 lg:text-left">
-          <!-- 首页主标题承接开源、免费、AI 生成简历的检索词，浏览器标题仍由 site.config 控制 -->
+          <!-- 首页主标题强调专业与无付费、无水印，浏览器标题仍由 site.config 控制 -->
           <h1
             class="animate-rise animate-rise--delay-one text-4xl leading-[1.15] font-black tracking-[-0.04em] sm:text-5xl lg:text-6xl"
           >
             {{ $t("resumeHomeHeroTitle") }}
           </h1>
-          <!-- 副标题说明 AI 承担哪几步，以及导出能力与免费事实 -->
+          <!-- 副标题说明 AI 承担哪几步，以及导出能力与免水印、免付费事实 -->
           <p class="animate-rise animate-rise--delay-two mt-6 text-base font-medium text-sf-text-2">
             {{ $t("resumeHomeHeroSubtitle") }}
           </p>
