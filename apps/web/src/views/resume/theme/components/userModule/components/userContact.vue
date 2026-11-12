@@ -11,6 +11,7 @@ import UserContactItem from "./userContactItem.vue";
 import { useUserFieldVisibility } from "../useUserFieldVisibility";
 import InlineInfoList from "@/views/resume/editor/preview/components/inlineInfoList.vue";
 import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";
+import { $t } from "@/locales";
 
 // 个人信息组件：基础信息与联系方式统一排序展示，标签支持图标、文字和隐藏模式，对齐方式由使用方通过 class 控制
 const {
@@ -198,7 +199,7 @@ const sizesText = computed(() => {
     { key: "shoes", value: value?.shoes },
   ]
     .filter((item) => item.value != null && item.value !== "")
-    .map((item) => (item.key === "shoes" ? `${item.value}码` : item.value));
+    .map((item) => (item.key === "shoes" ? `${item.value}${$t("themeDeco_sizeUnit")}` : item.value));
   return joinInfo(sizes);
 });
 // 期望薪资展示：只选了最低薪资的未完成区间按「Xk以上」展示，不再隐藏
@@ -207,7 +208,7 @@ const salaryText = computed(() => {
   const salary = user.value?.salary;
   if (!salary) return "";
   const incompleteMatch = String(salary).match(/^(.+?)k-$/i);
-  return incompleteMatch ? `${incompleteMatch[1]}k以上` : String(salary);
+  return incompleteMatch ? `${incompleteMatch[1]}k${$t("themeDeco_salaryAbove")}` : String(salary);
 });
 const secondaryItems = computed(() => {
   const items = [];
@@ -343,7 +344,7 @@ const customItems = computed(() =>
     .filter((key) => isUserCustomFieldKey(key))
     .filter((key) => !isUserFieldHidden(key) && user.value?.[key])
     .map((key) => {
-      const label = userFieldLabels.value.get(key) || "自定义字段";
+      const label = userFieldLabels.value.get(key) || $t("customField");
       return {
         key,
         icon: fieldIcon(key),

@@ -65,17 +65,17 @@ const startFeature = () => {
     class="relative flex h-full w-full flex-col items-center justify-center gap-3 text-center select-none"
   >
     <div class="flex-c gap-3 text-2xl font-bold text-sf-base select-none">
-      你好，我是 <span class="text-sf-theme">{{ $t("core.router.resumeAI") }}</span
-      >AI助手
+      {{ $t("aiChat_greetingPrefix") }} <span class="text-sf-theme">{{ $t("core.router.resumeAI") }}</span
+      >{{ $t("aiChat_greetingSuffix") }}
       <SfIcon icon="lucide:sparkles" class="text-sf-theme" size="6" />
     </div>
     <div class="flex flex-wrap items-center justify-center gap-3 text-sm font-medium text-sf-base">
-      <span>{{ props.mode === 'chat' ? '结合所选简历与编写规范，为你分析问题、提供建议和候选文案。' : '能通过对话帮你打造受HR青睐的专业简历。' }}</span>
+      <span>{{ props.mode === 'chat' ? $t('aiChat_chatIntro') : $t('aiChat_agentIntro') }}</span>
     </div>
     <div class="flex flex-wrap items-center justify-center gap-x-3 text-sm">
-      {{ props.mode === 'chat' ? '可以问：这段经历怎么表达更清楚？与目标岗位有哪些差距？' : '✨📄你可以这样问' }}
+      {{ props.mode === 'chat' ? $t('aiChat_chatExample') : $t('aiChat_agentExample') }}
     </div>
-    <p v-if="props.mode === 'chat'" class="text-sm text-sf-text-2">只提供分析和文案，不直接修改简历；会话开始后模式固定。</p>
+    <p v-if="props.mode === 'chat'" class="text-sm text-sf-text-2">{{ $t("aiChat_chatNote") }}</p>
     <!-- 一键优化与一键调整并排置顶并突出主题色 -->
     <div
       v-if="oneKeySuggestions.length"
@@ -109,7 +109,7 @@ const startFeature = () => {
     </div>
 
     <div class="flex flex-wrap items-center justify-center gap-x-3 text-sm">
-      我将根据你的
+      {{ $t("aiChat_iWillFollow") }}
       <div
         v-for="item in props.selectedModules"
         :key="item.key"
@@ -125,14 +125,14 @@ const startFeature = () => {
           @click="props.removeModule?.(item.key)"
         />
       </div>
-      {{ props.mode === 'chat' ? '提供分析与建议' : '一键操作' }}
+      {{ props.mode === 'chat' ? $t('aiChat_featureChat') : $t('aiChat_featureAgent') }}
     </div>
 
     <OneKeyIntro v-model="introVisible" @confirm="confirmOneKeyIntro" />
 
     <SfModal
       v-model="featureIntroVisible"
-      :title="activeFeature?.title || '功能介绍'"
+      :title="activeFeature?.title || $t('aiChat_featureIntroDefault')"
       width="560px"
     >
       <div v-if="activeFeature?.intro" class="flex w-full flex-col gap-3 pb-3 text-left">
@@ -164,12 +164,12 @@ const startFeature = () => {
         </div>
 
         <div class="flex items-center gap-3 rounded-xl bg-sf-bg-2 p-3">
-          <span class="text-[13px] text-sf-text-2">适合场景</span>
+          <span class="text-[13px] text-sf-text-2">{{ $t("aiChat_suitableScene") }}</span>
           <span class="text-[13px] font-bold text-sf-text">{{ activeFeature.intro.scene }}</span>
         </div>
 
         <div class="flex justify-end gap-3 pt-3">
-          <SfButton type="bg" size="large" @click="featureIntroVisible = false">暂不开始</SfButton>
+          <SfButton type="bg" size="large" @click="featureIntroVisible = false">{{ $t("aiChat_notNow") }}</SfButton>
           <SfButton size="large" @click="startFeature">{{ activeFeature.intro.action }}</SfButton>
         </div>
       </div>

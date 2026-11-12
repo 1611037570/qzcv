@@ -62,7 +62,7 @@ const { openPicker, loading } = useImageUpload({
         class="group border-sf-border relative flex w-32 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-3xl border border-dashed text-sf-text-3 transition-colors hover:border-sf-theme hover:text-sf-theme"
         @click="openPicker"
       >
-        <img v-if="img" :src="img" alt="图片" class="h-auto w-full object-cover" />
+        <img v-if="img" :src="img" :alt="$t('editorMisc_imageAlt')" class="h-auto w-full object-cover" />
         <!-- 已上传时鼠标悬停显示"重新上传"遮罩提示 -->
         <div
           v-if="img"

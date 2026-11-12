@@ -6,6 +6,7 @@ import { hasInterviewModel } from "@snowflake/interview-agent";
 import type { InterviewAction } from "@snowflake/interview-agent";
 import type { InterviewSession } from "./types";
 import confirm from "@/components/business/confirm";
+import { $t } from "@/locales";
 import { INTERVIEW_ACTION_LABELS, INTERVIEW_INTRO_PHASE, INTERVIEW_INTRO_SECONDS, formatInterviewDuration, getInterviewCompletedCount, getInterviewAnsweredTurns, getInterviewQuestionLimit, getInterviewStages, getModeLabel } from "./config";
 import { getInterviewSessionState } from "./sessionFlow";
 import OutputContent from "./outputContent.vue";
@@ -74,40 +75,40 @@ const phases = computed(() => getInterviewStages(props.session.config));
 const currentPhase = computed(() => latest.value?.phase || phases.value[0]);
 const reviewing = computed(() => state.value.reviewing);
 const resumeLabel = computed(() => {
-  if (introGeneration.value) return "重新生成";
-  if (introduction.value && props.session.pendingAction === "question") return "开始自我介绍";
-  if (state.value.answerReady) return "继续作答";
-  return props.session.pendingAction ? `重新生成${INTERVIEW_ACTION_LABELS[props.session.pendingAction]}` : "继续面试";
+  if (introGeneration.value) return $t("interview_regenerate");
+  if (introduction.value && props.session.pendingAction === "question") return $t("interview_startIntro");
+  if (state.value.answerReady) return $t("interview_continueAnswer");
+  return props.session.pendingAction ? $t("interview_regenerateAction", { action: INTERVIEW_ACTION_LABELS[props.session.pendingAction] }) : $t("interview_continueInterview");
 });
 const statusLabel = computed(() => {
   // 押题和自我介绍都是准备材料，不使用正式面试的结束状态文案。
-  if (preparation.value) return props.session.status === "completed" ? "已生成" : props.session.status === "paused" ? "生成未完成" : "正在生成";
-  if (props.session.status === "completed") return "已结束";
-  if (props.session.status === "paused") return "已暂停";
-  if (generating.value && props.session.pendingAction) return `正在生成${INTERVIEW_ACTION_LABELS[props.session.pendingAction]}`;
-  return introExpired.value ? "自我介绍时间到，等待确认提交" : "等待你的作答";
+  if (preparation.value) return props.session.status === "completed" ? $t("interview_generated") : props.session.status === "paused" ? $t("interview_generateIncomplete") : $t("interview_generating");
+  if (props.session.status === "completed") return $t("interview_ended");
+  if (props.session.status === "paused") return $t("interview_paused");
+  if (generating.value && props.session.pendingAction) return $t("interview_generatingAction", { action: INTERVIEW_ACTION_LABELS[props.session.pendingAction] });
+  return introExpired.value ? $t("interview_introTimeUpWaiting") : $t("interview_waitingAnswer");
 });
 const introductionNotice = computed(() => {
-  if (introExpired.value) return "时间到，草稿已保留。确认提交，或跳过本轮。";
+  if (introExpired.value) return $t("interview_introExpiredNotice");
   if (props.session.status === "paused") return state.value.answerReady
-    ? "计时已暂停，继续后使用剩余时间。"
-    : "尚未开始计时，继续后即可作答。";
-  return "可提前提交，暂停时计时停止；开场不占正式题数。";
+    ? $t("interview_timerPausedNotice")
+    : $t("interview_timerNotStartedNotice");
+  return $t("interview_introNoticeDefault");
 });
 // 作答框说明当前为何不可输入，保留草稿而不让用户误以为控件失效。
 const answerPlaceholder = computed(() => {
-  if (props.session.status === "paused") return "面试已暂停，继续后即可作答。";
-  if (generating.value) return props.session.pendingAction === "clarification" ? "面试官正在解释题意，请稍候…" : "面试官正在准备题目，请稍候…";
-  if (introExpired.value) return "自我介绍时间已到，请确认提交已保留的回答，或选择跳过。";
-  return introduction.value ? "简单介绍你的背景和相关经历…" : "围绕当前问题作答…";
+  if (props.session.status === "paused") return $t("interview_answerPlaceholderPaused");
+  if (generating.value) return props.session.pendingAction === "clarification" ? $t("interview_answerPlaceholderClarifying") : $t("interview_answerPlaceholderPreparing");
+  if (introExpired.value) return $t("interview_answerPlaceholderIntroExpired");
+  return introduction.value ? $t("interview_answerPlaceholderIntro") : $t("interview_answerPlaceholderDefault");
 });
 // 在作答位置解释当前真实状态，生成、暂停和到时不再共用普通作答提示。
 const answerNotice = computed(() => {
-  if (generating.value) return props.session.pendingAction === "clarification" ? "正在澄清原题，不计作答，可随时停止。" : "正在准备下一道题，可随时停止。";
-  if (props.session.status === "paused") return state.value.answerReady ? "已暂停，草稿与剩余时间保留，继续后即可作答。" : "生成尚未完成，重试后继续本场面试。";
-  if (isListening.value) return "正在转写，确认内容后再提交。";
+  if (generating.value) return props.session.pendingAction === "clarification" ? $t("interview_noticeClarifying") : $t("interview_noticePreparingNext");
+  if (props.session.status === "paused") return state.value.answerReady ? $t("interview_noticePausedReady") : $t("interview_noticePausedNotReady");
+  if (isListening.value) return $t("interview_noticeTranscribing");
   if (introduction.value) return introductionNotice.value;
-  return "提交后进入下一轮，结束后统一分析。";
+  return $t("interview_noticeSubmitNext");
 });
 // 开场单独编号，正式题目从第一题开始，跳过仍保留实际出题顺序。
 const questionNumber = (index: number) => props.session.turns.slice(0, index + 1).filter((turn) => turn.phase !== INTERVIEW_INTRO_PHASE).length;
@@ -125,11 +126,11 @@ const toggleVoice = () => {
   speechBase = draft.value.trim();
   result.value = "";
   try { startVoice(); }
-  catch { ElMessage.warning("暂时无法启动语音输入，请检查麦克风权限或使用文字作答"); }
+  catch { ElMessage.warning($t("interview_voiceStartFailed")); }
 };
 // 同步保留识别结果，避免录音结束与最终结果在同一轮更新时丢字。
 watch(result, (value) => { if (isListening.value && canAnswer.value) draft.value = [speechBase, value].filter(Boolean).join(" "); }, { flush: "sync" });
-watch(error, (value) => { if (value) ElMessage.warning("语音识别未能完成，请检查麦克风权限或使用文字作答"); });
+watch(error, (value) => { if (value) ElMessage.warning($t("interview_voiceError")); });
 // 下一帧再次检查作答权限和弹窗，防止生成结束抢走弹窗中的键盘焦点。
 const focusAnswer = async () => {
   await nextTick();
@@ -175,7 +176,7 @@ const send = async (skip = false) => {
   const turnId = latest.value?.id;
   // 有草稿时防止误点跳过直接丢弃回答，取消后保留草稿继续编辑。
   if (skip && draft.value.trim()) {
-    try { await confirm("跳过后，这段草稿不会作为回答提交。确定跳过本题？", "保留回答还是跳过", { confirmText: "跳过本题", cancelText: "继续编辑" }); }
+    try { await confirm($t("interview_skipConfirmMessage"), $t("interview_skipConfirmTitle"), { confirmText: $t("interview_skipQuestion"), cancelText: $t("interview_continueEditing") }); }
     catch { return; }
   }
   if (!canSubmit.value || latest.value?.id !== turnId) return;
@@ -232,8 +233,8 @@ const closeHelper = () => {
 // 生成稿与回看回答共用复制操作，不自动提交为候选人的作答。
 const copyContent = async (content: string) => {
   if (!content) return;
-  try { await copy(content); ElMessage.success("已复制"); }
-  catch { ElMessage.error("复制失败，请手动选择文字复制"); }
+  try { await copy(content); ElMessage.success($t("interview_copied")); }
+  catch { ElMessage.error($t("interview_copyFailed")); }
 };
 // 选题后收起资料窗口，保留用户定位，不被后续输出拉回底部。
 const navigateQuestion = (id: string) => {
@@ -255,29 +256,29 @@ const navigateQuestion = (id: string) => {
             <span :class="session.status === 'paused' ? 'text-sf-warning' : session.status === 'completed' ? 'text-sf-success' : 'text-sf-theme'" role="status">{{ statusLabel }}</span>
             <span v-if="!preparation" class="font-mono tabular-nums">{{ formatInterviewDuration(session.elapsedMs) }}</span>
             <span>{{ preparation ? session.config.language : currentPhase }}</span>
-            <span v-if="!preparation" class="tabular-nums">已答 {{ answeredCount }} 题<template v-if="questionLimit"> · 进度 {{ completedCount }}/{{ questionLimit }}</template></span>
+            <span v-if="!preparation" class="tabular-nums">{{ $t("interview_answeredCount", { count: answeredCount }) }}<template v-if="questionLimit">{{ $t("interview_progress", { current: completedCount, total: questionLimit }) }}</template></span>
           </p>
         </div>
       </div>
-      <nav class="flex flex-wrap items-center gap-3" aria-label="本场操作">
+      <nav class="flex flex-wrap items-center gap-3" :aria-label="$t('interview_actionsAria')">
         <slot name="navigation"></slot>
-        <InterviewButton type="bg" :aria-expanded="informationVisible" @click="informationVisible = true"><SfIcon icon="ph:info-duotone" size="4" />{{ preparation ? '生成信息' : '面试信息' }}</InterviewButton>
-        <InterviewButton v-if="session.status === 'active'" type="bg" @click="stopVoice(); emit('pause')"><SfIcon icon="lucide:pause" size="4" />{{ generating ? '停止生成' : '暂停' }}</InterviewButton>
+        <InterviewButton type="bg" :aria-expanded="informationVisible" @click="informationVisible = true"><SfIcon icon="ph:info-duotone" size="4" />{{ preparation ? $t('interview_generationInfo') : $t('interview_interviewInfo') }}</InterviewButton>
+        <InterviewButton v-if="session.status === 'active'" type="bg" @click="stopVoice(); emit('pause')"><SfIcon icon="lucide:pause" size="4" />{{ generating ? $t('interview_stopGenerating') : $t('interview_pause') }}</InterviewButton>
         <InterviewButton v-if="session.status === 'paused' && (preparation || reviewing)" @click="continueSession">{{ resumeLabel }}</InterviewButton>
-        <InterviewButton v-if="!preparation && !reviewing && session.status !== 'completed'" type="bg" @click="stopVoice(); emit('finish')">结束面试</InterviewButton>
-        <InterviewButton v-if="preparation && copySupported && session.preparation.status === 'complete'" @click="copyContent(session.preparation.content)"><SfIcon icon="famicons:copy-outline" size="4" />复制</InterviewButton>
-        <InterviewButton v-if="session.status === 'completed'" type="bg" @click="emit('again')">{{ preparation ? '调整后再生成' : '再练一场' }}</InterviewButton>
+        <InterviewButton v-if="!preparation && !reviewing && session.status !== 'completed'" type="bg" @click="stopVoice(); emit('finish')">{{ $t("interview_endInterview") }}</InterviewButton>
+        <InterviewButton v-if="preparation && copySupported && session.preparation.status === 'complete'" @click="copyContent(session.preparation.content)"><SfIcon icon="famicons:copy-outline" size="4" />{{ $t("interview_copy") }}</InterviewButton>
+        <InterviewButton v-if="session.status === 'completed'" type="bg" @click="emit('again')">{{ preparation ? $t('interview_regenerateAfterAdjust') : $t('interview_practiceAgain') }}</InterviewButton>
       </nav>
     </header>
-    <progress v-if="!preparation && questionLimit" class="h-[3px] w-full shrink-0 accent-sf-theme" :value="progress" max="100" :aria-label="'已完成 ' + completedCount + ' / ' + questionLimit"></progress>
+    <progress v-if="!preparation && questionLimit" class="h-[3px] w-full shrink-0 accent-sf-theme" :value="progress" max="100" :aria-label="$t('interview_completedProgress', { current: completedCount, total: questionLimit })"></progress>
 
     <!-- 准备稿按内容自然占高，长文仍可滚动，不再套用满屏聊天留白。 -->
     <section class="relative flex min-h-0 flex-col" :class="{ 'flex-1': !preparation }">
       <SfScrollbar ref="scrollbar" flush class="min-h-0" :class="preparation ? 'h-auto! flex-none!' : 'flex-1'" :max-height="preparation ? '70vh' : undefined" wrap-class="overscroll-contain" @scroll="handleScroll">
         <div ref="contentContainer" class="mx-auto flex w-full max-w-4xl flex-col gap-3 p-3">
           <article v-if="preparation" class="flex min-w-0 flex-col gap-3">
-            <h3 class="text-sm font-semibold">{{ introGeneration ? '你的自我介绍' : '面试准备材料' }}</h3>
-            <OutputContent :id="session.id + '-preparation'" :output="session.preparation" compact class="interview-message" :loading-text="introGeneration ? '正在生成自我介绍…' : '正在整理准备材料…'" />
+            <h3 class="text-sm font-semibold">{{ introGeneration ? $t('interview_yourIntro') : $t('interview_prepMaterial') }}</h3>
+            <OutputContent :id="session.id + '-preparation'" :output="session.preparation" compact class="interview-message" :loading-text="introGeneration ? $t('interview_generatingIntro') : $t('interview_preparingMaterial')" />
           </article>
 
           <!-- 头像与消息标题对齐，正文沿用同一左边界，避免逐层叠加留白。 -->
@@ -286,51 +287,51 @@ const navigateQuestion = (id: string) => {
               <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sf-bg text-sf-theme" aria-hidden="true"><SfIcon icon="ph:microphone-duotone" size="4" /></span>
               <section class="flex min-w-0 flex-1 flex-col">
                 <header class="flex min-h-6 flex-wrap items-center gap-3 text-xs text-sf-text-2">
-                  <span class="font-semibold text-sf-text">面试官小羊</span>
-                  <span>{{ turn.phase === INTERVIEW_INTRO_PHASE ? '开场自我介绍' : '问题 ' + questionNumber(index) + ' · ' + turn.phase }}</span>
-                  <span v-if="turn.id === latest?.id && !turn.submitted && !reviewing && turn.question.status === 'complete'" class="text-sf-theme">当前问题</span>
+                  <span class="font-semibold text-sf-text">{{ $t("interview_interviewerName") }}</span>
+                  <span>{{ turn.phase === INTERVIEW_INTRO_PHASE ? $t('interview_introPhaseLabel') : $t('interview_questionLabel', { number: questionNumber(index), phase: turn.phase }) }}</span>
+                  <span v-if="turn.id === latest?.id && !turn.submitted && !reviewing && turn.question.status === 'complete'" class="text-sf-theme">{{ $t("interview_currentQuestion") }}</span>
                 </header>
                 <OutputContent :id="turn.id + '-question'" :output="turn.question" compact class="interview-message" />
                 <!-- 消息操作贴近正文下方，复用编辑器的复制图标，不推到整行最右侧。 -->
-                <nav v-if="copySupported && turn.question.content && turn.question.status !== 'generating'" class="mt-3 flex items-center" aria-label="提问操作">
-                  <SfTooltip content="复制提问"><button type="button" class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sf-text-3 hover:text-sf-theme focus-visible:outline-2 focus-visible:outline-sf-theme" aria-label="复制面试官的提问" @click="copyContent(turn.question.content)"><SfIcon icon="ph:copy-duotone" size="4" /></button></SfTooltip>
+                <nav v-if="copySupported && turn.question.content && turn.question.status !== 'generating'" class="mt-3 flex items-center" :aria-label="$t('interview_questionActionsAria')">
+                  <SfTooltip :content="$t('interview_copyQuestion')"><button type="button" class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sf-text-3 hover:text-sf-theme focus-visible:outline-2 focus-visible:outline-sf-theme" :aria-label="$t('interview_copyQuestionAria')" @click="copyContent(turn.question.content)"><SfIcon icon="ph:copy-duotone" size="4" /></button></SfTooltip>
                 </nav>
               </section>
             </div>
 
             <!-- 澄清始终归在原题下方，说明与用户疑问不冒充正式作答。 -->
             <section v-for="item in turn.clarifications" :key="item.id" class="ml-9 flex min-w-0 flex-col gap-3 rounded-xl border border-sf-b bg-sf-bg p-3">
-              <p class="whitespace-pre-wrap break-words text-xs leading-6 text-sf-text-2">题意澄清 · {{ item.request }}</p>
-              <OutputContent :id="item.id + '-clarification'" :output="item.reply" compact loading-text="正在说明题意…" />
+              <p class="whitespace-pre-wrap break-words text-xs leading-6 text-sf-text-2">{{ $t("interview_clarifyLabel", { request: item.request }) }}</p>
+              <OutputContent :id="item.id + '-clarification'" :output="item.reply" compact :loading-text="$t('interview_clarifying')" />
             </section>
 
             <div v-if="turn.submitted" class="ml-auto flex w-full max-w-[87%] items-start justify-end gap-3">
               <section class="min-w-0">
-                <header class="flex min-h-6 flex-wrap items-center justify-end gap-3 text-xs text-sf-text-2"><span>{{ turn.skipped ? '已跳过' : formatInterviewDuration(turn.durationSeconds * 1000) + ' · 已提交' }}</span><span class="font-semibold text-sf-text">你</span></header>
-                <p class="whitespace-pre-wrap break-words rounded-2xl rounded-tr-none border border-sf-b bg-sf-bg p-3 text-sm leading-6" :class="{ 'text-sf-text-2': turn.skipped }">{{ turn.skipped ? '已跳过这道题。' : turn.answer }}</p>
-                <nav v-if="copySupported && !turn.skipped" class="mt-3 flex justify-end" aria-label="回答操作">
-                  <SfTooltip content="复制回答"><button type="button" class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sf-text-3 hover:text-sf-theme focus-visible:outline-2 focus-visible:outline-sf-theme" aria-label="复制你的回答" @click="copyContent(turn.answer)"><SfIcon icon="ph:copy-duotone" size="4" /></button></SfTooltip>
+                <header class="flex min-h-6 flex-wrap items-center justify-end gap-3 text-xs text-sf-text-2"><span>{{ turn.skipped ? $t('interview_skipped') : $t('interview_submittedWithDuration', { duration: formatInterviewDuration(turn.durationSeconds * 1000) }) }}</span><span class="font-semibold text-sf-text">{{ $t("interview_you") }}</span></header>
+                <p class="whitespace-pre-wrap break-words rounded-2xl rounded-tr-none border border-sf-b bg-sf-bg p-3 text-sm leading-6" :class="{ 'text-sf-text-2': turn.skipped }">{{ turn.skipped ? $t('interview_skippedQuestion') : turn.answer }}</p>
+                <nav v-if="copySupported && !turn.skipped" class="mt-3 flex justify-end" :aria-label="$t('interview_answerActionsAria')">
+                  <SfTooltip :content="$t('interview_copyAnswer')"><button type="button" class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sf-text-3 hover:text-sf-theme focus-visible:outline-2 focus-visible:outline-sf-theme" :aria-label="$t('interview_copyAnswerAria')" @click="copyContent(turn.answer)"><SfIcon icon="ph:copy-duotone" size="4" /></button></SfTooltip>
                 </nav>
               </section>
               <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-sf-b text-sf-text-2" aria-hidden="true"><SfIcon icon="ph:user-circle-duotone" size="4" /></span>
             </div>
             <!-- 统一结束后逐题回看，面试进行中不展示答案或思路入口。 -->
-            <nav v-if="state.canReviewAnswers && turn.submitted && turn.phase !== INTERVIEW_INTRO_PHASE && turn.question.status === 'complete'" class="flex flex-wrap gap-3" aria-label="本题复盘">
-              <InterviewButton type="bg" @click="openHelper('hint', turn.id)">答题思路</InterviewButton>
-              <InterviewButton type="bg" @click="openHelper('reference', turn.id)">参考回答</InterviewButton>
+            <nav v-if="state.canReviewAnswers && turn.submitted && turn.phase !== INTERVIEW_INTRO_PHASE && turn.question.status === 'complete'" class="flex flex-wrap gap-3" :aria-label="$t('interview_reviewAria')">
+              <InterviewButton type="bg" @click="openHelper('hint', turn.id)">{{ $t("interview_hint") }}</InterviewButton>
+              <InterviewButton type="bg" @click="openHelper('reference', turn.id)">{{ $t("interview_reference") }}</InterviewButton>
             </nav>
           </article>
 
           <article v-if="session.report.status !== 'empty' || session.pendingAction === 'report'" class="rounded-2xl border border-sf-b">
-            <header class="flex flex-wrap items-center justify-between gap-3 border-b border-sf-b p-3"><h3 class="flex items-center gap-3 text-sm font-semibold"><SfIcon icon="lucide:sparkles" size="5" class="text-sf-theme" />{{ session.endedEarly ? '阶段复盘' : '面试复盘' }}</h3><span class="text-xs text-sf-text-2">基于已提交的回答</span></header>
-            <OutputContent :id="session.id + '-report'" :output="session.report" loading-text="正在根据你的回答整理复盘…" />
+            <header class="flex flex-wrap items-center justify-between gap-3 border-b border-sf-b p-3"><h3 class="flex items-center gap-3 text-sm font-semibold"><SfIcon icon="lucide:sparkles" size="5" class="text-sf-theme" />{{ session.endedEarly ? $t('interview_stageReview') : $t('interview_interviewReview') }}</h3><span class="text-xs text-sf-text-2">{{ $t("interview_basedOnSubmitted") }}</span></header>
+            <OutputContent :id="session.id + '-report'" :output="session.report" :loading-text="$t('interview_generatingReport')" />
           </article>
-          <details v-if="reviewing && session.draft" class="rounded-xl border border-sf-b p-3 text-sm leading-6"><summary class="cursor-pointer text-sf-text-2">未提交草稿 · 未参与复盘</summary><p class="mt-3 whitespace-pre-wrap break-words">{{ session.draft }}</p></details>
-          <section v-if="session.status === 'completed' && !preparation" class="flex flex-wrap items-center justify-center gap-3 text-xs leading-6 text-sf-text-2"><p>{{ firstReviewTurn ? '本场面试已结束，可逐题查看思路与参考回答。' : '本场面试已结束。' }}</p><InterviewButton v-if="firstReviewTurn" type="bg" @click="navigateQuestion(firstReviewTurn.id)">逐题回看</InterviewButton></section>
+          <details v-if="reviewing && session.draft" class="rounded-xl border border-sf-b p-3 text-sm leading-6"><summary class="cursor-pointer text-sf-text-2">{{ $t("interview_unsubmittedDraft") }}</summary><p class="mt-3 whitespace-pre-wrap break-words">{{ session.draft }}</p></details>
+          <section v-if="session.status === 'completed' && !preparation" class="flex flex-wrap items-center justify-center gap-3 text-xs leading-6 text-sf-text-2"><p>{{ firstReviewTurn ? $t('interview_reviewAvailable') : $t('interview_endedSimple') }}</p><InterviewButton v-if="firstReviewTurn" type="bg" @click="navigateQuestion(firstReviewTurn.id)">{{ $t("interview_reviewPerQuestion") }}</InterviewButton></section>
         </div>
       </SfScrollbar>
       <!-- 与简历编辑器保持相同的圆形图标入口，点击后恢复跟随最新消息。 -->
-      <button v-if="!followOutput" type="button" class="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-sf-theme" aria-label="回到最新消息" @click="scrollToLatest">
+      <button v-if="!followOutput" type="button" class="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-sf-theme" :aria-label="$t('interview_scrollToLatestAria')" @click="scrollToLatest">
         <SfIcon icon="mingcute:arrow-down-line" size="4" box-size="8" class="rounded-full border border-sf-b bg-sf-bg" />
       </button>
     </section>
@@ -340,65 +341,65 @@ const navigateQuestion = (id: string) => {
       <div class="mx-auto flex w-full max-w-4xl flex-col gap-3">
         <section class="interview-composer overflow-hidden rounded-2xl border transition-colors" :class="canAnswer ? 'border-sf-b bg-sf-primary focus-within:border-sf-theme' : 'border-sf-b bg-sf-page'">
           <header class="flex items-center justify-between gap-3 px-3 pt-3 text-xs text-sf-text-2">
-            <h3 class="font-medium text-sf-text">{{ introduction ? '开场自我介绍' : '回答当前问题' }}</h3>
-            <span v-if="introduction" class="flex items-center gap-3" :class="remainingSeconds <= 30 ? 'text-sf-warning' : 'text-sf-theme'"><SfIcon icon="mdi:clock-outline" size="4" /><span class="font-mono text-base font-semibold tabular-nums" role="timer" aria-label="自我介绍剩余时间">{{ formatInterviewDuration(remainingSeconds * 1000) }}</span><span class="hidden text-xs text-sf-text-2 sm:inline">剩余</span></span>
+            <h3 class="font-medium text-sf-text">{{ introduction ? $t('interview_introPhaseLabel') : $t('interview_answerCurrentQuestion') }}</h3>
+            <span v-if="introduction" class="flex items-center gap-3" :class="remainingSeconds <= 30 ? 'text-sf-warning' : 'text-sf-theme'"><SfIcon icon="mdi:clock-outline" size="4" /><span class="font-mono text-base font-semibold tabular-nums" role="timer" :aria-label="$t('interview_introTimeAria')">{{ formatInterviewDuration(remainingSeconds * 1000) }}</span><span class="hidden text-xs text-sf-text-2 sm:inline">{{ $t("interview_remaining") }}</span></span>
             <span v-else class="tabular-nums">{{ draft.length }} / 12000</span>
           </header>
-          <progress v-if="introduction" class="block h-[3px] w-full" :class="remainingSeconds <= 30 ? 'accent-sf-warning' : 'accent-sf-theme'" :value="remainingSeconds" :max="INTERVIEW_INTRO_SECONDS" aria-label="自我介绍剩余时间进度"></progress>
-          <el-input ref="input" v-model="draft" type="textarea" :autosize="answerAutosize" :maxlength="12000" :disabled="!canAnswer" resize="none" :placeholder="answerPlaceholder" aria-label="你的面试回答" @keydown.enter="handleKeydown" />
+          <progress v-if="introduction" class="block h-[3px] w-full" :class="remainingSeconds <= 30 ? 'accent-sf-warning' : 'accent-sf-theme'" :value="remainingSeconds" :max="INTERVIEW_INTRO_SECONDS" :aria-label="$t('interview_introProgressAria')"></progress>
+          <el-input ref="input" v-model="draft" type="textarea" :autosize="answerAutosize" :maxlength="12000" :disabled="!canAnswer" resize="none" :placeholder="answerPlaceholder" :aria-label="$t('interview_answerInputAria')" @keydown.enter="handleKeydown" />
           <div class="flex flex-wrap items-center justify-between gap-3 p-3">
-            <nav class="flex flex-wrap items-center gap-3" aria-label="作答工具">
-              <InterviewButton v-if="isSupported" type="bg" :disabled="!canAnswer" :aria-pressed="isListening" :class="{ 'text-sf-error!': isListening }" @click="toggleVoice"><SfIcon :icon="isListening ? 'ph:stop-circle-fill' : 'ph:microphone-duotone'" size="4" />{{ isListening ? '结束转写' : '语音输入' }}</InterviewButton>
-              <span v-else class="text-xs text-sf-text-2">文字作答</span>
-              <SfTooltip v-if="!introduction" content="解释原题，不计作答；可先在输入框填写具体疑问。"><InterviewButton type="bg" :disabled="!canSubmit" @click="clarifyQuestion">澄清题意</InterviewButton></SfTooltip>
+            <nav class="flex flex-wrap items-center gap-3" :aria-label="$t('interview_answerToolsAria')">
+              <InterviewButton v-if="isSupported" type="bg" :disabled="!canAnswer" :aria-pressed="isListening" :class="{ 'text-sf-error!': isListening }" @click="toggleVoice"><SfIcon :icon="isListening ? 'ph:stop-circle-fill' : 'ph:microphone-duotone'" size="4" />{{ isListening ? $t('interview_stopTranscribe') : $t('interview_voiceInput') }}</InterviewButton>
+              <span v-else class="text-xs text-sf-text-2">{{ $t("interview_textAnswer") }}</span>
+              <SfTooltip v-if="!introduction" :content="$t('interview_clarifyTip')"><InterviewButton type="bg" :disabled="!canSubmit" @click="clarifyQuestion">{{ $t("interview_clarify") }}</InterviewButton></SfTooltip>
             </nav>
             <div class="ml-auto flex items-center gap-3">
-              <InterviewButton type="bg" :disabled="!canSubmit" @click="send(true)">{{ introduction ? '跳过开场' : '跳过本题' }}</InterviewButton>
+              <InterviewButton type="bg" :disabled="!canSubmit" @click="send(true)">{{ introduction ? $t('interview_skipIntro') : $t('interview_skipQuestion') }}</InterviewButton>
               <!-- 暂停时原位显示恢复操作，不额外占用一张提示卡片。 -->
               <InterviewButton v-if="session.status === 'paused'" @click="continueSession"><SfIcon icon="lucide:play" size="4" />{{ resumeLabel }}</InterviewButton>
-              <InterviewButton v-else-if="generating" type="bg" @click="emit('pause')"><SfIcon icon="lucide:pause" size="4" />停止生成</InterviewButton>
-              <InterviewButton v-else :disabled="!canSubmit || !draft.trim()" @click="send()">{{ introExpired ? '确认提交' : '提交回答' }}<SfIcon icon="icon-park-outline:send-one" size="4" /></InterviewButton>
+              <InterviewButton v-else-if="generating" type="bg" @click="emit('pause')"><SfIcon icon="lucide:pause" size="4" />{{ $t("interview_stopGenerating") }}</InterviewButton>
+              <InterviewButton v-else :disabled="!canSubmit || !draft.trim()" @click="send()">{{ introExpired ? $t('interview_confirmSubmit') : $t('interview_submitAnswer') }}<SfIcon icon="icon-park-outline:send-one" size="4" /></InterviewButton>
             </div>
           </div>
         </section>
-        <p class="flex flex-wrap items-center justify-between gap-3 text-xs leading-6 text-sf-text-2" role="status"><span :class="{ 'text-sf-error': isListening }">{{ answerNotice }}</span><span v-if="canSubmit" class="hidden shrink-0 sm:inline">Ctrl / ⌘ + Enter 提交</span></p>
+        <p class="flex flex-wrap items-center justify-between gap-3 text-xs leading-6 text-sf-text-2" role="status"><span :class="{ 'text-sf-error': isListening }">{{ answerNotice }}</span><span v-if="canSubmit" class="hidden shrink-0 sm:inline">{{ $t("interview_submitShortcut") }}</span></p>
       </div>
     </footer>
 
-    <SfModal v-model="informationVisible" :title="preparation ? '生成信息' : '本场面试'" width="600px">
+    <SfModal v-model="informationVisible" :title="preparation ? $t('interview_generationInfo') : $t('interview_thisInterview')" width="600px">
       <SfScrollbar flush class="h-auto! flex-none!" max-height="60vh">
         <section class="flex flex-col gap-3">
           <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border border-sf-b p-3 text-sm leading-6">
-            <template v-if="session.config.position"><dt class="text-sf-text-2">岗位</dt><dd class="break-words">{{ session.config.position }}</dd></template>
-            <template v-if="!introGeneration"><dt class="text-sf-text-2">年限</dt><dd>{{ session.config.experienceYears }}</dd></template>
-            <dt class="text-sf-text-2">类型</dt><dd>{{ getModeLabel(session.config.mode) }}</dd>
-            <dt class="text-sf-text-2">语言</dt><dd>{{ session.config.language }}</dd>
-            <template v-if="session.config.mode === 'specialized'"><dt class="text-sf-text-2">训练重点</dt><dd>{{ session.config.direction }}</dd></template>
-            <dt class="text-sf-text-2">参考简历</dt><dd class="break-words">{{ session.resumeTitle || '未关联' }}</dd>
+            <template v-if="session.config.position"><dt class="text-sf-text-2">{{ $t("interview_positionLabel") }}</dt><dd class="break-words">{{ session.config.position }}</dd></template>
+            <template v-if="!introGeneration"><dt class="text-sf-text-2">{{ $t("interview_yearsLabel") }}</dt><dd>{{ session.config.experienceYears }}</dd></template>
+            <dt class="text-sf-text-2">{{ $t("interview_typeLabel") }}</dt><dd>{{ getModeLabel(session.config.mode) }}</dd>
+            <dt class="text-sf-text-2">{{ $t("interview_languageLabel") }}</dt><dd>{{ session.config.language }}</dd>
+            <template v-if="session.config.mode === 'specialized'"><dt class="text-sf-text-2">{{ $t("interview_focusLabel") }}</dt><dd>{{ session.config.direction }}</dd></template>
+            <dt class="text-sf-text-2">{{ $t("interview_resumeLabel") }}</dt><dd class="break-words">{{ session.resumeTitle || $t("interview_notLinked") }}</dd>
           </dl>
           <section v-if="!preparation" class="flex flex-col gap-3 rounded-xl border border-sf-b p-3">
-            <header class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-sm font-semibold">面试进程</h3><span class="text-xs text-sf-text-2">已作答 {{ answeredCount }} / 已提交 {{ submittedCount }} 题</span></header>
-            <p v-if="questionLimit" class="text-xs text-sf-text-2">已完成 {{ completedCount }} / {{ questionLimit }} {{ session.config.mode === 'specialized' ? '轮有效回答' : '题' }}</p>
+            <header class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-sm font-semibold">{{ $t("interview_progressTitle") }}</h3><span class="text-xs text-sf-text-2">{{ $t("interview_answeredSubmitted", { answered: answeredCount, submitted: submittedCount }) }}</span></header>
+            <p v-if="questionLimit" class="text-xs text-sf-text-2">{{ $t("interview_completedUnit", { current: completedCount, total: questionLimit, unit: session.config.mode === 'specialized' ? $t('interview_unitRounds') : $t('interview_unitQuestions') }) }}</p>
             <ol class="flex flex-wrap gap-3 text-xs"><li v-for="phase in phases" :key="phase" class="rounded-xl border p-3" :class="currentPhase?.startsWith(phase) ? 'border-sf-theme text-sf-theme' : 'border-sf-b text-sf-text-2'" :aria-current="currentPhase?.startsWith(phase) ? 'step' : undefined">{{ phase }}</li></ol>
-            <nav v-if="session.turns.length" class="flex flex-wrap gap-3" aria-label="题目导航">
-              <button v-for="(turn, index) in session.turns" :key="turn.id" type="button" class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border text-xs hover:border-sf-theme focus-visible:outline-2 focus-visible:outline-sf-theme" :class="turn.id === latest?.id ? 'border-sf-theme text-sf-theme' : 'border-sf-b text-sf-text-2'" :aria-label="turn.phase === INTERVIEW_INTRO_PHASE ? '查看开场自我介绍' : '查看第 ' + questionNumber(index) + ' 题'" @click="navigateQuestion(turn.id)">{{ turn.phase === INTERVIEW_INTRO_PHASE ? '开场' : questionNumber(index) }}</button>
+            <nav v-if="session.turns.length" class="flex flex-wrap gap-3" :aria-label="$t('interview_questionNavAria')">
+              <button v-for="(turn, index) in session.turns" :key="turn.id" type="button" class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border text-xs hover:border-sf-theme focus-visible:outline-2 focus-visible:outline-sf-theme" :class="turn.id === latest?.id ? 'border-sf-theme text-sf-theme' : 'border-sf-b text-sf-text-2'" :aria-label="turn.phase === INTERVIEW_INTRO_PHASE ? $t('interview_viewIntroAria') : $t('interview_viewQuestionAria', { number: questionNumber(index) })" @click="navigateQuestion(turn.id)">{{ turn.phase === INTERVIEW_INTRO_PHASE ? $t('interview_introShort') : questionNumber(index) }}</button>
             </nav>
           </section>
-          <details v-if="session.config.jobDescription" class="rounded-xl border border-sf-b p-3 text-xs leading-6"><summary class="cursor-pointer font-semibold">目标岗位要求</summary><p class="mt-3 whitespace-pre-wrap break-words text-sf-text-2">{{ session.config.jobDescription }}</p></details>
-          <nav class="flex flex-wrap gap-3"><InterviewButton v-if="!introGeneration" type="bg" @click="emit('export')">导出本场记录</InterviewButton><InterviewButton type="bg" @click="openModelSettings()">面试设置</InterviewButton></nav>
+          <details v-if="session.config.jobDescription" class="rounded-xl border border-sf-b p-3 text-xs leading-6"><summary class="cursor-pointer font-semibold">{{ $t("interview_jobRequirementTitle") }}</summary><p class="mt-3 whitespace-pre-wrap break-words text-sf-text-2">{{ session.config.jobDescription }}</p></details>
+          <nav class="flex flex-wrap gap-3"><InterviewButton v-if="!introGeneration" type="bg" @click="emit('export')">{{ $t("interview_exportRecord") }}</InterviewButton><InterviewButton type="bg" @click="openModelSettings()">{{ $t("interview_interviewSettings") }}</InterviewButton></nav>
         </section>
       </SfScrollbar>
     </SfModal>
 
-    <SfModal :model-value="!!helper && !modelSettingsVisible" :title="helper?.action === 'hint' ? '答题思路' : '参考回答'" width="600px" @update:model-value="closeHelper">
+    <SfModal :model-value="!!helper && !modelSettingsVisible" :title="helper?.action === 'hint' ? $t('interview_hint') : $t('interview_reference')" width="600px" @update:model-value="closeHelper">
       <div v-if="helper && helperTurn" class="flex min-w-0 flex-col gap-3">
-        <p class="text-xs leading-6 text-sf-text-2">本题已结束，以下内容用于回看，不改变已提交的回答与复盘。</p>
-        <SfScrollbar flush class="h-auto! flex-none!" max-height="50vh"><OutputContent :id="helperTurn.id + '-' + helper.action + '-modal'" :output="helperTurn[helper.action]" compact :loading-text="helper.action === 'hint' ? '正在整理答题思路…' : '正在生成参考回答…'" /></SfScrollbar>
-        <InterviewButton v-if="helperGenerating" type="bg" @click="emit('pause')">停止生成</InterviewButton>
+        <p class="text-xs leading-6 text-sf-text-2">{{ $t("interview_helperNotice") }}</p>
+        <SfScrollbar flush class="h-auto! flex-none!" max-height="50vh"><OutputContent :id="helperTurn.id + '-' + helper.action + '-modal'" :output="helperTurn[helper.action]" compact :loading-text="helper.action === 'hint' ? $t('interview_generatingHint') : $t('interview_generatingReference')" /></SfScrollbar>
+        <InterviewButton v-if="helperGenerating" type="bg" @click="emit('pause')">{{ $t("interview_stopGenerating") }}</InterviewButton>
         <div v-else class="flex flex-wrap justify-end gap-3">
-          <InterviewButton v-if="copySupported && helperTurn[helper.action].content" type="bg" @click="copyContent(helperTurn[helper.action].content)">复制</InterviewButton>
-          <InterviewButton type="bg" @click="generateHelper">{{ helperTurn[helper.action].status === 'complete' ? '换一个' : '重新生成' }}</InterviewButton>
-          <InterviewButton @click="closeHelper">返回复盘</InterviewButton>
+          <InterviewButton v-if="copySupported && helperTurn[helper.action].content" type="bg" @click="copyContent(helperTurn[helper.action].content)">{{ $t("interview_copy") }}</InterviewButton>
+          <InterviewButton type="bg" @click="generateHelper">{{ helperTurn[helper.action].status === 'complete' ? $t('interview_regenerateAnother') : $t('interview_regenerate') }}</InterviewButton>
+          <InterviewButton @click="closeHelper">{{ $t("interview_backToReview") }}</InterviewButton>
         </div>
       </div>
     </SfModal>

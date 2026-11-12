@@ -30,7 +30,7 @@ const url = computed({
       <SfInput v-model="name" :placeholder="$t('websiteExample')" clearable />
     </SfFormItem>
     <SfFormItem :label="$t('linkAddress')" class="min-w-0 flex-1">
-      <UrlInput v-model="url" placeholder="如 example.com" />
+      <UrlInput v-model="url" :placeholder="$t('editorMisc_projectLinkPlaceholder')" />
     </SfFormItem>
   </div>
 </template>

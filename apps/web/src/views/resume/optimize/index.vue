@@ -9,6 +9,7 @@ import { getResumeOptimizationBlockReason } from "@snowflake/resume-agent";
 import { createResumeSnapshotForAi } from "../shared/resumeSnapshot";
 import { useResumeCapacity } from "../hooks/useResumeCapacity";
 import CapacityNotice from "../components/aiTask/capacityNotice.vue";
+import { $t } from "@/locales";
 
 const store = useResumeStore();
 const route = useRoute();
@@ -39,7 +40,7 @@ const initialize = async () => {
       selectedId.value = queryId;
       if (ensureCapacity()) activeId.value = queryId;
     }
-  } catch { error.value = "简历读取失败，请重试。"; }
+  } catch { error.value = $t("optimizePage_readFailed"); }
   finally { loading.value = false; }
 };
 onMounted(initialize);
@@ -50,11 +51,11 @@ const close = () => { activeId.value = ""; };
 
 <template>
   <main class="flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden bg-sf-page p-3 text-sf-text">
-    <header class="shrink-0"><h1 class="text-lg font-semibold">{{ $t('resumeNavAiOptimize') }}</h1><p class="mt-[6px] text-xs leading-6 text-sf-text-2">选择简历，一次优化。在预览中确认效果，再决定保存或放弃。</p></header>
+    <header class="shrink-0"><h1 class="text-lg font-semibold">{{ $t('resumeNavAiOptimize') }}</h1><p class="mt-[6px] text-xs leading-6 text-sf-text-2">{{ $t("optimizePage_subtitle") }}</p></header>
     <CapacityNotice v-if="!loading && !activeId" />
-    <div v-if="loading" class="flex min-h-0 flex-1 items-center justify-center gap-3 text-sm text-sf-text-2"><SfIcon icon="eos-icons:loading" size="6" />正在读取简历…</div>
-    <div v-else-if="error" class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3"><p class="text-sm text-sf-error">{{ error }}</p><SfButton type="bg" @click="initialize">重新读取</SfButton></div>
-    <div v-else-if="!options.length" class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center"><h2 class="text-lg font-medium">先准备一份简历</h2><p class="text-sm text-sf-text-2">创建或导入简历后，就可以开始优化。</p><router-link to="/resume/mine" class="text-sm text-sf-theme hover:underline">前往我的简历</router-link></div>
+    <div v-if="loading" class="flex min-h-0 flex-1 items-center justify-center gap-3 text-sm text-sf-text-2"><SfIcon icon="eos-icons:loading" size="6" />{{ $t("aiOptimize_loading") }}</div>
+    <div v-else-if="error" class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3"><p class="text-sm text-sf-error">{{ error }}</p><SfButton type="bg" @click="initialize">{{ $t("aiOptimize_reload") }}</SfButton></div>
+    <div v-else-if="!options.length" class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center"><h2 class="text-lg font-medium">{{ $t("optimizePage_emptyTitle") }}</h2><p class="text-sm text-sf-text-2">{{ $t("optimizePage_emptyTip") }}</p><router-link to="/resume/mine" class="text-sm text-sf-theme hover:underline">{{ $t("jobMatch_goMine") }}</router-link></div>
     <section v-else-if="activeId" class="min-h-0 flex-1 overflow-hidden rounded-xl border border-sf-b bg-sf-primary p-3">
       <OptimizationPanel :key="activeId" :resume-id="activeId" @close="close" />
     </section>
@@ -63,11 +64,11 @@ const close = () => { activeId.value = ""; };
       <section class="flex min-h-0 min-w-0 flex-col gap-3 rounded-xl border border-sf-b bg-sf-primary p-3">
         <SfScrollbar flush class="min-h-0 flex-1">
           <!-- 简历选择沿用模型接入的紧凑表单样式。 -->
-          <label class="optimize-select flex flex-col gap-[6px] text-xs font-medium">选择简历<SfSelect v-model="selectedId" :list="options" placeholder="请选择简历" aria-label="选择需要优化的简历" /></label>
+          <label class="optimize-select flex flex-col gap-[6px] text-xs font-medium">{{ $t("jobMatch_selectResume") }}<SfSelect v-model="selectedId" :list="options" :placeholder="$t('optimizePage_selectPlaceholder')" :aria-label="$t('optimizePage_selectAria')" /></label>
           <p v-if="blockReason" class="mt-3 rounded-xl bg-sf-warning-2 p-3 text-xs leading-6 text-sf-warning" role="status">{{ blockReason }}</p>
-          <router-link v-if="blockReason" :to="{ path: '/resume/editor', query: { id: selectedId } }" class="mt-3 inline-block text-xs text-sf-theme hover:underline">去填写简历</router-link>
+          <router-link v-if="blockReason" :to="{ path: '/resume/editor', query: { id: selectedId } }" class="mt-3 inline-block text-xs text-sf-theme hover:underline">{{ $t("aiOptimize_goFill") }}</router-link>
         </SfScrollbar>
-        <footer class="flex shrink-0 justify-end border-t border-sf-b pt-3"><SfButton icon="lucide:sparkles" :disabled="!remainingSlots || !selectedId || !!blockReason || store.isGenerating" @click="open">{{ !remainingSlots ? '简历数量已达上限' : store.isGenerating ? '优化任务进行中' : blockReason ? '暂无可优化内容' : '优化这份简历' }}</SfButton></footer>
+        <footer class="flex shrink-0 justify-end border-t border-sf-b pt-3"><SfButton icon="lucide:sparkles" :disabled="!remainingSlots || !selectedId || !!blockReason || store.isGenerating" @click="open">{{ !remainingSlots ? $t('aiOptimize_capacityFull') : store.isGenerating ? $t('optimizePage_taskRunning') : blockReason ? $t('optimizePage_noContent') : $t('optimizePage_start') }}</SfButton></footer>
       </section>
     </section>
   </main>

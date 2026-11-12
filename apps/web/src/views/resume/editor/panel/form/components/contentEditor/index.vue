@@ -144,7 +144,7 @@ const appendExample = (example) => {
           class="flex items-center gap-[6px] bg-sf-module-header px-[6px] pb-[6px]"
           :class="aiVisible ? '' : 'rounded-b-3xl'"
         >
-          <span class="text-xs text-sf-text-3">数量</span>
+          <span class="text-xs text-sf-text-3">{{ $t("editorMisc_count") }}</span>
           <div class="inline-flex items-center rounded-full border border-sf-b bg-sf-primary p-[3px]">
             <button
               v-for="option in aiCountOptions"

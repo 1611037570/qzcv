@@ -6,6 +6,7 @@ import { PROVIDER_NAMES } from "@/configs";
 import { useAiStore } from "@/stores/modules/ai";
 import { LLM } from "@/apis";
 import { getProviderIcon } from "./providerIcons";
+import { $t } from "@/locales";
 
 const emit = defineEmits<{ jumpAdd: [] }>();
 const props = defineProps<{
@@ -43,7 +44,7 @@ async function testConnection(item: any) {
   if (connectionStates.value[item.id]?.status === "testing") return;
   connectionStates.value[item.id] = {
     status: "testing",
-    message: "正在测试连接…",
+    message: $t("aiModel_testingConnection"),
   };
   try {
     const llm = new LLM({
@@ -58,22 +59,22 @@ async function testConnection(item: any) {
     if (!modelList.value.some((model) => model.id === item.id)) return;
     connectionStates.value[item.id] = {
       status: "success",
-      message: "连接成功",
+      message: $t("aiModel_connectionSuccess"),
     };
   } catch (error: any) {
     if (!modelList.value.some((model) => model.id === item.id)) return;
     connectionStates.value[item.id] = {
       status: "error",
-      message: error?.message || "连接失败，请检查模型配置后重试",
+      message: error?.message || $t("aiModel_connectionFailedRetry"),
     };
   }
 }
 
 // 删除确认使用统一 Sf 弹窗，确认后再移除模型及其角色绑定。
 function removeModel(item: any) {
-  confirm("确定要删除该模型吗？此操作不可恢复。", "删除模型", {
-    confirmText: "删除", // 明确确认按钮对应的操作。
-    cancelText: "取消", // 取消时保留模型配置。
+  confirm($t("aiModel_removeModelConfirm"), $t("aiModel_removeModelTitle"), {
+    confirmText: $t("delete"), // 明确确认按钮对应的操作。
+    cancelText: $t("cancel"), // 取消时保留模型配置。
   })
     .then(() => {
       aiStore.deleteModel(item.id);
@@ -88,11 +89,11 @@ function removeModel(item: any) {
     <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sf-theme-3 text-sf-theme">
       <SfIcon icon="lucide:sparkles" size="6" />
     </span>
-    <h3 class="text-sm font-semibold text-sf-text">先添加一个模型</h3>
-    <p class="max-w-sm text-xs leading-5 text-sf-text-2">可直接添加内置服务，也可以接入自己的服务商。添加后，在上方为角色选择使用的模型。</p>
+    <h3 class="text-sm font-semibold text-sf-text">{{ $t("aiModel_emptyTitle") }}</h3>
+    <p class="max-w-sm text-xs leading-5 text-sf-text-2">{{ $t("aiModel_emptyDescription") }}</p>
     <SfButton class="gap-[6px]" @click="emit('jumpAdd')">
       <SfIcon icon="ic:round-add" size="4" />
-      添加第一个模型
+      {{ $t("aiModel_addFirst") }}
     </SfButton>
   </div>
 
@@ -120,12 +121,12 @@ function removeModel(item: any) {
               @click="testConnection(item)"
             >
               <SfIcon v-if="connectionStates[item.id]?.status === 'testing'" icon="line-md:loading-twotone-loop" size="3" />
-              {{ connectionStates[item.id]?.status === "testing" ? "测试中" : "测试连接" }}
+              {{ connectionStates[item.id]?.status === "testing" ? $t("aiModel_testingShort") : $t("aiModel_checkConnection") }}
             </SfButton>
             <button
               type="button"
               class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-xl text-sf-text-3 transition-colors hover:bg-sf-error-2 hover:text-sf-error"
-              :aria-label="`删除模型 ${item.name}`"
+              :aria-label="$t('aiModel_deleteModelAria', { name: item.name })"
               @click="removeModel(item)"
             >
               <SfIcon icon="lucide:trash-2" size="4" />
@@ -134,7 +135,7 @@ function removeModel(item: any) {
         </div>
         <div class="mt-3 flex flex-wrap items-center gap-[6px]">
           <span v-for="name in item.bindings" :key="name" class="rounded-full bg-sf-theme-3 px-3 py-[3px] text-[11px] text-sf-theme">{{ name }}</span>
-          <span v-if="!item.bindings.length" class="text-xs text-sf-text-2">暂未分配给角色</span>
+          <span v-if="!item.bindings.length" class="text-xs text-sf-text-2">{{ $t("aiModel_notAssigned") }}</span>
         </div>
         <p
           v-if="connectionStates[item.id]"

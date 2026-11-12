@@ -15,7 +15,7 @@ const props = defineProps({
     >
       <div class="flex items-center gap-1 text-sf-theme">
         <SfIcon icon="lucide:sparkles" size="4" class="" />
-        <span class="text-sm font-semibold">小舟AI</span>
+        <span class="text-sm font-semibold">{{ $t("editorMisc_aiBrand") }}</span>
       </div>
       <div class="text-xs text-sf-text-3">{{ $t("aiProcessing") }}</div>
       <SfIcon icon="ph:stop-circle-fill" size="7" class="text-sf-error" />

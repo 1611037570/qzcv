@@ -1087,5 +1087,10 @@
   "resumeNameYearsExperience": "{years}年经验",
   "resumeLoadFailed": "简历读取失败，请稍后重试",
   "resumeLoadRetry": "重新读取",
-  "resumeLoadBackHome": "返回简历首页"
+  "resumeLoadBackHome": "返回简历首页",
+  "resume_note_refreshing": "更新中...",
+  "resume_note_refresh": "重新获取",
+  "resume_note_copy_unsupported": "当前浏览器不支持复制",
+  "resume_note_copy_success": "已复制便签内容",
+  "resume_note_copy_failed": "复制失败，请重试"
 }

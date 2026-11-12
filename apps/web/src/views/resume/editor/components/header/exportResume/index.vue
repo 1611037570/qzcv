@@ -154,7 +154,7 @@ const a = {
         <!-- 内容选择独立成行，说明下沉，避免与操作按钮争抢空间。 -->
         <section class="flex flex-col gap-3 pb-3">
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="shrink-0 text-sm font-medium text-sf-text">导出内容</p>
+            <p class="shrink-0 text-sm font-medium text-sf-text">{{ $t("editorMisc_exportContent") }}</p>
             <!-- 内容切换恢复项目统一按钮样式。 -->
             <div class="flex gap-3">
               <SfButton
@@ -164,7 +164,7 @@ const a = {
                 :aria-pressed="!exportDesensitized"
                 @click="selectExportMode(false)"
               >
-                原始简历
+                {{ $t("editorMisc_originalResume") }}
               </SfButton>
               <SfButton
                 :type="exportDesensitized ? 'theme' : 'bg'"
@@ -173,7 +173,7 @@ const a = {
                 :aria-pressed="exportDesensitized"
                 @click="selectExportMode(true)"
               >
-                脱敏简历
+                {{ $t("editorMisc_desensitizedResume") }}
               </SfButton>
             </div>
           </div>
@@ -182,8 +182,8 @@ const a = {
             <p class="min-w-0 flex-1 text-xs text-sf-text-3">
               {{
                 exportDesensitized
-                  ? `脱敏配置：${desensitizeName}`
-                  : "原始简历：保留完整内容，不应用脱敏"
+                  ? $t("editorMisc_desensitizeConfig", { name: desensitizeName })
+                  : $t("editorMisc_originalResumeTip")
               }}
             </p>
             <SfButton
@@ -194,7 +194,7 @@ const a = {
               class="shrink-0"
               @click="desensitizeVisible = true"
             >
-              修改字段
+              {{ $t("editorMisc_modifyFields") }}
             </SfButton>
           </div>
         </section>
@@ -223,7 +223,7 @@ const a = {
                 </SfButton>
               </div>
               <p class="text-sm leading-6 text-sf-text-3">{{ $t("pdfDescription") }}</p>
-              <p v-if="exportDesensitized" class="text-xs leading-6 text-sf-text-3">脱敏后会重新排版，页数以实际导出为准。</p>
+              <p v-if="exportDesensitized" class="text-xs leading-6 text-sf-text-3">{{ $t("editorMisc_desensitizeReflowTip") }}</p>
               <p class="text-xs leading-6 text-sf-text-3">{{ $t("exportCloudUnavailableTip") }}</p>
             </div>
             <SfButton
@@ -231,7 +231,7 @@ const a = {
               :disabled="isPrinting"
               @click="emitExport(pdfExportType === 'server' ? 'resume-print-server-pdf' : 'resume-print-browser-pdf')"
             >
-              导出 PDF
+              {{ $t("editorMisc_exportPdf") }}
             </SfButton>
           </div>
         </section>

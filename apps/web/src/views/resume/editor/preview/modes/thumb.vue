@@ -66,7 +66,7 @@ const { stop: stopVisibleObserve } = useIntersectionObserver(
       class="absolute inset-0 z-10 flex items-center justify-center bg-sf-primary"
       role="status"
       aria-busy="true"
-      aria-label="正在加载模板预览"
+      :aria-label="$t('editorMisc_thumbLoading')"
     >
       <ResumePreviewSkeleton />
     </div>

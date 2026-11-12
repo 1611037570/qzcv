@@ -11,14 +11,14 @@ const {
   <header class="w-full px-3 pt-3">
     <div class="flex min-h-[66px] items-center justify-between gap-3 pb-3">
       <div class="flex min-w-0 items-center gap-3" :style="{ color: themeColor }">
-        <span class="shrink-0 text-[36px] leading-none tracking-[0.08em]">个人简历</span>
+        <span class="shrink-0 text-[36px] leading-none tracking-[0.08em]">{{ $t("themeDeco_resumeTitle") }}</span>
         <span
           aria-hidden="true"
           class="h-[42px] w-px shrink-0"
           :style="{ backgroundColor: themeColor }"
         />
         <span class="min-w-0 text-[14px] leading-[1.5]">
-          <span class="block">细心从每一个细节开始</span>
+          <span class="block">{{ $t("themeDeco_ribbonSlogan") }}</span>
           <span class="block font-semibold">Personal resume</span>
         </span>
       </div>

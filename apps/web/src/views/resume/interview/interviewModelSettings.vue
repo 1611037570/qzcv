@@ -27,12 +27,12 @@ const confirm = () => {
 </script>
 
 <template>
-  <SfModal v-model="visible" :title="modelReady ? '面试设置' : '先配置面试模型'" width="1100px">
+  <SfModal v-model="visible" :title="modelReady ? $t('interview_interviewSettings') : $t('interview_configureModelFirst')" width="1100px">
     <section class="flex w-full min-w-0 flex-col gap-3">
-      <p class="text-xs leading-6 text-sf-text-2">为“面试官小羊”选择可用模型。设置在当前页面完成，已填写的资料、面试内容和回答草稿都会保留。</p>
-      <label class="flex flex-wrap items-center gap-3 text-sm"><span>面试语言</span><SfSelect v-model="language" :list="languageOptions" class="max-w-48 rounded-xl! border border-sf-b bg-sf-bg" /><span class="text-xs text-sf-text-2">用于新开始的训练，当前面试保持原语言。</span></label>
+      <p class="text-xs leading-6 text-sf-text-2">{{ $t("interview_modelSettingsDesc") }}</p>
+      <label class="flex flex-wrap items-center gap-3 text-sm"><span>{{ $t("interview_languageField") }}</span><SfSelect v-model="language" :list="languageOptions" class="max-w-48 rounded-xl! border border-sf-b bg-sf-bg" /><span class="text-xs text-sf-text-2">{{ $t("interview_languageHint") }}</span></label>
       <SfScrollbar flush class="h-auto! flex-none!" max-height="60vh"><AiProviderSettingsContent /></SfScrollbar>
-      <nav class="flex flex-wrap justify-end gap-3"><InterviewButton type="bg" @click="visible = false">返回</InterviewButton><InterviewButton :disabled="!modelReady" @click="confirm">配置完成，继续</InterviewButton></nav>
+      <nav class="flex flex-wrap justify-end gap-3"><InterviewButton type="bg" @click="visible = false">{{ $t("interview_back") }}</InterviewButton><InterviewButton :disabled="!modelReady" @click="confirm">{{ $t("interview_configureDone") }}</InterviewButton></nav>
     </section>
   </SfModal>
 </template>

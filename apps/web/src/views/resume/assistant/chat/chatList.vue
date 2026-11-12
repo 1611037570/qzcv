@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { AiChatSummary } from "@/stores/modules/resume/resumeCatalog";
+import i18n, { $t } from "@/locales";
+import { computed } from "vue";
 
 defineProps<{
   chats: AiChatSummary[]; // 当前简历的对话摘要，沿用已有排序。
@@ -13,9 +15,12 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+// 跟随界面语言展示时间，渲染时读取 locale 保证切换后重新格式化。
+const locale = computed(() => i18n.global.locale.value);
+
 function formatTime(time: number) {
   // 时间作为次级信息展示，去掉秒数以减少列表噪声。
-  return new Date(time).toLocaleString("zh-CN", {
+  return new Date(time).toLocaleString(locale.value, {
     year: "numeric", // 保留年份，便于识别较早的会话。
     month: "2-digit", // 使用两位月份。
     day: "2-digit", // 使用两位日期。
@@ -34,20 +39,20 @@ function formatTime(time: number) {
           <SfIcon icon="ph:chats-teardrop-duotone" size="5" />
         </span>
         <div class="min-w-0">
-          <h2 class="text-sm font-semibold text-sf-text">对话记录</h2>
-          <p class="text-xs leading-6 text-sf-text-3">共 {{ chats.length }} 个话题</p>
+          <h2 class="text-sm font-semibold text-sf-text">{{ $t("aiChat_chatHistory") }}</h2>
+          <p class="text-xs leading-6 text-sf-text-3">{{ $t("aiChat_topicCount", { count: chats.length }) }}</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
         <SfButton type="bg" :disabled="disabled" class="h-9 gap-3" @click="emit('create')">
           <SfIcon icon="ph:plus-bold" size="4" />
-          新建话题
+          {{ $t("aiChat_newTopic") }}
         </SfButton>
-        <SfTooltip content="返回对话">
+        <SfTooltip :content="$t('aiChat_backToChat')">
           <button
             class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-sf-text-2 transition hover:bg-sf-bg-2 hover:text-sf-text"
             type="button"
-            aria-label="返回对话"
+            :aria-label="$t('aiChat_backToChat')"
             @click="emit('close')"
           >
             <SfIcon icon="mingcute:close-line" size="4" />
@@ -80,7 +85,7 @@ function formatTime(time: number) {
               {{ chat.title }}
             </p>
             <div class="flex flex-wrap items-center gap-x-3 text-xs leading-6 text-sf-text-3">
-              <span class="font-medium text-sf-text-2">{{ chat.mode === 'chat' ? '聊天' : '智能体' }}</span>
+              <span class="font-medium text-sf-text-2">{{ chat.mode === 'chat' ? $t('aiChat_modeChat') : $t('aiChat_modeAgent') }}</span>
               <span aria-hidden="true">·</span>
               <time :datetime="new Date(chat.updateTime).toISOString()">{{ formatTime(chat.updateTime) }}</time>
             </div>
@@ -93,8 +98,8 @@ function formatTime(time: number) {
       <span class="flex h-12 w-12 items-center justify-center rounded-3xl bg-sf-bg-2 text-sf-text-3">
         <SfIcon icon="ph:chats-teardrop-duotone" size="6" />
       </span>
-      <p class="text-sm font-medium text-sf-text">还没有对话记录</p>
-      <p class="text-xs text-sf-text-3">新建话题，开始讨论你的简历</p>
+      <p class="text-sm font-medium text-sf-text">{{ $t("aiChat_emptyHistory") }}</p>
+      <p class="text-xs text-sf-text-3">{{ $t("aiChat_emptyHint") }}</p>
     </div>
   </aside>
 </template>

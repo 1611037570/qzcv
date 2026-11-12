@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { $t } from "@/locales";
 
 const props = defineProps({
   report: { type: Object, required: true },
@@ -22,25 +23,25 @@ const changeRows = computed(() => {
 const level = computed(() => {
   const s = props.report.totalScore;
   // 没有可靠维度时显示未评分，不按零分评级
-  if (s == null) return "暂不可评分";
-  if (s >= 90) return "优秀";
-  if (s >= 80) return "良好";
-  if (s >= 70) return "中等";
-  if (s >= 60) return "及格";
-  return "待提升";
+  if (s == null) return $t("aiChat_scoreUnavailable");
+  if (s >= 90) return $t("aiChat_scoreExcellent");
+  if (s >= 80) return $t("aiChat_scoreGood");
+  if (s >= 70) return $t("aiChat_scoreMedium");
+  if (s >= 60) return $t("aiChat_scorePass");
+  return $t("aiChat_scoreImprove");
 });
 </script>
 
 <template>
   <div class="w-full max-w-full overflow-hidden rounded-3xl border border-sf-b bg-sf-bg p-3">
     <div class="text-center">
-      <h2 class="text-lg font-bold text-sf-text">全方位综合评估</h2>
-      <p class="mt-3 text-[13px] text-sf-text-2">六大维度深度剖析简历质量</p>
+      <h2 class="text-lg font-bold text-sf-text">{{ $t("aiChat_reportTitle") }}</h2>
+      <p class="mt-3 text-[13px] text-sf-text-2">{{ $t("aiChat_reportSubtitle") }}</p>
     </div>
     <!-- 综合评分 -->
     <div class="mt-3 flex flex-col items-center justify-center gap-3 py-3">
       <span class="text-[40px] font-black leading-none text-sf-theme">{{ report.totalScore ?? "—" }}</span>
-      <span class="text-[13px] text-sf-text-2">综合评分 · {{ level }}</span>
+      <span class="text-[13px] text-sf-text-2">{{ $t("aiChat_overallScore") }} · {{ level }}</span>
     </div>
 
     <!-- 分维度得分 -->
@@ -54,14 +55,14 @@ const level = computed(() => {
           />
         </div>
         <span class="w-12 shrink-0 text-right text-[13px] font-medium text-sf-text">
-          {{ d.score ?? "不适用" }}
+          {{ d.score ?? $t("aiChat_notApplicable") }}
         </span>
       </div>
     </div>
 
     <!-- 体检问题清单 -->
     <div v-if="report.checks?.length" class="mt-6">
-      <div class="mb-3 text-[14px] font-medium text-sf-text">体检诊断</div>
+      <div class="mb-3 text-[14px] font-medium text-sf-text">{{ $t("aiChat_diagnosis") }}</div>
       <div class="flex flex-col gap-3">
         <div v-for="(c, i) in report.checks" :key="i" class="flex items-center gap-3">
           <span
@@ -75,12 +76,12 @@ const level = computed(() => {
 
     <!-- 本次改动：按模块汇总成一张表，同一模块只出现一次 -->
     <div v-if="changeRows.length" class="mt-6">
-      <div class="mb-3 text-[14px] font-medium text-sf-text">本次改动</div>
+      <div class="mb-3 text-[14px] font-medium text-sf-text">{{ $t("aiChat_changeOverview") }}</div>
       <table class="w-full table-fixed border-collapse text-[13px]">
         <thead>
           <tr class="text-sf-text-2">
-            <th class="w-24 border-b border-sf-b py-3 text-left font-normal">模块</th>
-            <th class="border-b border-sf-b py-3 text-left font-normal">修改范围</th>
+            <th class="w-24 border-b border-sf-b py-3 text-left font-normal">{{ $t("aiChat_moduleLabel") }}</th>
+            <th class="border-b border-sf-b py-3 text-left font-normal">{{ $t("aiChat_changeScope") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -94,7 +95,7 @@ const level = computed(() => {
 
     <!-- 下一步建议 -->
     <div v-if="report.suggestions?.length" class="mt-6">
-      <div class="mb-3 text-[14px] font-medium text-sf-text">下一步建议</div>
+      <div class="mb-3 text-[14px] font-medium text-sf-text">{{ $t("aiChat_nextSteps") }}</div>
       <div class="flex flex-col gap-3">
         <div v-for="(s, i) in report.suggestions" :key="i" class="flex items-start gap-3">
           <span class="text-[13px] leading-relaxed text-sf-theme">{{ i + 1 }}.</span>

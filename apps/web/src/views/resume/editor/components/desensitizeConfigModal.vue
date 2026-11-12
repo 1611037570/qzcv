@@ -52,13 +52,13 @@ const handleConfirm = () => {
 </script>
 
 <template>
-  <SfModal v-model="visible" title="选择脱敏内容" width="720px">
+  <SfModal v-model="visible" :title="$t('desensitize_title')" width="720px">
     <div class="desensitize-fields flex max-h-[72vh] min-h-0 flex-col gap-3">
       <!-- 仅预设和字段区域滚动，底部操作始终固定。 -->
       <SfScrollbar class="min-h-0 flex-1!" max-height="60vh" view-class="flex flex-col gap-3 pr-3" flush>
         <!-- 预设压缩为单行入口，统一使用项目胶囊圆角。 -->
         <section class="flex flex-wrap items-center gap-3">
-          <p class="shrink-0 text-sm font-medium text-sf-text">快捷预设</p>
+          <p class="shrink-0 text-sm font-medium text-sf-text">{{ $t("desensitize_presets") }}</p>
           <div class="grid flex-1 grid-cols-3 gap-3">
             <button
               v-for="item in DESENSITIZE_PRESET_OPTIONS"
@@ -82,7 +82,7 @@ const handleConfirm = () => {
           <header class="flex items-center justify-between gap-3">
             <p class="text-sm font-medium leading-6 text-sf-text">{{ group.name }}</p>
             <p class="shrink-0 text-xs leading-6 text-sf-text-3">
-              已选 {{ selectedGroupCount(group.key) }}/{{ groupedFields(group.key).length }}
+              {{ $t("desensitize_groupSelected", { selected: selectedGroupCount(group.key), total: groupedFields(group.key).length }) }}
             </p>
           </header>
           <!-- 字段紧凑排列，不展示悬停说明。 -->
@@ -104,13 +104,13 @@ const handleConfirm = () => {
       <footer class="flex flex-none flex-wrap items-center justify-between gap-3 border-t border-sf-b pt-3">
         <div class="flex items-center gap-3">
           <span class="text-xs text-sf-text-3">
-            已选择 <span class="font-medium text-sf-text">{{ draftFields.length }}</span> / {{ DESENSITIZE_FIELD_OPTIONS.length }} 项
+            {{ $t("desensitize_selectedPrefix") }} <span class="font-medium text-sf-text">{{ draftFields.length }}</span> / {{ DESENSITIZE_FIELD_OPTIONS.length }} {{ $t("desensitize_selectedSuffix") }}
           </span>
-          <SfButton type="bg" size="small" @click="clearAll">清空选择</SfButton>
+          <SfButton type="bg" size="small" @click="clearAll">{{ $t("desensitize_clearAll") }}</SfButton>
         </div>
         <div class="flex gap-3">
-          <SfButton type="bg" size="small" @click="visible = false">取消</SfButton>
-          <SfButton type="theme" size="small" @click="handleConfirm">应用选择</SfButton>
+          <SfButton type="bg" size="small" @click="visible = false">{{ $t("cancel") }}</SfButton>
+          <SfButton type="theme" size="small" @click="handleConfirm">{{ $t("desensitize_apply") }}</SfButton>
         </div>
       </footer>
     </div>

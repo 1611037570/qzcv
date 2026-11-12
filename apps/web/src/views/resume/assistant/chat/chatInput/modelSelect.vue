@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { PROVIDER_NAMES } from "@/configs";
 import { useAiStore } from "@/stores";
+import { $t } from "@/locales";
 import ThinkMode from "./thinkMode.vue";
 
 const aiStore = useAiStore();
@@ -29,13 +30,13 @@ const configuredModels = computed(() => {
 });
 const modelOptions = computed(() => [
   ...configuredModels.value,
-  { id: ADD_MODEL_OPTION_ID, name: "添加模型", active: false },
+  { id: ADD_MODEL_OPTION_ID, name: $t("aiChat_addModel"), active: false },
 ]);
 
 // 触发按钮文本：选中的自定义模型名，未选中自定义模型时回退到内置雪花服务
 const activeName = computed(() => {
   const current = configuredModels.value.find((item) => item.id === selectedModel.value);
-  return current ? current.name : "雪花服务";
+  return current ? current.name : $t("aiChat_snowflakeService");
 });
 
 // 点击模型项：切换为当前使用模型
@@ -63,7 +64,7 @@ function goToAddModel() {
     @click="goToAddModel"
   >
     <SfIcon icon="lucide:triangle-alert" size="4" />
-    <span>未配置模型</span>
+    <span>{{ $t("aiChat_modelNotConfigured") }}</span>
   </div>
   <div class="flex items-center gap-1" v-else>
     <!-- 模型选择置于深度思考之前，并增加名称的最大显示宽度。 -->

@@ -191,28 +191,28 @@ function formatHourlyWage(value: number) {
   <SfScrollbar class="h-full bg-sf-page" flush>
     <!-- 工作区内容撑满可用宽度，保留紧凑分组和选中反馈。 -->
     <main class="w-full p-3 text-sf-text">
-      <nav aria-label="面包屑" class="text-xs text-sf-text-3">
+      <nav :aria-label="$t('tools_breadcrumb')" class="text-xs text-sf-text-3">
         <RouterLink to="/resume/tools" class="transition-colors hover:text-sf-theme">
-          求职工具
+          {{ $t("tools_title") }}
         </RouterLink>
         <span class="px-3" aria-hidden="true">/</span>
-        <span aria-current="page">真实时薪计算器</span>
+        <span aria-current="page">{{ $t("tools_wageTitle") }}</span>
       </nav>
 
       <template v-if="!showResult">
         <header class="mt-3 mb-3">
-          <h1 class="text-lg font-semibold">真实时薪计算器</h1>
+          <h1 class="text-lg font-semibold">{{ $t("tools_wageTitle") }}</h1>
           <p class="mt-[6px] max-w-3xl text-xs leading-6 text-sf-text-2">
-            把大小周、单休、每日工时和通勤一起算进去，看看这份工作的每小时真实回报。
+            {{ $t("tools_wageSubtitle") }}
           </p>
         </header>
 
         <form class="mt-3 grid gap-3" @submit.prevent="viewResult">
           <fieldset class="rounded-xl border border-sf-b bg-sf-primary p-3">
-            <legend class="px-3 text-sm font-semibold">全年现金收入</legend>
+            <legend class="px-3 text-sm font-semibold">{{ $t("tools_wageIncomeLegend") }}</legend>
             <section class="mt-3 grid gap-3 md:grid-cols-2">
               <label class="rounded-lg bg-sf-bg p-3 text-sm font-semibold">
-                年度确定性现金总包
+                {{ $t("tools_wagePackageLabel") }}
                 <SfInputNumber
                   v-model="form.annualGuaranteedPackage"
                   :min="0"
@@ -221,11 +221,11 @@ function formatHourlyWage(value: number) {
                   class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
                 />
                 <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">
-                  单位：元；包含固定月薪、固定奖金和已写明的固定补贴。
+                  {{ $t("tools_wagePackageHint") }}
                 </span>
               </label>
               <label class="rounded-lg bg-sf-bg p-3 text-sm font-semibold">
-                其他年度现金收入
+                {{ $t("tools_wageExtraLabel") }}
                 <SfInputNumber
                   v-model="form.annualAdditionalCash"
                   :min="0"
@@ -234,14 +234,14 @@ function formatHourlyWage(value: number) {
                   class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
                 />
                 <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">
-                  单位：元；只填写尚未计入总包的加班费或固定现金补贴，没有则填零。
+                  {{ $t("tools_wageExtraHint") }}
                 </span>
               </label>
             </section>
           </fieldset>
 
           <fieldset class="rounded-xl border border-sf-b bg-sf-primary p-3">
-            <legend class="px-3 text-sm font-semibold">休息制度</legend>
+            <legend class="px-3 text-sm font-semibold">{{ $t("tools_wageScheduleLegend") }}</legend>
             <ul class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <li v-for="schedule in workScheduleOptions" :key="schedule.key">
                 <button
@@ -271,7 +271,7 @@ function formatHourlyWage(value: number) {
               v-if="form.workSchedule === 'fixedMonthlyRest'"
               class="mt-3 block rounded-lg bg-sf-bg p-3 text-sm font-semibold"
             >
-              每月固定休息天数
+              {{ $t("tools_wageMonthlyRestLabel") }}
               <SfInputNumber
                 v-model="form.monthlyRestDays"
                 :min="0"
@@ -280,13 +280,13 @@ function formatHourlyWage(value: number) {
                 class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
               />
               <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">
-                不包含下面单独填写的带薪年假和法定节假日。
+                {{ $t("tools_wageMonthlyRestHint") }}
               </span>
             </label>
           </fieldset>
 
           <fieldset class="rounded-xl border border-sf-b bg-sf-primary p-3">
-            <legend class="px-3 text-sm font-semibold">法定节假日休假情况</legend>
+            <legend class="px-3 text-sm font-semibold">{{ $t("tools_wageHolidayLegend") }}</legend>
             <ul class="mt-3 grid gap-3 md:grid-cols-3">
               <li v-for="option in holidayRestOptions" :key="option.key">
                 <button
@@ -315,10 +315,10 @@ function formatHourlyWage(value: number) {
           </fieldset>
 
           <fieldset class="rounded-xl border border-sf-b bg-sf-primary p-3">
-            <legend class="px-3 text-sm font-semibold">每天与全年的时间投入</legend>
+            <legend class="px-3 text-sm font-semibold">{{ $t("tools_wageTimeLegend") }}</legend>
             <section class="mt-3 grid gap-3 md:grid-cols-3">
               <label class="rounded-lg bg-sf-bg p-3 text-sm font-semibold">
-                每日实际工作时长
+                {{ $t("tools_wageDailyHoursLabel") }}
                 <SfInputNumber
                   v-model="form.dailyWorkHours"
                   :min="1"
@@ -327,10 +327,10 @@ function formatHourlyWage(value: number) {
                   :precision="1"
                   class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
                 />
-                <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">单位：小时；包含日常加班。</span>
+                <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">{{ $t("tools_wageDailyHoursHint") }}</span>
               </label>
               <label class="rounded-lg bg-sf-bg p-3 text-sm font-semibold">
-                单程通勤时长
+                {{ $t("tools_wageCommuteLabel") }}
                 <SfInputNumber
                   v-model="form.oneWayCommuteMinutes"
                   :min="0"
@@ -338,10 +338,10 @@ function formatHourlyWage(value: number) {
                   :step="5"
                   class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
                 />
-                <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">单位：分钟；居家办公可以填零。</span>
+                <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">{{ $t("tools_wageCommuteHint") }}</span>
               </label>
               <label class="rounded-lg bg-sf-bg p-3 text-sm font-semibold">
-                年度带薪年假
+                {{ $t("tools_wageLeaveLabel") }}
                 <SfInputNumber
                   v-model="form.annualPaidLeaveDays"
                   :min="0"
@@ -349,17 +349,17 @@ function formatHourlyWage(value: number) {
                   :step="1"
                   class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
                 />
-                <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">单位：天；填写实际能够使用的天数。</span>
+                <span class="mt-[6px] block text-xs leading-6 font-normal text-sf-text-2">{{ $t("tools_wageLeaveHint") }}</span>
               </label>
             </section>
           </fieldset>
 
           <section class="rounded-xl border border-sf-b bg-sf-primary p-3 text-center">
             <p v-if="!hasValidWorkDays" class="text-sm font-semibold text-sf-error">
-              全年休息天数需要少于三百六十五天。
+              {{ $t("tools_wageErrorDays") }}
             </p>
             <p v-else class="text-sm text-sf-text-2">
-              所有输入仅保存在当前页面，用于即时估算，不会上传。
+              {{ $t("tools_wagePrivacyNote") }}
             </p>
             <SfButton
               :round="false"
@@ -367,7 +367,7 @@ function formatHourlyWage(value: number) {
               class="mx-auto mt-3"
               @click="viewResult"
             >
-              计算真实时薪
+              {{ $t("tools_wageSubmit") }}
             </SfButton>
           </section>
         </form>
@@ -376,62 +376,65 @@ function formatHourlyWage(value: number) {
       <section v-else-if="calculationResult" class="mt-3 rounded-xl border border-sf-b bg-sf-primary p-3">
         <!-- 主结果独立呈现，收入与时间明细保持在下方卡片中。 -->
         <header class="rounded-lg bg-sf-theme-3 p-3 text-center">
-          <p class="text-xs font-semibold text-sf-theme">轻舟简历 · 求职工具</p>
-          <h1 class="mt-3 text-lg font-semibold">你的工作真实时薪</h1>
+          <p class="text-xs font-semibold text-sf-theme">{{ $t("tools_brand") }}</p>
+          <h1 class="mt-3 text-lg font-semibold">{{ $t("tools_wageResultTitle") }}</h1>
           <p class="mt-3 text-5xl font-semibold tracking-tight tabular-nums text-sf-theme">
             ¥{{ formatHourlyWage(calculationResult.realHourlyWage) }}
           </p>
-          <p class="mt-3 text-sm text-sf-text-2">已同时计入工作时间和往返通勤时间</p>
+          <p class="mt-3 text-sm text-sf-text-2">{{ $t("tools_wageResultSubtitle") }}</p>
         </header>
 
         <dl class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <div class="rounded-lg bg-sf-bg p-3">
-            <dt class="text-sm text-sf-text-2">全年现金收入</dt>
+            <dt class="text-sm text-sf-text-2">{{ $t("tools_wageIncomeLegend") }}</dt>
             <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatCurrency(calculationResult.annualCashIncome) }}</dd>
           </div>
           <div class="rounded-lg bg-sf-bg p-3">
-            <dt class="text-sm text-sf-text-2">年度实际工作天数</dt>
-            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualWorkDays) }} 天</dd>
+            <dt class="text-sm text-sf-text-2">{{ $t("tools_wageWorkDays") }}</dt>
+            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualWorkDays) }} {{ $t("tools_wageUnitDay") }}</dd>
           </div>
           <div class="rounded-lg bg-sf-bg p-3">
-            <dt class="text-sm text-sf-text-2">平均每月休息天数</dt>
-            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.averageMonthlyRestDays) }} 天</dd>
+            <dt class="text-sm text-sf-text-2">{{ $t("tools_wageMonthlyRestDays") }}</dt>
+            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.averageMonthlyRestDays) }} {{ $t("tools_wageUnitDay") }}</dd>
           </div>
           <div class="rounded-lg bg-sf-bg p-3">
-            <dt class="text-sm text-sf-text-2">年度工作时长</dt>
-            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualWorkHours) }} 小时</dd>
+            <dt class="text-sm text-sf-text-2">{{ $t("tools_wageAnnualWorkHours") }}</dt>
+            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualWorkHours) }} {{ $t("tools_wageUnitHour") }}</dd>
           </div>
           <div class="rounded-lg bg-sf-bg p-3">
-            <dt class="text-sm text-sf-text-2">年度通勤时长</dt>
-            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualCommuteHours) }} 小时</dd>
+            <dt class="text-sm text-sf-text-2">{{ $t("tools_wageAnnualCommuteHours") }}</dt>
+            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualCommuteHours) }} {{ $t("tools_wageUnitHour") }}</dd>
           </div>
           <div class="rounded-lg bg-sf-bg p-3">
-            <dt class="text-sm text-sf-text-2">年度总占用时间</dt>
-            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualOccupiedHours) }} 小时</dd>
+            <dt class="text-sm text-sf-text-2">{{ $t("tools_wageAnnualOccupied") }}</dt>
+            <dd class="mt-[6px] text-lg font-semibold text-sf-text tabular-nums">{{ formatDecimal(calculationResult.annualOccupiedHours) }} {{ $t("tools_wageUnitHour") }}</dd>
           </div>
         </dl>
 
         <section class="mt-3 rounded-xl border border-sf-theme bg-sf-theme-3 p-3">
-          <h2 class="text-sm font-semibold text-sf-theme">标准双休等价结果</h2>
+          <h2 class="text-sm font-semibold text-sf-theme">{{ $t("tools_wageEquivalentTitle") }}</h2>
           <p class="mt-3 text-sm leading-6 text-sf-text">
-            一份工作在每日工时、通勤、年假和法定节假日相同的情况下，标准双休年薪达到
+            {{ $t("tools_wageEquivalentBefore") }}
             <strong class="text-sf-theme">{{ formatCurrency(calculationResult.doubleWeekendEquivalentSalary) }}</strong>
-            ，就与你当前工作的真实时薪相当。
+            {{ $t("tools_wageEquivalentAfter") }}
           </p>
           <p class="mt-3 text-sm text-sf-text-2">
-            当前制度每年比标准双休
-            {{ calculationResult.occupiedHoursDifference >= 0 ? "多占用" : "少占用" }}
-            {{ formatDecimal(Math.abs(calculationResult.occupiedHoursDifference)) }} 小时。
+            {{
+              $t("tools_wageHoursDiff", {
+                mode: calculationResult.occupiedHoursDifference >= 0 ? $t("tools_wageMoreHours") : $t("tools_wageLessHours"),
+                hours: formatDecimal(Math.abs(calculationResult.occupiedHoursDifference)),
+              })
+            }}
           </p>
         </section>
 
         <footer class="mt-3 border-t border-sf-b pt-3 text-xs leading-6 text-sf-text-2">
-          结果按一年三百六十五天、五十二周进行估算，不包含下班待命、情绪消耗、福利价值和收入税费，请结合实际情况判断。
+          {{ $t("tools_wageFooterNote") }}
         </footer>
 
         <section class="mt-3 flex flex-wrap justify-center gap-3">
-          <SfButton :round="false" plain @click="editValues">修改数据</SfButton>
-          <SfButton :round="false" plain @click="resetCalculator">重新计算</SfButton>
+          <SfButton :round="false" plain @click="editValues">{{ $t("tools_wageEdit") }}</SfButton>
+          <SfButton :round="false" plain @click="resetCalculator">{{ $t("tools_wageReset") }}</SfButton>
         </section>
       </section>
     </main>

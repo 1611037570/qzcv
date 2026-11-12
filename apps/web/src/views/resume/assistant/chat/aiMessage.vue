@@ -3,6 +3,7 @@ import { useThemeStore } from "@/stores";
 import { TransitionPresets, useClipboard, useTransition } from "@vueuse/core";
 import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
+import { $t } from "@/locales";
 import ToggleButton from "./toggleButton.vue";
 import ReportPanel from "./reportPanel.vue";
 import ChangeList from "./changeList.vue";
@@ -57,11 +58,11 @@ const handleFillFollowQuestion = (event, question) => {
 
 const handleCopy = async (text) => {
   if (!isSupported.value) {
-    ElMessage.error("当前浏览器不支持复制");
+    ElMessage.error($t("aiChat_copyUnsupported"));
     return;
   }
   await copy(text);
-  ElMessage.success("复制成功");
+  ElMessage.success($t("aiChat_copySuccess"));
 };
 
 // 撤回修改：先隐藏按钮再通知父级执行数据回滚
@@ -117,13 +118,13 @@ const showContent = computed(
 const hasThought = computed(() => !!props.msg.thought?.trim());
 const hasContent = computed(() => !!content.value?.trim());
 // 执行过程统一承载思考、任务目标和实际操作结果。
-const processLabel = "执行过程";
+const processLabel = $t("aiChat_processLabel");
 // 等待态文案：优先展示当前执行动作，其次回退到思考/生成计时
 const statusText = computed(() => {
   if (props.msg.stepLabel) return props.msg.stepLabel;
-  if (isThinking.value) return `思考中 ${props.msg.thoughtTime || 0} 秒`;
-  if (isGenerating.value) return `生成回复中 ${props.msg.contentTime || 0} 秒`;
-  return "生成中";
+  if (isThinking.value) return $t("aiChat_thinkingTime", { time: props.msg.thoughtTime || 0 });
+  if (isGenerating.value) return $t("aiChat_generatingReplyTime", { time: props.msg.contentTime || 0 });
+  return $t("aiChat_generating");
 });
 const totalTime = computed(() => (props.msg.thoughtTime || 0) + (props.msg.contentTime || 0));
 const showTotalTime = computed(
@@ -156,7 +157,7 @@ const animatedTokens = useTransition(
         <!-- 回复内容切换 (美化后的胶囊风格) -->
         <ToggleButton
           v-if="hasContent"
-          label="回复内容"
+          :label="$t('aiChat_replyContent')"
           :collapsed="msg.contentCollapsed"
           @toggle="emit('updateCollapsedStatus', index, 'content')"
         />
@@ -172,7 +173,7 @@ const animatedTokens = useTransition(
         <div v-if="msg.total_tokens" class="flex items-center gap-1">
           <span>{{ Math.round(animatedTokens) }} tokens</span>
         </div>
-        <span v-if="showTotalTime"> 耗时 {{ totalTime }} 秒 </span>
+        <span v-if="showTotalTime"> {{ $t("aiChat_totalTime", { time: totalTime }) }} </span>
       </div>
     </header>
     <!-- 加载状态 -->
@@ -230,14 +231,14 @@ const animatedTokens = useTransition(
       class="flex h-8 w-[170px] cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-sf-error-2 text-[14px] text-sf-error"
       @click="retry(msg)"
     >
-      生成失败，点击重试!
+      {{ $t("aiChat_generateFailedRetry") }}
     </div>
     <!-- 操作区域 -->
     <nav
       v-if="msg.content && !msg.typing && (resumeShow || canWithdraw)"
       class="mt-1 flex items-center gap-1 transition-opacity duration-300"
     >
-      <SfTooltip content="复制">
+      <SfTooltip :content="$t('aiChat_copy')">
         <button class="action-btn" @click="handleCopy(msg.content)">
           <SfIcon icon="ph:copy-duotone" size="3.5" />
         </button>
@@ -248,7 +249,7 @@ const animatedTokens = useTransition(
         class="ai-action-btn"
         @click="emit('regenerate', index)"
       >
-        重新生成
+        {{ $t("aiChat_regenerate") }}
       </button>
       <button
         v-if="isLast && !withdrawn && canWithdraw"
@@ -256,7 +257,7 @@ const animatedTokens = useTransition(
         class="ai-action-btn"
         @click="handleWithdrawModify"
       >
-        撤回修改
+        {{ $t("aiChat_withdrawChanges") }}
       </button>
     </nav>
     <!-- 推荐问题 -->
@@ -271,7 +272,7 @@ const animatedTokens = useTransition(
           <span class="block truncate whitespace-nowrap">{{ item }}</span>
         </SfTooltip>
         <div class="flex shrink-0 items-center gap-1">
-          <SfTooltip content="填入输入框">
+          <SfTooltip :content="$t('aiChat_fillInput')">
             <button
               type="button"
               class="follow-question-action"
@@ -280,7 +281,7 @@ const animatedTokens = useTransition(
               <SfIcon icon="ph:chat-teardrop-dots-duotone" size="3.5" />
             </button>
           </SfTooltip>
-          <SfTooltip content="发送">
+          <SfTooltip :content="$t('aiChat_send')">
             <button
               type="button"
               class="follow-question-action"

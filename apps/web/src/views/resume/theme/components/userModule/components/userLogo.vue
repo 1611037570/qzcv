@@ -21,7 +21,7 @@ const logoStyle = computed(() => {
 
 <template>
   <!-- 保留图片比例，图案在校徽区域内靠顶部显示。 -->
-  <img v-if="logo" :src="logo" :style="logoStyle" class="shrink-0 object-contain object-top" alt="校徽" />
+  <img v-if="logo" :src="logo" :style="logoStyle" class="shrink-0 object-contain object-top" :alt="$t('schoolLogo')" />
 </template>
 
 <style lang="scss" scoped></style>

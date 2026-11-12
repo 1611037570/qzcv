@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from "vue";
+import { $t } from "@/locales";
 import AiNotice from "../aiNotice.vue";
 import DesensitizeMode from "./desensitizeMode.vue";
 import ModuleSelect from "./moduleSelect.vue";
@@ -28,7 +29,7 @@ const actionButtonConfig = computed(() => {
   if (props.isGenerating) {
     return {
       icon: "ph:stop-circle-fill",
-      title: "停止生成",
+      title: $t("aiChat_stopGenerate"),
       class:
         "bg-sf-error-2 text-sf-error shadow-sm hover:bg-sf-error hover:text-white active:scale-95",
       handler: () => emit("stop"),
@@ -37,7 +38,7 @@ const actionButtonConfig = computed(() => {
   }
   return {
     icon: "mdi:arrow-up",
-    title: "发送消息",
+    title: $t("aiChat_sendMessage"),
     class: canSend.value
       ? "cursor-pointer bg-sf-theme text-white  hover:-translate-y-0.5  active:translate-y-0 active:scale-95"
       : "cursor-not-allowed bg-sf-bg-3 text-sf-text opacity-50",
@@ -106,7 +107,7 @@ onMounted(() => {
           type="textarea"
           :rows="1"
           :autosize="{ minRows: 1, maxRows: 5 }"
-          placeholder="按 Enter 发送，Shift + Enter 换行..."
+          :placeholder="$t('aiChat_inputPlaceholder')"
           class="ai-input"
           resize="none"
           @keydown.enter="handleKeydown"

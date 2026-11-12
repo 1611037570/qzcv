@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { $t } from "@/locales";
 
 defineOptions({ name: "SalaryRange" });
 
@@ -34,7 +35,7 @@ const salarySteps = [
 ];
 const minimumOptions = salarySteps.map((step) => {
   const value = String(step);
-  return { name: `${value}k${step >= 200 ? "以上" : ""}`, value };
+  return { name: `${value}k${step >= 200 ? $t("themeDeco_salaryAbove") : ""}`, value };
 });
 const maximumOptions = computed(() => {
   const minimum = Number(normalizeAmount(range.value.minimum));

@@ -6,6 +6,7 @@ import { useAiStore } from "@/stores";
 import { PROVIDER_NAMES } from "@/configs";
 import { SF_ICON_LIST_KEY } from "@/components/base/icon";
 import { AI_BRAND_ICONS, getProviderIcon } from "./providerIcons";
+import { $t } from "@/locales";
 import PencilIcon from "@iconify-vue/lucide/pencil";
 import FileTextIcon from "@iconify-vue/lucide/file-text";
 import SparklesIcon from "@iconify-vue/lucide/sparkles";
@@ -22,7 +23,7 @@ provide(SF_ICON_LIST_KEY, {
   "lucide:sparkles": SparklesIcon, // 面试辅导角色及其他服务商图标。
 });
 
-const agentCards: Array<{
+const agentCards = computed<Array<{
   // 角色使用的稳定标识。
   key: "xiaoZhou" | "xiaoYang" | "resumeParser";
   // 角色展示名称。
@@ -31,26 +32,26 @@ const agentCards: Array<{
   description: string;
   // 项目中已登记的角色图标。
   icon: string;
-}> = [
+}>>(() => [
   {
     key: "xiaoZhou",
-    name: "简历助手小舟",
-    description: "简历制作 · 内容润色 · Markdown 导入",
+    name: $t("aiModel_agentXiaoZhou"),
+    description: $t("aiModel_agentXiaoZhouDesc"),
     icon: "lucide:pencil",
   },
   {
     key: "resumeParser",
-    name: "简历解析",
-    description: "PDF 导入 · 页面识别与内容提取",
+    name: $t("aiModel_agentParser"),
+    description: $t("aiModel_agentParserDesc"),
     icon: "lucide:file-text",
   },
   {
     key: "xiaoYang",
-    name: "面试官小羊",
-    description: "AI 简历面试 · 追问评分与复盘",
+    name: $t("aiModel_agentXiaoYang"),
+    description: $t("aiModel_agentXiaoYangDesc"),
     icon: "lucide:sparkles",
   },
-];
+]);
 
 // 角色选择器展示已添加的模型配置
 const modelOptions = computed(() =>
@@ -58,9 +59,9 @@ const modelOptions = computed(() =>
     value: model.id,
     name: model.name || model.model || PROVIDER_NAMES[model.provider] || model.provider,
     providerName: model.builtin
-      ? "雪花服务"
+      ? $t("aiChat_snowflakeService")
       : model.provider === "ark"
-        ? "豆包"
+        ? $t("aiModel_providerDoubao")
         : PROVIDER_NAMES[model.provider] || model.provider, // 选择栏右侧的服务商名称。
     icon: getProviderIcon(model.provider, model.builtin, model.model), // 当前选中项与下拉选项共用的品牌图标。
     iconClass: model.builtin ? "text-sf-theme" : "", // 雪花服务图标使用主题色。
@@ -69,19 +70,19 @@ const modelOptions = computed(() =>
 
 // 卡片展示直接从当前绑定派生，切换或删除模型后同步刷新。
 const agentViews = computed(() =>
-  agentCards.map((agent) => ({
+  agentCards.value.map((agent) => ({
     ...agent,
     selectedModel: modelOptions.value.find((model) => model.value === getAgentModel(agent.key)), // 当前角色选中的模型及展示信息。
   })),
 );
 
-const boundCount = computed(() => agentCards.filter((agent) => getAgentModel(agent.key)).length);
+const boundCount = computed(() => agentCards.value.filter((agent) => getAgentModel(agent.key)).length);
 // 模型库直接展示当前角色分配，复用上方角色声明而不再维护一份名称表。
 const modelBindings = computed<Record<string, string[]>>(() =>
   Object.fromEntries(
     modelList.value.map((model) => [
       model.id,
-      agentCards
+      agentCards.value
         .filter((agent) => getAgentModel(agent.key) === model.id)
         .map((agent) => agent.name),
     ]),
@@ -103,8 +104,8 @@ provide("bg", "bg-sf-primary");
   <div class="ai-settings-content min-w-0 overflow-hidden rounded-2xl border border-sf-b bg-sf-primary">
     <section class="border-b border-sf-b p-3">
       <header class="mb-3 flex items-center justify-between gap-3">
-        <h2 class="text-sm font-semibold text-sf-text">角色模型</h2>
-        <span class="text-xs text-sf-text-2">已分配 {{ boundCount }}/{{ agentCards.length }}</span>
+        <h2 class="text-sm font-semibold text-sf-text">{{ $t("aiModel_roleModels") }}</h2>
+        <span class="text-xs text-sf-text-2">{{ $t("aiModel_assignedCount", { assigned: boundCount, total: agentCards.length }) }}</span>
       </header>
       <div class="agent-assignments grid min-w-0 gap-3">
         <article v-for="agent in agentViews" :key="agent.key" class="flex min-w-0 flex-col gap-[6px] rounded-xl p-3" :class="agent.key === 'xiaoZhou' ? 'bg-sf-theme-3' : agent.key === 'resumeParser' ? 'bg-sf-success-2' : 'bg-sf-warning-2'">
@@ -117,8 +118,8 @@ provide("bg", "bg-sf-primary");
             :model-value="getAgentModel(agent.key)"
             :list="modelOptions"
             class="agent-model-select min-w-0 w-full flex-none!"
-            :aria-label="`为${agent.name}选择模型`"
-            :placeholder="modelOptions.length ? '选择模型' : '先添加模型'"
+            :aria-label="$t('aiModel_selectModelFor', { name: agent.name })"
+            :placeholder="modelOptions.length ? $t('aiModel_selectModel') : $t('aiModel_addModelFirst')"
             clearable
             :disabled="!modelOptions.length"
             @update:model-value="setAgentModel(agent.key, $event)"

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { loadCropper } from "./cropperLoader";
+import { $t } from "@/locales";
 
 const props = defineProps({
   src: { type: String, default: "" }, // 待裁切图片地址。
@@ -36,7 +37,7 @@ const initCropper = async () => {
   try {
     Cropper = await loadCropper();
   } catch (error) {
-    if (version === cropVersion && visible.value) ElMessage.error("裁剪组件加载失败，请重新选择图片");
+    if (version === cropVersion && visible.value) ElMessage.error($t("editorMisc_cropperLoadFailed"));
     return;
   }
   if (version !== cropVersion || !visible.value || imageRef.value !== imageElement || !imageElement) return;

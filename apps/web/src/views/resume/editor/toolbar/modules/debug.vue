@@ -4,19 +4,19 @@
     v-if="system.showDebug"
     icon="mdi:console-line"
     size="5"
-    content="调试控制台"
+    :content="$t('debugConsole')"
     :active="drawerVisible"
     @click="drawerVisible = !drawerVisible"
   />
 
   <!-- 抽屉：关闭时销毁内容，避免内容常驻导致关闭后仍持续序列化整份数据 -->
-  <el-drawer v-model="drawerVisible" title="控制台" direction="rtl" size="50%" destroy-on-close>
+  <el-drawer v-model="drawerVisible" :title="$t('debug_consoleTitle')" direction="rtl" size="50%" destroy-on-close>
     <div v-if="drawerVisible" class="flex flex-col gap-3 p-3">
       <SfTab :list="tabList" v-model="activeTab">
         <SfTabPane value="performance">
           <SfCollapse v-model="performanceActiveNames">
             <SfCollapseItem name="runtime">
-              <template #title>运行性能数据 (runtimeData)</template>
+              <template #title>{{ $t("debug_runtimeDataTitle") }}</template>
               <div class="flex flex-col gap-3">
                 <div
                   v-for="item in performanceRows"
@@ -29,7 +29,7 @@
               </div>
             </SfCollapseItem>
             <SfCollapseItem name="env">
-              <template #title>运行环境 (env)</template>
+              <template #title>{{ $t("debug_envTitle") }}</template>
               <SfMdPreview
                 :modelValue="fieldMd(runtimeData.env)"
                 editorId="debug-env"
@@ -71,7 +71,7 @@
           <SfCollapse>
             <!-- 运行时配置展示编辑器实际使用的完整表单结构 -->
             <SfCollapseItem name="runtimeConfig">
-              <template #title>运行时配置 (runtimeConfig)</template>
+              <template #title>{{ $t("debug_runtimeConfigTitle") }}</template>
               <div class="max-h-[50vh] overflow-y-auto">
                 <div v-for="(value, key) in runtimeConfig ?? {}" :key="key" class="mb-3">
                   <div class="mb-3 font-medium">{{ key }}</div>
@@ -85,7 +85,7 @@
               </div>
             </SfCollapseItem>
             <SfCollapseItem name="currentConfig">
-              <template #title>当前配置 (currentConfig)</template>
+              <template #title>{{ $t("debug_currentConfigTitle") }}</template>
               <div class="max-h-[50vh] overflow-y-auto">
                 <div v-for="(value, key) in currentConfig ?? {}" :key="key" class="mb-3">
                   <div class="mb-3 font-medium">{{ key }}</div>
@@ -105,16 +105,16 @@
             <SfCollapseItem name="assistantChat">
               <template #title>
                 <div class="flex w-full items-center justify-between gap-3">
-                  <span>消息对话 (resumeAssistantChat)</span>
+                  <span>{{ $t("debug_chatTitle") }}</span>
                   <span
                     v-if="resumeAssistantChat"
                     class="shrink-0 rounded-full bg-sf-theme px-3 text-xs text-sf-theme-text"
                   >
-                    当前使用
+                    {{ $t("debug_inUse") }}
                   </span>
                 </div>
               </template>
-              <div v-if="!chatMessages.length" class="text-sm text-sf-text-3">暂无消息</div>
+              <div v-if="!chatMessages.length" class="text-sm text-sf-text-3">{{ $t("debug_noMessages") }}</div>
               <div v-else class="max-h-[50vh] overflow-y-auto">
                 <div v-for="(msg, index) in chatMessages" :key="index" class="mb-3">
                   <!-- 消息摘要行：点击展开该条消息的完整 JSON 便于排查 -->
@@ -127,7 +127,7 @@
                     <span class="min-w-0 flex-1 truncate text-sm whitespace-nowrap text-sf-text-2">
                       {{ msgBrief(msg) }}
                     </span>
-                    <SfTooltip content="删除该消息">
+                    <SfTooltip :content="$t('debug_deleteMessageTip')">
                       <button
                         type="button"
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sf-text-3 transition-colors hover:bg-sf-error-2 hover:text-sf-error"
@@ -159,6 +159,7 @@ import { computed, ref } from "vue";
 import { useAiStore, useResumeStore } from "@/stores";
 import { storeToRefs } from "pinia";
 import confirm from "@/components/business/confirm";
+import { $t } from "@/locales";
 import Icon from "../components/icon.vue";
 
 const drawerVisible = ref(false);
@@ -168,13 +169,13 @@ const uiActiveNames = ref([]);
 
 // 顶部 Tab：性能 / 数据 / 界面 / 配置 / 消息对话
 const activeTab = ref("performance");
-const tabList = [
-  { name: "性能", value: "performance" },
-  { name: "数据", value: "data" },
-  { name: "界面", value: "ui" },
-  { name: "配置", value: "config" },
-  { name: "消息对话", value: "chat" },
-];
+const tabList = computed(() => [
+  { name: $t("debug_tabPerformance"), value: "performance" },
+  { name: $t("debug_tabData"), value: "data" },
+  { name: $t("debug_tabUi"), value: "ui" },
+  { name: $t("debug_tabConfig"), value: "config" },
+  { name: $t("debug_tabChat"), value: "chat" },
+]);
 // 性能折叠面板：默认展开
 const performanceActiveNames = ref(["runtime", "env"]);
 
@@ -188,9 +189,9 @@ const performanceRows = computed(() => {
   const data = runtimeData.value;
   const time = (value) => (value ? `${value}ms` : "—");
   return [
-    { label: "编辑区加载耗时", value: time(data.editorDuration) },
-    { label: "预览区加载耗时", value: time(data.previewDuration) },
-    { label: "编辑器首屏首帧", value: time(data.firstFrame) },
+    { label: $t("debug_editorLoadTime"), value: time(data.editorDuration) },
+    { label: $t("debug_previewLoadTime"), value: time(data.previewDuration) },
+    { label: $t("debug_firstFrame"), value: time(data.firstFrame) },
   ];
 });
 
@@ -217,7 +218,7 @@ const toggleMsgJson = (index) => {
 
 // 删除消息：删除后关闭展开的 JSON 预览
 function handleDeleteMsg(index) {
-  confirm("删除后不可恢复。", "删除该条消息")
+  confirm($t("debug_deleteConfirm"), $t("debug_deleteMessageTitle"))
     .then(() => {
       const chat = resumeAssistantChat.value;
       if (!chat) return;

@@ -4,6 +4,7 @@ import { useResumeStore } from "@/stores";
 import { honorTemplateList } from "@/domain/resume/theme/uiConfig";
 import ColorTags from "@/views/resume/theme/components/tagTemplate/colorTags.vue";
 import Icon from "../icon.vue";
+import { $t } from "@/locales";
 const resumeStore = useResumeStore();
 
 // 荣誉布局保存在简历 ui.honor，标签布局只影响预览内容。
@@ -14,11 +15,11 @@ const honorLayout = computed({
   },
 });
 // 荣誉模板的示例名称与描述共用同一组内容。
-const mockHonor = {
-  name: "国家奖学金", // 示例荣誉名称
-  desc: "学习表现优秀", // 示例荣誉描述
-  linkName: "获奖公告", // 示例荣誉链接名称
-};
+const mockHonor = computed(() => ({
+  name: $t("editorMisc_mockHonorName"), // 示例荣誉名称
+  desc: $t("editorMisc_mockHonorDesc"), // 示例荣誉描述
+  linkName: $t("editorMisc_mockHonorLink"), // 示例荣誉链接名称
+}));
 </script>
 
 <template>

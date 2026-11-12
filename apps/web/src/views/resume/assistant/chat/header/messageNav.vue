@@ -1,4 +1,6 @@
 <script setup>
+import { $t } from "@/locales";
+
 defineProps({
   messages: {
     type: Array,
@@ -12,10 +14,10 @@ function getMessageBrief(msg) {
   const content = msg.content;
   const brief = content.replace(/\s+/g, " ").trim();
   if (brief) return brief;
-  if (msg.requestStatus === "error") return "生成失败";
-  if (msg.typing && msg.requestStatus === "thinking") return "思考中";
-  if (msg.typing && msg.requestStatus === "generating") return "回复中";
-  if (msg.typing) return "生成中";
+  if (msg.requestStatus === "error") return $t("aiChat_navGenerateFailed");
+  if (msg.typing && msg.requestStatus === "thinking") return $t("aiChat_navThinking");
+  if (msg.typing && msg.requestStatus === "generating") return $t("aiChat_navReplying");
+  if (msg.typing) return $t("aiChat_navGenerating");
   return "";
 }
 </script>

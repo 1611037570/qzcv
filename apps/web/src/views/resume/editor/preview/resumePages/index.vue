@@ -333,7 +333,7 @@ defineExpose({
         v-if="pagePlan.status === 'invalid'"
         class="flex min-h-30 flex-col items-center justify-center gap-3 rounded-3xl bg-white p-6 text-center text-sm text-red-600"
       >
-        <span class="font-bold">页面布局配置有误</span>
+        <span class="font-bold">{{ $t("editorMisc_layoutError") }}</span>
         <span v-for="warning in pagePlan.warnings" :key="warning.message">{{
           warning.message
         }}</span>
@@ -343,7 +343,7 @@ defineExpose({
           v-if="pagePlan.status === 'overflow'"
           class="mb-3 flex min-h-12 items-center justify-center rounded-3xl bg-white p-3 text-center text-sm text-red-600"
         >
-          当前内容超出页面可用区域，请调整内容或排版后再导出
+          {{ $t("editorMisc_contentOverflow") }}
         </div>
         <!-- 实际渲染的分页内容，页面只消费 PagePlan 中的分片。 -->
         <div ref="rootRef" class="relative flex flex-col gap-3">

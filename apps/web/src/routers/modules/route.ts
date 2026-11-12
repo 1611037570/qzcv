@@ -38,26 +38,29 @@ const resumeChildren: RouteRecordRaw[] = [
   { path: "optimize", component: () => import("@/views/resume/optimize/index.vue"), meta: { localeFiles: ["resume", "resume-editor"] } },
   // 岗位适配先做只读分析，再预览并另存定制简历。
   { path: "job-match", component: () => import("@/views/resume/jobMatch/index.vue"), meta: { localeFiles: ["resume", "resume-editor"] } },
-  // 面试独立于简历编辑器，使用自己的流程与持久化记录。
-  { path: "interview", component: () => import("@/views/resume/interview/index.vue") },
+  // 面试独立于简历编辑器，使用自己的流程与持久化记录，文案由页面语言包维护。
+  { path: "interview", component: () => import("@/views/resume/interview/index.vue"), meta: { localeFiles: ["resume", "interview"] } },
   { path: "statistics", component: () => import("@/views/resume/statistics/index.vue") },
   { path: "guide", component: () => import("@/views/resume/guide/index.vue") },
   // 求职工具从指南拆出独立入口，两个页面各自收录。
-  { path: "tools", component: () => import("@/views/resume/tools/index.vue") },
+  { path: "tools", component: () => import("@/views/resume/tools/index.vue"), meta: { localeFiles: ["resume", "tools"] } },
   // 离职决策评分作为求职工具二级页面单独按需加载。
   {
     path: "tools/resignation-score",
     component: () => import("@/views/resume/guide/resignationScore/index.vue"),
+    meta: { localeFiles: ["resume", "tools"] },
   },
   // Offer 对比决策器作为求职工具二级页面单独按需加载。
   {
     path: "tools/offer-comparison",
     component: () => import("@/views/resume/guide/offerComparison/index.vue"),
+    meta: { localeFiles: ["resume", "tools"] },
   },
   // 真实时薪计算器作为求职工具二级页面单独按需加载。
   {
     path: "tools/real-hourly-wage",
     component: () => import("@/views/resume/guide/realHourlyWage/index.vue"),
+    meta: { localeFiles: ["resume", "tools"] },
   },
   // 工具页原挂在指南下的旧路径，保留重定向，避免已收录链接失效。
   { path: "guide/resignation-score", redirect: "/resume/tools/resignation-score" },

@@ -15,7 +15,7 @@ const { thinkMode } = storeToRefs(aiStore);
     "
     @click.stop="thinkMode = !thinkMode"
   >
-    深度思考
+    {{ $t("aiChat_deepThink") }}
   </div>
 </template>
 

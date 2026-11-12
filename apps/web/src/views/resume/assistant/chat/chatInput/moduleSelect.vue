@@ -61,11 +61,11 @@ const toggleModule = (item) => {
       class="gap-1 whitespace-nowrap"
     >
       <template v-if="selectedModule.length">
-        已选
+        {{ $t("aiChat_selectedCount") }}
         <span>
           {{ selectedModule.length }}
         </span>
-        模块
+        {{ $t("aiChat_moduleLabel") }}
       </template>
       <span v-else> {{ ALL_MODULE_NAME }} </span>
       <SfIcon
@@ -78,7 +78,7 @@ const toggleModule = (item) => {
       <SfList :list="moduleOptions" :border="false" @onClick="toggleModule">
         <template #footer>
           <p class="px-1 pt-1 text-xs text-sf-text-3">
-            选择后 AI 只读取和操作选中的模块，而非整份简历
+            {{ $t("aiChat_moduleScopeHint") }}
           </p>
         </template>
       </SfList>

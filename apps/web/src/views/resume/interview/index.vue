@@ -4,6 +4,7 @@ import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import type { InterviewConfig } from "@snowflake/interview-agent";
 import confirm from "@/components/business/confirm";
+import { $t } from "@/locales";
 import { INTERVIEW_INTRO_PHASE, INTERVIEW_MODES, formatInterviewDuration, getInterviewCompletedCount, getInterviewQuestionLimit, getModeLabel, isPreparationMode } from "./config";
 import { useInterviewSession } from "./useInterviewSession";
 import type { InterviewSession } from "./types";
@@ -31,8 +32,8 @@ const filteredSessions = computed(() => sessions.value.filter((session) =>
 const dateLabel = (time: number) => new Date(time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 // 文案生成与模拟面试使用各自的状态文案，历史记录不再混称训练结束。
 const statusLabel = (session: InterviewSession) => isPreparationMode(session.config.mode)
-  ? session.status === "completed" ? "已生成" : session.status === "active" ? "生成中" : "未完成"
-  : session.status === "completed" ? "已结束" : session.status === "active" ? "进行中" : "已暂停";
+  ? session.status === "completed" ? $t("interview_generated") : session.status === "active" ? $t("interview_generatingShort") : $t("interview_incomplete")
+  : session.status === "completed" ? $t("interview_ended") : session.status === "active" ? $t("interview_inProgress") : $t("interview_paused");
 
 // 仅加载新版独立面试记录，读取失败支持原地重试。
 const initialize = async () => {
@@ -58,18 +59,18 @@ const endSession = async () => {
   if (!id || confirmingEnd.value) return;
   confirmingEnd.value = true;
   try {
-    await confirm("结束后将停止提问，并只根据已提交的回答生成复盘。未提交的草稿会保留在记录中。", "结束本场面试", { confirmText: "结束并复盘", cancelText: "继续作答" });
+    await confirm($t("interview_endConfirmMessage"), $t("interview_endConfirmTitle"), { confirmText: $t("interview_endConfirmConfirm"), cancelText: $t("interview_continueAnswer") });
   } catch { return; }
   finally { confirmingEnd.value = false; }
   if (current.value?.id === id) await finish();
 };
 const deleteSession = async (session: InterviewSession) => {
   try {
-    await confirm(`删除“${session.title}”及其问答、草稿和复盘？此操作无法恢复。`, "删除面试记录", { confirmText: "删除", cancelText: "取消" });
+    await confirm($t("interview_deleteConfirmMessage", { title: session.title }), $t("interview_deleteTitle"), { confirmText: $t("interview_delete"), cancelText: $t("interview_cancel") });
   } catch { return; }
   if (current.value?.id === session.id) select("");
   try { await store.remove(session.id); }
-  catch { ElMessage.error("删除失败，请重试"); }
+  catch { ElMessage.error($t("interview_deleteFailed")); }
 };
 
 // 导出可读记录，澄清与正式回答分开，保留停止、跳过和草稿的真实状态。
@@ -77,19 +78,19 @@ const exportSession = () => {
   const session = current.value;
   if (!session) return;
   const content = [
-    `# ${session.title}`, `创建时间：${new Date(session.createdAt).toLocaleString("zh-CN")}`,
-    `训练类型：${getModeLabel(session.config.mode)}\n目标岗位：${session.config.position}\n工作年限：${session.config.experienceYears}\n参考简历：${session.resumeTitle || "未关联"}\n状态：${statusLabel(session)}\n训练时长：${formatInterviewDuration(session.elapsedMs)}`,
-    ...(session.preparation.content ? [`## 准备材料${session.preparation.status === "complete" ? "" : "（未完成）"}\n\n${session.preparation.content}`] : []),
+    `# ${session.title}`, $t("interview_exportCreatedAt", { time: new Date(session.createdAt).toLocaleString("zh-CN") }),
+    `${$t("interview_exportMode", { mode: getModeLabel(session.config.mode) })}\n${$t("interview_exportPosition", { position: session.config.position })}\n${$t("interview_exportYears", { years: session.config.experienceYears })}\n${$t("interview_exportResume", { resume: session.resumeTitle || $t("interview_notLinked") })}\n${$t("interview_exportStatus", { status: statusLabel(session) })}\n${$t("interview_exportDuration", { duration: formatInterviewDuration(session.elapsedMs) })}`,
+    ...(session.preparation.content ? [$t("interview_exportPreparation", { suffix: session.preparation.status === "complete" ? "" : $t("interview_exportIncomplete"), content: session.preparation.content })] : []),
     ...session.turns.map((turn, index) => [
-      `## ${turn.phase === INTERVIEW_INTRO_PHASE ? "开场自我介绍 · 限时两分钟" : `第 ${session.turns.slice(0, index + 1).filter((item) => item.phase !== INTERVIEW_INTRO_PHASE).length} 题 · ${turn.phase}`}${turn.question.status === "complete" ? "" : "（未完成）"}`, turn.question.content,
-      `作答用时：${formatInterviewDuration(turn.durationSeconds * 1000)}`,
-      ...(turn.clarifications?.map((item) => `### 题意澄清${item.reply.status === "complete" ? "" : "（未完成）"}\n\n你的疑问：${item.request}\n\n${item.reply.content}`) || []),
-      turn.submitted ? `### 你的回答\n\n${turn.skipped ? "已跳过" : turn.answer}` : "尚未提交回答",
-      ...(turn.hint.content ? [`### 答题思路（面试后回看）\n\n${turn.hint.content}`] : []),
-      ...(turn.reference.content ? [`### 参考回答（面试后回看）\n\n${turn.reference.content}`] : []),
+      `## ${turn.phase === INTERVIEW_INTRO_PHASE ? $t("interview_exportIntro") : $t("interview_exportQuestion", { number: session.turns.slice(0, index + 1).filter((item) => item.phase !== INTERVIEW_INTRO_PHASE).length, phase: turn.phase })}${turn.question.status === "complete" ? "" : $t("interview_exportIncomplete")}`, turn.question.content,
+      $t("interview_exportAnswerTime", { duration: formatInterviewDuration(turn.durationSeconds * 1000) }),
+      ...(turn.clarifications?.map((item) => $t("interview_exportClarify", { suffix: item.reply.status === "complete" ? "" : $t("interview_exportIncomplete"), request: item.request, content: item.reply.content })) || []),
+      turn.submitted ? $t("interview_exportAnswer", { answer: turn.skipped ? $t("interview_skipped") : turn.answer }) : $t("interview_exportNotSubmitted"),
+      ...(turn.hint.content ? [$t("interview_exportHint", { content: turn.hint.content })] : []),
+      ...(turn.reference.content ? [$t("interview_exportReference", { content: turn.reference.content })] : []),
     ].join("\n\n")),
-    ...(session.report.content ? [`## 面试复盘${session.report.status === "complete" ? "" : "（未完成）"}\n\n${session.report.content}`] : []),
-    ...(session.draft ? [`## 未提交草稿\n\n${session.draft}`] : []),
+    ...(session.report.content ? [$t("interview_exportReport", { suffix: session.report.status === "complete" ? "" : $t("interview_exportIncomplete"), content: session.report.content })] : []),
+    ...(session.draft ? [$t("interview_exportDraft", { content: session.draft })] : []),
   ].join("\n\n");
   const url = URL.createObjectURL(new Blob([content], { type: "text/markdown;charset=utf-8" /* 可读的面试文本记录。 */ }));
   const anchor = document.createElement("a");
@@ -105,21 +106,21 @@ const exportSession = () => {
     <header v-if="!current" class="flex shrink-0 flex-wrap items-center justify-between gap-3">
       <!-- 页头与其他助手页面使用一致的紧凑标题。 -->
       <div class="min-w-0">
-        <h1 class="text-lg font-semibold text-sf-text">{{ $t('resumeNavInterview') }}</h1><p class="mt-[6px] text-xs leading-6 text-sf-text-2">选择训练方式，或先准备自我介绍与面试题。</p>
+        <h1 class="text-lg font-semibold text-sf-text">{{ $t('resumeNavInterview') }}</h1><p class="mt-[6px] text-xs leading-6 text-sf-text-2">{{ $t("interview_pageSubtitle") }}</p>
       </div>
       <nav class="flex flex-wrap items-center gap-3">
-        <InterviewButton type="bg" :disabled="initializing || !store.ready" @click="historyVisible = true"><SfIcon icon="tabler:history" size="4" />训练记录 {{ sessions.length }}</InterviewButton>
-        <InterviewButton v-if="current" type="bg" @click="newSession()">新建训练</InterviewButton>
+        <InterviewButton type="bg" :disabled="initializing || !store.ready" @click="historyVisible = true"><SfIcon icon="tabler:history" size="4" />{{ $t("interview_historyCount", { count: sessions.length }) }}</InterviewButton>
+        <InterviewButton v-if="current" type="bg" @click="newSession()">{{ $t("interview_newSession") }}</InterviewButton>
       </nav>
     </header>
-    <p v-if="store.saveError" class="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-sf-b bg-sf-primary p-3 text-sm text-sf-error" role="alert">面试记录尚未保存成功：{{ store.saveError }}<InterviewButton type="bg" :disabled="store.saving > 0" @click="store.retrySave">{{ store.saving > 0 ? '正在保存…' : '重试保存' }}</InterviewButton></p>
-    <section v-if="initializing" class="flex min-h-60 flex-1 items-center justify-center gap-3 text-sm text-sf-text-2"><SfIcon icon="eos-icons:loading" size="6" />正在读取面试记录…</section>
-    <section v-else-if="store.loadError" class="flex flex-1 flex-col items-center justify-center gap-3"><p class="text-sf-error">面试记录读取失败：{{ store.loadError }}</p><InterviewButton @click="initialize">重新读取</InterviewButton></section>
+    <p v-if="store.saveError" class="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-sf-b bg-sf-primary p-3 text-sm text-sf-error" role="alert">{{ $t("interview_saveError", { error: store.saveError }) }}<InterviewButton type="bg" :disabled="store.saving > 0" @click="store.retrySave">{{ store.saving > 0 ? $t('interview_saving') : $t('interview_retrySave') }}</InterviewButton></p>
+    <section v-if="initializing" class="flex min-h-60 flex-1 items-center justify-center gap-3 text-sm text-sf-text-2"><SfIcon icon="eos-icons:loading" size="6" />{{ $t("interview_loadingRecords") }}</section>
+    <section v-else-if="store.loadError" class="flex flex-1 flex-col items-center justify-center gap-3"><p class="text-sf-error">{{ $t("interview_loadError", { error: store.loadError }) }}</p><InterviewButton @click="initialize">{{ $t("interview_reload") }}</InterviewButton></section>
     <!-- 面试中将记录与新建入口合入会话工具栏，避免上下两条导航重复占位。 -->
     <InterviewRoom v-else-if="current" :key="current.id" :session="current" @pause="pause" @resume="resume" @finish="endSession" @submit="submit" @clarify="clarify" @request="request" @again="newSession(true)" @export="exportSession">
       <template #navigation>
-        <InterviewButton type="bg" @click="historyVisible = true"><SfIcon icon="tabler:history" size="4" />训练记录 {{ sessions.length }}</InterviewButton>
-        <InterviewButton type="bg" @click="newSession()">新建训练</InterviewButton>
+        <InterviewButton type="bg" @click="historyVisible = true"><SfIcon icon="tabler:history" size="4" />{{ $t("interview_historyCount", { count: sessions.length }) }}</InterviewButton>
+        <InterviewButton type="bg" @click="newSession()">{{ $t("interview_newSession") }}</InterviewButton>
       </template>
     </InterviewRoom>
     <!-- 页面外层统一留白，滚动容器不再重复叠加内边距。 -->
@@ -127,17 +128,17 @@ const exportSession = () => {
       <SetupPanel :key="setupKey" :initial-config="initialConfig" :initial-resume-id="initialResumeId" @start="start" />
     </SfScrollbar>
 
-    <SfModal v-model="historyVisible" title="面试训练记录" width="860px">
+    <SfModal v-model="historyVisible" :title="$t('interview_historyTitle')" width="860px">
       <section class="interview-fields flex w-full min-w-0 flex-col gap-3">
         <div class="interview-history-filters grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-          <SfInput v-model="search" placeholder="搜索岗位、公司或记录标题" aria-label="搜索面试记录" clearable />
-          <SfSelect v-model="historyMode" :list="historyModeOptions" placeholder="全部训练类型" aria-label="筛选训练类型" clearable />
+          <SfInput v-model="search" :placeholder="$t('interview_searchPlaceholder')" :aria-label="$t('interview_searchAria')" clearable />
+          <SfSelect v-model="historyMode" :list="historyModeOptions" :placeholder="$t('interview_allTypes')" :aria-label="$t('interview_filterAria')" clearable />
         </div>
         <section v-if="!filteredSessions.length" class="flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-sf-b p-3 text-center">
-          <SfIcon icon="tabler:history" size="9" class="text-sf-text-2" /><h3 class="text-sm font-medium">{{ sessions.length ? '没有找到匹配的记录' : '还没有面试记录' }}</h3>
-          <p class="text-xs leading-6 text-sf-text-2">{{ sessions.length ? '试试其他关键词，或查看全部类型。' : '完成一次生成或开始面试后，记录会保存在这里。' }}</p>
-          <InterviewButton v-if="search || historyMode" type="bg" @click="search = ''; historyMode = ''">清除筛选</InterviewButton>
-          <InterviewButton v-else type="bg" @click="historyVisible = false">选择功能</InterviewButton>
+          <SfIcon icon="tabler:history" size="9" class="text-sf-text-2" /><h3 class="text-sm font-medium">{{ sessions.length ? $t('interview_noMatch') : $t('interview_emptyHistory') }}</h3>
+          <p class="text-xs leading-6 text-sf-text-2">{{ sessions.length ? $t('interview_noMatchHint') : $t('interview_emptyHint') }}</p>
+          <InterviewButton v-if="search || historyMode" type="bg" @click="search = ''; historyMode = ''">{{ $t("interview_clearFilters") }}</InterviewButton>
+          <InterviewButton v-else type="bg" @click="historyVisible = false">{{ $t("interview_chooseFeature") }}</InterviewButton>
         </section>
         <SfScrollbar flush class="h-auto! flex-none!" max-height="60vh">
           <div class="flex flex-col gap-3">
@@ -145,10 +146,10 @@ const exportSession = () => {
           <article v-for="session in filteredSessions" :key="session.id" class="flex items-center gap-3 rounded-xl border p-3 transition-colors hover:border-sf-theme focus-within:border-sf-theme" :class="current?.id === session.id ? 'border-sf-theme bg-sf-bg' : 'border-sf-b'">
             <button type="button" class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl text-left focus-visible:outline-2 focus-visible:outline-sf-theme" @click="openSession(session.id)">
               <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sf-page text-sf-theme"><SfIcon :icon="isPreparationMode(session.config.mode) ? 'lucide:file-text' : 'ph:microphone-duotone'" size="5" /></span>
-              <span class="flex min-w-0 flex-1 flex-col gap-3"><span class="flex flex-wrap items-center gap-3"><span class="break-words text-sm font-medium">{{ session.title }}</span><span class="text-xs" :class="session.status === 'completed' ? 'text-sf-success' : session.status === 'paused' ? 'text-sf-warning' : 'text-sf-theme'">{{ statusLabel(session) }}</span><span v-if="current?.id === session.id" class="text-xs text-sf-theme">当前记录</span></span>
-              <span class="text-xs leading-6 text-sf-text-2">{{ dateLabel(session.updatedAt) }} · {{ getModeLabel(session.config.mode) }}<template v-if="!isPreparationMode(session.config.mode)"> · 已完成 {{ getInterviewCompletedCount(session.config, session.turns.filter(turn => turn.submitted)) }}<template v-if="getInterviewQuestionLimit(session.config)"> / {{ getInterviewQuestionLimit(session.config) }}</template> {{ session.config.mode === 'specialized' ? '轮有效回答' : '题' }}</template></span></span>
+              <span class="flex min-w-0 flex-1 flex-col gap-3"><span class="flex flex-wrap items-center gap-3"><span class="break-words text-sm font-medium">{{ session.title }}</span><span class="text-xs" :class="session.status === 'completed' ? 'text-sf-success' : session.status === 'paused' ? 'text-sf-warning' : 'text-sf-theme'">{{ statusLabel(session) }}</span><span v-if="current?.id === session.id" class="text-xs text-sf-theme">{{ $t("interview_currentRecord") }}</span></span>
+              <span class="text-xs leading-6 text-sf-text-2">{{ dateLabel(session.updatedAt) }} · {{ getModeLabel(session.config.mode) }}<template v-if="!isPreparationMode(session.config.mode)"> · {{ $t('interview_completedCount', { count: getInterviewCompletedCount(session.config, session.turns.filter(turn => turn.submitted)) }) }}<template v-if="getInterviewQuestionLimit(session.config)"> / {{ getInterviewQuestionLimit(session.config) }}</template> {{ session.config.mode === 'specialized' ? $t('interview_unitRounds') : $t('interview_unitQuestions') }}</template></span></span>
             </button>
-            <InterviewButton type="error" plain @click="deleteSession(session)">删除</InterviewButton>
+            <InterviewButton type="error" plain @click="deleteSession(session)">{{ $t("interview_delete") }}</InterviewButton>
           </article>
           </div>
         </SfScrollbar>

@@ -6,6 +6,7 @@ import SkillTemplate from "@/views/resume/theme/components/skillTemplate/index.v
 import DistributionTemplate from "@/views/resume/theme/components/skillTemplate/distribution.vue";
 import ColorTags from "@/views/resume/theme/components/tagTemplate/colorTags.vue";
 import Icon from "../icon.vue";
+import { $t } from "@/locales";
 const resumeStore = useResumeStore();
 
 // 技能布局与列数保存在简历 ui.skill，模板编号与标题模板同属 ui.theme。
@@ -28,21 +29,21 @@ const skillTemplate = computed({
   },
 });
 // 技能样式示例共用同一名称与十分制评分。
-const mockSkill = {
-  name: "Vue 是最好的语言", // 示例技能名称
-  desc: "熟悉组件开发", // 示例技能描述
+const mockSkill = computed(() => ({
+  name: $t("editorMisc_mockSkillName"), // 示例技能名称
+  desc: $t("editorMisc_mockSkillDesc"), // 示例技能描述
   level: 7, // 示例技能评分
-};
+}));
 // 占比模板示例使用多项技能，以展示整条比例条和图例。
 const mockDistributionSkills = [
   { name: "Vue" /* 示例技能名称 */, level: 6 /* 示例技能评分 */ },
   { name: "TypeScript" /* 示例技能名称 */, level: 4 /* 示例技能评分 */ },
 ];
 // 彩色标签示例展示不同技能的交替配色。
-const mockNotionSkills = [
-  { name: "Vue" /* 示例技能名称 */, desc: "组件开发" /* 示例技能描述 */ },
-  { name: "TypeScript" /* 示例技能名称 */, desc: "类型设计" /* 示例技能描述 */ },
-];
+const mockNotionSkills = computed(() => [
+  { name: "Vue" /* 示例技能名称 */, desc: $t("editorMisc_mockSkillDesc2") /* 示例技能描述 */ },
+  { name: "TypeScript" /* 示例技能名称 */, desc: $t("editorMisc_mockSkillDesc3") /* 示例技能描述 */ },
+]);
 // 选择无评分、标签类、占比或圆环样式时显示技能条目编辑区。
 const selectSkillTemplate = (value) => {
   skillTemplate.value = value;

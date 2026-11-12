@@ -7,6 +7,7 @@ import { LLM } from "@/apis";
 import { PROVIDER_NAMES, snowflake } from "@/configs";
 import { getProviderIcon } from "./providerIcons";
 import { MODEL_PRESETS, type ModelPreset } from "./modelPresets";
+import { $t } from "@/locales";
 
 const props = defineProps<{
   /** 已添加模型当前绑定的角色名称。 */
@@ -46,11 +47,11 @@ type ProviderTemplate = {
 const providerTemplates: ProviderTemplate[] = [
   {
     id: "snowflake",
-    name: "雪花服务",
+    name: $t("aiChat_snowflakeService"),
     builtin: true,
     preset: {
       provider: snowflake.provider,
-      name: "雪花服务",
+      name: $t("aiChat_snowflakeService"),
       model: snowflake.model,
       key: snowflake.apiKey,
       url: snowflake.baseUrl,
@@ -262,7 +263,7 @@ watch(
 function openCustomModel() {
   if (busy.value) return;
   if (!credentialReady.value) {
-    ElMessage.warning("请先填写 API 密钥并检查接口地址");
+    ElMessage.warning($t("aiModel_fillCredentialFirst"));
     return;
   }
   customVisible.value = true;
@@ -272,7 +273,7 @@ function openCustomModel() {
 async function testModel(model: string, add = false, alias = "", saved?: ModelItem) {
   if (busy.value || !model.trim()) return;
   if (!saved && !credentialReady.value) {
-    ElMessage.warning("请先填写 API 密钥并检查接口地址");
+    ElMessage.warning($t("aiModel_fillCredentialFirst"));
     return;
   }
   const target = session.value;
@@ -283,11 +284,11 @@ async function testModel(model: string, add = false, alias = "", saved?: ModelIt
     item.key.trim() === config.key.trim() && item.url.trim() === config.url.trim() &&
     item.protocol === config.protocol);
   if (add && duplicate()) {
-    ElMessage.info("该模型已添加");
+    ElMessage.info($t("aiModel_modelAlreadyAdded"));
     return;
   }
   if (add && config.name && aiStore.modelList.some((item) => item.name?.trim() === config.name?.trim())) {
-    ElMessage.error("别名已存在，请使用其他别名");
+    ElMessage.error($t("aiModel_aliasExists"));
     return;
   }
   testingModel.value = cardKey;
@@ -295,7 +296,7 @@ async function testModel(model: string, add = false, alias = "", saved?: ModelIt
     if (!add || target.connections[cardKey]?.status !== "success") {
       target.connections[cardKey] = {
         status: "testing", // 当前模型正在检测。
-        message: "正在检测连接…", // 明确请求仍在进行。
+        message: $t("aiModel_testingDetect"), // 明确请求仍在进行。
       };
       const llm = new LLM({
         url: config.url, // 冻结本次检测的完整地址。
@@ -309,12 +310,12 @@ async function testModel(model: string, add = false, alias = "", saved?: ModelIt
       if (saved && !aiStore.modelList.some((item) => item.id === saved.id)) return;
       target.connections[cardKey] = {
         status: "success", // 当前模型通过最小请求检测。
-        message: "连接成功", // 允许新模型继续保存。
+        message: $t("aiModel_connectionSuccess"), // 允许新模型继续保存。
       };
     }
     if (disposed || !add || duplicate()) return;
     if (config.name && aiStore.modelList.some((item) => item.name?.trim() === config.name?.trim())) {
-      ElMessage.error("别名已存在，请使用其他别名");
+      ElMessage.error($t("aiModel_aliasExists"));
       return;
     }
     const deployed = aiStore.deployModel(config);
@@ -322,12 +323,12 @@ async function testModel(model: string, add = false, alias = "", saved?: ModelIt
     target.form.model = "";
     target.form.name = "";
     customVisible.value = false;
-    ElMessage.success("模型添加成功，可在角色模型中分配");
+    ElMessage.success($t("aiModel_modelAddedSuccess"));
   } catch (error: unknown) {
     if (disposed) return;
     target.connections[cardKey] = {
       status: "error", // 失败只影响当前模型。
-      message: error instanceof Error ? error.message : "连接失败，请检查模型配置", // 保留服务商的真实错误原因。
+      message: error instanceof Error ? error.message : $t("aiModel_connectionFailed"), // 保留服务商的真实错误原因。
     };
   } finally {
     testingModel.value = "";
@@ -338,18 +339,18 @@ function handleAddBuiltin() {
   const preset = currentProvider.value.preset;
   if (!preset || getProviderModels(currentProvider.value).length) return;
   if (aiStore.modelList.some((model) => model.name?.trim() === preset.name)) {
-    ElMessage.error("别名已存在，请使用其他别名");
+    ElMessage.error($t("aiModel_aliasExists"));
     return;
   }
   aiStore.deployModel({ ...preset, builtin: true });
-  ElMessage.success("模型添加成功，可在角色模型中分配");
+  ElMessage.success($t("aiModel_modelAddedSuccess"));
 }
 
 // 删除操作仍使用原有确认机制，并由模型仓库同步解绑角色。
 function removeModel(model: ModelItem) {
-  confirm("确定要删除该模型吗？此操作不可恢复。", "删除模型", {
-    confirmText: "删除", // 明确本次删除操作。
-    cancelText: "取消", // 保留模型和当前角色绑定。
+  confirm($t("aiModel_removeModelConfirm"), $t("aiModel_removeModelTitle"), {
+    confirmText: $t("delete"), // 明确本次删除操作。
+    cancelText: $t("cancel"), // 保留模型和当前角色绑定。
   }).then(() => aiStore.deleteModel(model.id)).catch(() => {});
 }
 
@@ -363,15 +364,15 @@ provide("bg", "bg-sf-bg");
   <!-- 服务商使用下划线导航，下方配置和模型列表保持连续阅读顺序。 -->
   <section class="provider-workspace min-w-0">
     <header class="px-3 pt-3">
-      <h2 class="text-sm font-semibold text-sf-text">模型接入</h2>
+      <h2 class="text-sm font-semibold text-sf-text">{{ $t("aiModel_accessTitle") }}</h2>
     </header>
-    <nav class="flex flex-wrap gap-x-3 border-b border-sf-b px-3" aria-label="选择服务商">
+    <nav class="flex flex-wrap gap-x-3 border-b border-sf-b px-3" :aria-label="$t('aiModel_selectProvider')">
       <!-- 悬停时用文字和下划线提示可切换服务商。 -->
       <button v-for="provider in providerList" :key="provider.id" type="button" class="flex min-w-0 cursor-pointer items-center gap-[6px] border-b-2 py-3 text-xs transition-colors disabled:cursor-wait disabled:opacity-60" :class="selectedProvider === provider.id ? 'border-sf-theme font-medium text-sf-theme' : 'border-transparent text-sf-text-2 hover:border-sf-theme hover:text-sf-theme'" :aria-pressed="selectedProvider === provider.id" :disabled="busy" @click="selectProvider(provider)">
         <!-- 雪花服务图标使用主题色。 -->
         <SfIcon :icon="getProviderIcon(provider.id, provider.builtin)" size="4" class="shrink-0" :class="{ 'text-sf-theme': provider.builtin }" />
         <span>{{ provider.name }}</span>
-        <span v-if="getCredential(provider)?.key.trim() || (provider.builtin && getProviderModels(provider).length)" class="h-[6px] w-[6px] shrink-0 rounded-full bg-sf-success" aria-label="已配置" />
+        <span v-if="getCredential(provider)?.key.trim() || (provider.builtin && getProviderModels(provider).length)" class="h-[6px] w-[6px] shrink-0 rounded-full bg-sf-success" :aria-label="$t('aiModel_configured')" />
       </button>
     </nav>
 
@@ -383,33 +384,33 @@ provide("bg", "bg-sf-bg");
             <!-- 详情中的雪花服务图标与导航保持一致。 -->
             <SfIcon :icon="getProviderIcon(currentProvider.id, currentProvider.builtin)" size="5" box-size="9" class="shrink-0 rounded-lg bg-sf-primary" :class="{ 'text-sf-theme': currentProvider.builtin }" />
             <h3 class="text-sm font-semibold text-sf-text">{{ currentProvider.name }}</h3>
-            <span v-if="!currentProvider.builtin" class="rounded-full px-[6px] py-[3px] text-[11px]" :class="credentialReady ? 'bg-sf-success-2 text-sf-success' : 'bg-sf-primary text-sf-text-3'">{{ credentialReady ? '已保存' : '待配置' }}</span>
+            <span v-if="!currentProvider.builtin" class="rounded-full px-[6px] py-[3px] text-[11px]" :class="credentialReady ? 'bg-sf-success-2 text-sf-success' : 'bg-sf-primary text-sf-text-3'">{{ credentialReady ? $t('aiModel_saved') : $t('aiModel_pendingConfig') }}</span>
           </div>
           <!-- 获取密钥入口沿用按钮的圆角。 -->
-          <a v-if="keyLink" :href="keyLink" target="_blank" rel="noopener noreferrer" class="rounded-xl bg-sf-primary px-3 py-[6px] text-xs text-sf-theme transition-colors hover:bg-sf-theme-3">获取密钥 ↗</a>
+          <a v-if="keyLink" :href="keyLink" target="_blank" rel="noopener noreferrer" class="rounded-xl bg-sf-primary px-3 py-[6px] text-xs text-sf-theme transition-colors hover:bg-sf-theme-3">{{ $t("aiModel_getApiKey") }}</a>
         </header>
         <div v-if="!currentProvider.builtin" class="connection-fields grid min-w-0 items-start gap-3">
           <div class="flex min-w-0 flex-col gap-[6px]">
-            <label :for="`provider-key-${selectedProvider}`" class="text-xs font-medium text-sf-text">API 密钥</label>
-            <SfInput :id="`provider-key-${selectedProvider}`" v-model="form.key" type="password" show-password class="h-9 w-full rounded-lg! border border-sf-b bg-sf-bg!" placeholder="填入该服务商的 API Key" :disabled="busy" />
+            <label :for="`provider-key-${selectedProvider}`" class="text-xs font-medium text-sf-text">{{ $t("aiModel_apiKeyLabel") }}</label>
+            <SfInput :id="`provider-key-${selectedProvider}`" v-model="form.key" type="password" show-password class="h-9 w-full rounded-lg! border border-sf-b bg-sf-bg!" :placeholder="$t('aiModel_apiKeyPlaceholder')" :disabled="busy" />
           </div>
           <div class="flex min-w-0 flex-col gap-[6px]">
-            <span class="text-xs font-medium text-sf-text">接口地址</span>
+            <span class="text-xs font-medium text-sf-text">{{ $t("aiModel_endpointLabel") }}</span>
             <!-- 接口地址直接展示，方便查看和修改。 -->
-            <SfInput v-model="form.url" class="h-9 w-full rounded-lg! border border-sf-b bg-sf-bg!" :placeholder="currentProvider.defaultUrl" aria-label="完整接口地址" :disabled="busy" />
+            <SfInput v-model="form.url" class="h-9 w-full rounded-lg! border border-sf-b bg-sf-bg!" :placeholder="currentProvider.defaultUrl" :aria-label="$t('aiModel_endpointAria')" :disabled="busy" />
           </div>
         </div>
-        <p v-else class="text-xs leading-6 text-sf-text-2">内置配置无需填写密钥，添加后即可为角色选择模型。</p>
+        <p v-else class="text-xs leading-6 text-sf-text-2">{{ $t("aiModel_builtinTip") }}</p>
       </section>
 
       <!-- 已添加模型以独立边框明确各条配置及其操作范围。 -->
       <section class="flex min-w-0 flex-col gap-3">
         <header class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-baseline gap-[6px]">
-            <h4 class="text-sm font-semibold text-sf-text">已接入模型</h4>
-            <span class="text-xs text-sf-text-3 tabular-nums">{{ modelCards.length }} 个</span>
+            <h4 class="text-sm font-semibold text-sf-text">{{ $t("aiModel_addedModelsTitle") }}</h4>
+            <span class="text-xs text-sf-text-3 tabular-nums">{{ $t("aiModel_modelCount", { count: modelCards.length }) }}</span>
           </div>
-          <SfButton v-if="!currentProvider.builtin" :round="false" :disabled="busy || !credentialReady" @click="openCustomModel">添加模型</SfButton>
+          <SfButton v-if="!currentProvider.builtin" :round="false" :disabled="busy || !credentialReady" @click="openCustomModel">{{ $t("aiChat_addModel") }}</SfButton>
         </header>
         <div v-if="modelCards.length" class="flex flex-col gap-3">
           <article v-for="card in modelCards" :key="card.key" class="flex min-w-0 flex-col gap-3 rounded-xl border border-sf-b p-3">
@@ -419,17 +420,17 @@ provide("bg", "bg-sf-bg");
                 <p v-if="card.name !== card.model" class="mt-[3px] break-all font-mono text-xs text-sf-text-3">{{ card.model }}</p>
               </div>
               <div class="flex shrink-0 items-center gap-3">
-                <SfButton :round="false" type="bg" :disabled="busy" :aria-busy="testingModel === card.key" @click="testModel(card.model, false, '', card.saved)">{{ testingModel === card.key ? '检测中…' : '检测连接' }}</SfButton>
+                <SfButton :round="false" type="bg" :disabled="busy" :aria-busy="testingModel === card.key" @click="testModel(card.model, false, '', card.saved)">{{ testingModel === card.key ? $t('aiModel_testing') : $t('aiModel_testConnection') }}</SfButton>
                 <!-- 删除操作默认与检测连接一致，悬停时提示危险操作。 -->
-                <SfButton :round="false" type="bg" class="hover:bg-sf-error! hover:text-white!" :disabled="busy" @click="removeModel(card.saved)">删除</SfButton>
+                <SfButton :round="false" type="bg" class="hover:bg-sf-error! hover:text-white!" :disabled="busy" @click="removeModel(card.saved)">{{ $t("delete") }}</SfButton>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-[6px]">
               <template v-if="props.bindings[card.saved.id]?.length">
-                <span class="text-[11px] text-sf-text-3">用于</span>
+                <span class="text-[11px] text-sf-text-3">{{ $t("aiModel_usedFor") }}</span>
                 <span v-for="role in props.bindings[card.saved.id]" :key="role" class="rounded-full bg-sf-theme-3 px-[6px] py-[3px] text-[11px] text-sf-theme">{{ role }}</span>
               </template>
-              <span v-else class="text-xs text-sf-text-3">暂未分配给角色</span>
+              <span v-else class="text-xs text-sf-text-3">{{ $t("aiModel_notAssigned") }}</span>
             </div>
             <p v-if="session.connections[card.key]" role="status" class="break-words text-xs leading-6" :class="session.connections[card.key].status === 'success' ? 'text-sf-success' : session.connections[card.key].status === 'error' ? 'text-sf-error' : 'text-sf-text-2'">{{ session.connections[card.key].message }}</p>
           </article>
@@ -439,30 +440,30 @@ provide("bg", "bg-sf-bg");
             <h5 class="text-sm font-medium text-sf-text">{{ currentProvider.name }}</h5>
             <p class="mt-[6px] break-all text-xs text-sf-text-3">{{ currentProvider.preset.model }}</p>
           </div>
-          <SfButton :round="false" @click="handleAddBuiltin">添加模型</SfButton>
+          <SfButton :round="false" @click="handleAddBuiltin">{{ $t("aiChat_addModel") }}</SfButton>
         </article>
-        <p v-else class="rounded-lg border border-dashed border-sf-b p-3 text-xs leading-6 text-sf-text-2">{{ !credentialReady ? '请先填写连接配置，再添加模型。' : '暂无模型，点击“添加模型”填写模型信息。' }}</p>
+        <p v-else class="rounded-lg border border-dashed border-sf-b p-3 text-xs leading-6 text-sf-text-2">{{ !credentialReady ? $t('aiModel_emptyNeedConfig') : $t('aiModel_emptyTip') }}</p>
       </section>
     </div>
   </section>
 
   <!-- 模型标识用于接口调用，展示别名单独填写；接入点提示仅对豆包展示。 -->
-  <SfModal v-model="customVisible" :title="`${currentProvider.name} · 添加模型`" width="480px" :before-close="() => !busy">
+  <SfModal v-model="customVisible" :title="`${currentProvider.name} · ${$t('aiChat_addModel')}`" width="480px" :before-close="() => !busy">
     <div class="flex flex-col gap-3">
       <!-- 预设仅填写模型 ID，实际可用性仍由连接检测确定。 -->
       <section v-if="modelPresets.length" class="flex flex-col gap-3">
-        <span class="text-xs text-sf-text-2">常用模型</span>
+        <span class="text-xs text-sf-text-2">{{ $t("aiModel_commonPresets") }}</span>
         <div class="flex flex-wrap gap-3">
           <button v-for="preset in modelPresets" :key="preset.model" type="button" class="cursor-pointer rounded-lg border px-3 py-[6px] text-xs transition-colors disabled:cursor-wait disabled:opacity-60" :class="form.model.trim() === preset.model ? 'border-sf-theme bg-sf-bg text-sf-theme' : 'border-sf-b text-sf-text-2 hover:bg-sf-bg'" :aria-pressed="form.model.trim() === preset.model" :disabled="busy" @click="selectModelPreset(preset)">{{ preset.name }}</button>
         </div>
       </section>
-      <label class="flex flex-col gap-[6px] text-xs text-sf-text-2">模型 ID（接口调用名）<SfInput v-model="form.model" class="h-9 w-full rounded-lg! border border-sf-b" :placeholder="selectedProvider === 'ark' ? '填写豆包控制台提供的模型 ID 或接入点 ID' : '填写服务商提供的模型 ID'" :disabled="busy" /></label>
-      <label class="flex flex-col gap-[6px] text-xs text-sf-text-2">别名（可选）<SfInput v-model="form.name" class="h-9 w-full rounded-lg! border border-sf-b" placeholder="填写在模型列表中显示的名称" :disabled="busy" /></label>
+      <label class="flex flex-col gap-[6px] text-xs text-sf-text-2">{{ $t("aiModel_modelIdLabel") }}<SfInput v-model="form.model" class="h-9 w-full rounded-lg! border border-sf-b" :placeholder="selectedProvider === 'ark' ? $t('aiModel_arkModelIdPlaceholder') : $t('aiModel_modelIdPlaceholder')" :disabled="busy" /></label>
+      <label class="flex flex-col gap-[6px] text-xs text-sf-text-2">{{ $t("aiModel_aliasLabel") }}<SfInput v-model="form.name" class="h-9 w-full rounded-lg! border border-sf-b" :placeholder="$t('aiModel_aliasPlaceholder')" :disabled="busy" /></label>
       <p v-if="session.connections[`draft:${form.model.trim()}`]" role="status" class="text-xs leading-6 break-words" :class="session.connections[`draft:${form.model.trim()}`].status === 'error' ? 'text-sf-error' : 'text-sf-text-2'">{{ session.connections[`draft:${form.model.trim()}`].message }}</p>
-      <p class="text-xs leading-6 text-sf-text-3">使用已保存的密钥检测并添加，测试请求可能消耗少量令牌。</p>
+      <p class="text-xs leading-6 text-sf-text-3">{{ $t("aiModel_testCostTip") }}</p>
       <footer class="flex justify-end gap-3 border-t border-sf-b pt-3">
-        <SfButton :round="false" type="bg" border :disabled="busy" @click="customVisible = false">取消</SfButton>
-        <SfButton :round="false" :disabled="busy || !credentialReady || !form.model.trim()" @click="testModel(form.model, true, form.name)">{{ busy ? '正在检测…' : '检测并添加' }}</SfButton>
+        <SfButton :round="false" type="bg" border :disabled="busy" @click="customVisible = false">{{ $t("cancel") }}</SfButton>
+        <SfButton :round="false" :disabled="busy || !credentialReady || !form.model.trim()" @click="testModel(form.model, true, form.name)">{{ busy ? $t('aiModel_testingNow') : $t('aiModel_testAndAdd') }}</SfButton>
       </footer>
     </div>
   </SfModal>

@@ -47,7 +47,7 @@ function showAll() {
           @click="open"
         >
           <SfIcon icon="fa6-solid:file-import" size="4" />
-          <span>导入简历</span>
+          <span>{{ $t("resumeImportResume") }}</span>
         </button>
       </template>
     </ImportResume>

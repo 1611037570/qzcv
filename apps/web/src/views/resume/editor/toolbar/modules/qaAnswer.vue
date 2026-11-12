@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from "vue";
 import { isChrome, isSafari } from "@/utils";
 import eventBus from "@/utils/modules/eventBus";
-import { DOWNLOAD_URL, RECOMMEND_BROWSER } from "@/components/business/browserTip";
+import { DOWNLOAD_URL } from "@/components/business/browserTip";
 import { $t } from "@/locales";
 
 // QA 解答弹窗可见性
@@ -98,13 +98,13 @@ const reportIssue = () => {
         <div v-show="openedMap[item.id]" class="border-t border-sf-b p-3 text-sm">
           <template v-if="item.id === 'browser'">
             <p class="leading-6 text-sf-text-2">
-              {{ $t("qaBrowserMessage").replace("谷歌浏览器", RECOMMEND_BROWSER) }}
+              {{ $t("qaBrowserMessage") }}
             </p>
             <a
               :href="DOWNLOAD_URL"
               target="_blank"
               class="mt-3 inline-block text-sf-theme underline"
-              >{{ $t("downloadRecommendedBrowser").replace("谷歌浏览器", RECOMMEND_BROWSER) }}</a
+              >{{ $t("downloadRecommendedBrowser") }}</a
             >
           </template>
           <template v-else-if="item.id === 'style'">

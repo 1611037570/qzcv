@@ -53,18 +53,18 @@ function resetScore() {
   <SfScrollbar class="h-full bg-sf-page" flush>
     <!-- 工作区内容撑满可用宽度，保留紧凑分组和选中反馈。 -->
     <main class="w-full p-3 text-sf-text">
-      <nav aria-label="面包屑" class="text-xs text-sf-text-3">
+      <nav :aria-label="$t('tools_breadcrumb')" class="text-xs text-sf-text-3">
         <RouterLink to="/resume/tools" class="transition-colors hover:text-sf-theme">
-          求职工具
+          {{ $t("tools_title") }}
         </RouterLink>
         <span class="px-3" aria-hidden="true">/</span>
-        <span aria-current="page">离职决策快速评分</span>
+        <span aria-current="page">{{ $t("tools_resignBreadcrumb") }}</span>
       </nav>
 
       <header v-if="!showResult" class="mt-3 mb-3">
-        <h1 class="text-lg font-semibold">离职决策 10 项快速评分表</h1>
+        <h1 class="text-lg font-semibold">{{ $t("tools_resignTitle") }}</h1>
         <p class="mt-[6px] max-w-3xl text-xs leading-6 text-sf-text-2">
-          每项满分 10 分，选择最贴合你现状的档位。完成全部十项后，系统会自动计算总分并给出对应结果。
+          {{ $t("tools_resignSubtitle") }}
         </p>
       </header>
 
@@ -72,14 +72,13 @@ function resetScore() {
         <article v-if="!showResult" class="grid gap-3">
           <nav
             class="rounded-xl border border-sf-b bg-sf-primary p-3"
-            aria-label="评分项目进度"
+            :aria-label="$t('tools_resignProgressNav')"
           >
             <p class="text-xs font-medium text-sf-text-2">
-              第 {{ activeItemIndex + 1 }} / {{ resignationScoreList.length }} 项 · 已完成
-              {{ completedCount }} 项
+              {{ $t("tools_progress", { current: activeItemIndex + 1, total: resignationScoreList.length, done: completedCount }) }}
             </p>
             <!-- 进度按实际完成项展示，当前项与已完成项分别使用主题色和成功色。 -->
-            <div class="mt-3 h-[3px] overflow-hidden rounded-full bg-sf-bg-2" role="progressbar" aria-label="评分完成进度" :aria-valuenow="completedCount" :aria-valuemax="resignationScoreList.length" :aria-valuemin="0">
+            <div class="mt-3 h-[3px] overflow-hidden rounded-full bg-sf-bg-2" role="progressbar" :aria-label="$t('tools_resignProgressBar')" :aria-valuenow="completedCount" :aria-valuemax="resignationScoreList.length" :aria-valuemin="0">
               <div class="h-full rounded-full bg-sf-theme transition-[width] duration-300" :style="`width: ${completedCount / resignationScoreList.length * 100}%`" />
             </div>
             <ol class="mt-3 grid grid-cols-5 gap-3 md:grid-cols-10">
@@ -93,7 +92,7 @@ function resetScore() {
                       ? 'border-sf-success bg-sf-success-2 text-sf-success'
                       : 'border-sf-b bg-sf-primary text-sf-text-2'"
                   :aria-current="activeItemIndex === itemIndex ? 'step' : undefined"
-                  :aria-label="`${itemIndex + 1}. ${item.title}${selectedScores[itemIndex] !== null ? '，已完成' : '，未完成'}`"
+                  :aria-label="`${itemIndex + 1}. ${item.title}${selectedScores[itemIndex] !== null ? $t('tools_completed') : $t('tools_uncompleted')}`"
                   @click="switchScoreItem(itemIndex)"
                 >
                   <span class="font-medium tabular-nums">{{ itemIndex + 1 }}</span>
@@ -135,14 +134,14 @@ function resetScore() {
                 :disabled="activeItemIndex === 0"
                 @click="switchScoreItem(activeItemIndex - 1)"
               >
-                上一项
+                {{ $t("tools_prevItem") }}
               </SfButton>
               <SfButton
                 :round="false"
                 :disabled="activeItemIndex === resignationScoreList.length - 1"
                 @click="switchScoreItem(activeItemIndex + 1)"
               >
-                下一项
+                {{ $t("tools_nextItem") }}
               </SfButton>
             </footer>
           </fieldset>
@@ -150,12 +149,12 @@ function resetScore() {
 
         <section class="mt-3 rounded-xl border border-sf-b bg-sf-primary p-3 text-center">
           <template v-if="!showResult">
-            <h2 class="text-base font-semibold">查看评估结果</h2>
+            <h2 class="text-base font-semibold">{{ $t("tools_resignViewResult") }}</h2>
             <p class="mt-3 text-sm text-sf-text-2">
               {{
                 isCompleted
-                  ? "十项评分已完成，可以查看评估结果。"
-                  : `已完成 ${completedCount} / ${resignationScoreList.length} 项，还需完成 ${resignationScoreList.length - completedCount} 项。`
+                  ? $t("tools_resignReadyAll")
+                  : $t("tools_readyPartial", { done: completedCount, total: resignationScoreList.length, remain: resignationScoreList.length - completedCount })
               }}
             </p>
             <SfButton
@@ -164,7 +163,7 @@ function resetScore() {
               class="mx-auto mt-3"
               @click="viewScoreResult"
             >
-              查看评估结果
+              {{ $t("tools_resignViewResult") }}
             </SfButton>
           </template>
 
@@ -174,9 +173,9 @@ function resetScore() {
             aria-live="polite"
           >
 
-            <p class="text-xs font-semibold text-sf-theme">轻舟简历 · 求职工具</p>
-            <h2 class="mt-3 text-lg font-semibold">工作去留评估结果</h2>
-            <p class="mt-3 text-xs text-sf-text-2">当前工作综合得分</p>
+            <p class="text-xs font-semibold text-sf-theme">{{ $t("tools_brand") }}</p>
+            <h2 class="mt-3 text-lg font-semibold">{{ $t("tools_resignResultTitle") }}</h2>
+            <p class="mt-3 text-xs text-sf-text-2">{{ $t("tools_resignScoreLabel") }}</p>
             <p class="mt-3 text-5xl font-semibold tracking-tight tabular-nums text-sf-theme">
               {{ totalScore }}<span class="text-sm text-sf-text-2"> / 100</span>
             </p>
@@ -189,12 +188,12 @@ function resetScore() {
               {{ scoreResult.content }}
             </p>
             <footer class="mt-3 border-t border-sf-b pt-3 text-xs text-sf-text-2">
-              本成绩根据收入、福利、通勤、工作边界、发展与身心健康等十项现状综合计算。
+              {{ $t("tools_resignFooterNote") }}
             </footer>
           </article>
 
           <SfButton v-if="showResult" plain class="mx-auto mt-3" @click="resetScore">
-            重新评分
+            {{ $t("tools_resignReset") }}
           </SfButton>
         </section>
       </section>

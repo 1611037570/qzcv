@@ -4,7 +4,7 @@
     <header class="flex items-center justify-between gap-3 bg-transparent p-3">
       <h1 class="text-lg font-semibold text-sf-text">{{ $t("resumeNavLanded") }}</h1>
       <SfButton :disabled="isRefreshing" @click="refreshWall">
-        {{ isRefreshing ? "更新中..." : "重新获取" }}
+        {{ isRefreshing ? $t("resume_note_refreshing") : $t("resume_note_refresh") }}
       </SfButton>
     </header>
     <NoteWall ref="noteWall" @refreshing="isRefreshing = $event" />

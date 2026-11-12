@@ -1,5 +1,7 @@
 <script setup>
 import MessageNav from "./messageNav.vue";
+import { $t } from "@/locales";
+import { computed } from "vue";
 
 const props = defineProps({
   // 当前会话类型，由会话宿主统一判断。
@@ -24,16 +26,16 @@ const props = defineProps({
 const emit = defineEmits(["select", "openChatList", "newChat", "selectMode"]);
 
 // 模式选择复用统一 Tab，首条消息后的锁定规则由会话宿主维护。
-const modeTabs = [
+const modeTabs = computed(() => [
   {
-    name: "智能体", // 智能体标签名称。
+    name: $t("aiChat_modeAgent"), // 智能体标签名称。
     value: "agent", // 智能体会话类型。
   },
   {
-    name: "聊天", // 只读聊天标签名称。
+    name: $t("aiChat_modeChat"), // 只读聊天标签名称。
     value: "chat", // 只读聊天会话类型。
   },
-];
+]);
 
 function createNewChat() {
   if (props.isGenerating) return;
@@ -52,7 +54,7 @@ function createNewChat() {
           :model-value="props.mode"
           :disabled="props.isGenerating"
           class="h-9 w-48! text-sm"
-          aria-label="新会话模式"
+          :aria-label="$t('aiChat_newChatMode')"
           @update:model-value="emit('selectMode', $event)"
         />
         <!-- 锁定后只做轻量标识：小号胶囊避免占用过多头部空间 -->
@@ -60,7 +62,7 @@ function createNewChat() {
           v-else
           class="flex h-6 items-center rounded-full bg-sf-bg-2 px-2 text-xs font-medium text-sf-text-2"
         >
-          {{ props.mode === 'chat' ? '聊天' : '智能体' }}
+          {{ props.mode === 'chat' ? $t('aiChat_modeChat') : $t('aiChat_modeAgent') }}
         </span>
         <MessageNav
           v-if="props.messages.length"
@@ -69,7 +71,7 @@ function createNewChat() {
         />
       </div>
       <div class="flex items-center gap-1">
-        <SfTooltip content="对话记录">
+        <SfTooltip :content="$t('aiChat_chatHistory')">
           <SfIcon
             @click="emit('openChatList')"
             icon="ph:chats-teardrop-duotone"
@@ -78,7 +80,7 @@ function createNewChat() {
             class="cursor-pointer rounded-full text-sf-text-2 hover:bg-sf-bg-2 hover:text-sf-text"
           />
         </SfTooltip>
-        <SfTooltip content="新建话题" v-if="props.modeLocked">
+        <SfTooltip :content="$t('aiChat_newTopic')" v-if="props.modeLocked">
           <SfIcon
             @click="createNewChat"
             icon="ph:plus-bold"

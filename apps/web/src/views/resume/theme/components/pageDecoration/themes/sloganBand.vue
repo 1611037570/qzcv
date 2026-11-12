@@ -2,12 +2,13 @@
 import { computed } from "vue";
 import ResumeField from "@/views/resume/editor/preview/components/resumeField/index.vue";
 import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";
+import { $t } from "@/locales";
 
 // 标语通栏由文字自然撑高，底边线计入下侧留白。
-const slogan = {
-  title: "个人简历", // 色带主标题
-  subtitle: "在追求中发现可能，在创造中实现价值", // 色带副标题
-};
+const slogan = computed(() => ({
+  title: $t("themeDeco_resumeTitle"), // 色带主标题
+  subtitle: $t("themeDeco_bandSlogan"), // 色带副标题
+}));
 const {
   theme: { fontValue, lineHeightValue, themeColor, themeColorContrast, themeColorLine },
 } = useResumePreviewContext();

@@ -1087,5 +1087,10 @@
   "resumeNameYearsExperience": "{years} years of experience",
   "resumeLoadFailed": "Failed to load resumes. Please try again later.",
   "resumeLoadRetry": "Reload",
-  "resumeLoadBackHome": "Back to Resume Home"
+  "resumeLoadBackHome": "Back to Resume Home",
+  "resume_note_refreshing": "Updating...",
+  "resume_note_refresh": "Refresh",
+  "resume_note_copy_unsupported": "Your browser does not support copying",
+  "resume_note_copy_success": "Note content copied",
+  "resume_note_copy_failed": "Failed to copy. Please try again."
 }

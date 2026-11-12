@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import { $t } from "@/locales";
+
 import {
   offerComparisonMetrics,
   type OfferComparisonMetric,
@@ -264,12 +266,12 @@ const rankedCompanies = computed(() =>
 );
 const resultTitle = computed(() => {
   const comparableResults = rankedCompanies.value.filter((result) => result.comparableWeight > 0);
-  if (!comparableResults.length) return "可比较信息不足，暂时无法判断";
-  if (comparableResults.length === 1) return "只有一家公司具备可比较信息";
+  if (!comparableResults.length) return $t("tools_offerResultInsufficientInfo");
+  if (comparableResults.length === 1) return $t("tools_offerResultSingleCompany");
   if (comparableResults[0]!.score - comparableResults[1]!.score < 5) {
-    return "排名靠前的 Offer 综合表现接近";
+    return $t("tools_offerResultTopClose");
   }
-  return `${getCompanyName(comparableResults[0]!.company)} 的综合表现领先`;
+  return $t("tools_offerResultLeading", { name: getCompanyName(comparableResults[0]!.company) });
 });
 
 // 判断一家公司在指定维度中的对比状态。
@@ -287,12 +289,12 @@ function getMetricLevel(detail: MetricComparisonDetail, company: OfferCompany): 
 // 将内部对比状态转换为结果页可读文案。
 function getMetricLevelLabel(detail: MetricComparisonDetail, company: OfferCompany) {
   const labelMap: Record<MetricComparisonLevel, string> = {
-    advantage: "占优",
-    close: "接近",
-    middle: "居中",
-    weak: "偏弱",
-    pending: "待确认",
-    insufficient: "信息不足",
+    advantage: $t("tools_offerLevelAdvantage"),
+    close: $t("tools_offerLevelClose"),
+    middle: $t("tools_offerLevelMiddle"),
+    weak: $t("tools_offerLevelWeak"),
+    pending: $t("tools_offerLevelPending"),
+    insufficient: $t("tools_offerLevelInsufficient"),
   };
   return labelMap[getMetricLevel(detail, company)];
 }
@@ -300,10 +302,10 @@ function getMetricLevelLabel(detail: MetricComparisonDetail, company: OfferCompa
 // 格式化结果表中的数值与未知状态。
 function formatMetricValue(metric: OfferComparisonMetric, company: OfferCompany) {
   const entry = company.metrics[metric.key];
-  if (entry.status === "unknown") return "未说明 / 不清楚";
-  if (entry.status !== "value" || entry.value === null) return "未填写";
+  if (entry.status === "unknown") return $t("tools_unknownChoice");
+  if (entry.status !== "value" || entry.value === null) return $t("tools_offerNotFilled");
   if (metric.inputType === "choice") {
-    return metric.options?.find((choice) => choice.value === entry.value)?.label ?? "未填写";
+    return metric.options?.find((choice) => choice.value === entry.value)?.label ?? $t("tools_offerNotFilled");
   }
   return `${entry.value}${metric.unit ?? ""}`;
 }
@@ -352,26 +354,26 @@ function formatScore(score: number) {
   <SfScrollbar class="h-full bg-sf-page" flush>
     <!-- 工作区内容撑满可用宽度，保留紧凑分组和选中反馈。 -->
     <main class="w-full p-3 text-sf-text">
-      <nav aria-label="面包屑" class="text-xs text-sf-text-3">
+      <nav :aria-label="$t('tools_breadcrumb')" class="text-xs text-sf-text-3">
         <RouterLink to="/resume/tools" class="transition-colors hover:text-sf-theme">
-          求职工具
+          {{ $t("tools_title") }}
         </RouterLink>
         <span class="px-3" aria-hidden="true">/</span>
-        <span aria-current="page">Offer 对比决策器</span>
+        <span aria-current="page">{{ $t("tools_offerTitle") }}</span>
       </nav>
 
       <header v-if="!showResult" class="mt-3 mb-3">
-        <h1 class="text-lg font-semibold">Offer 对比决策器</h1>
+        <h1 class="text-lg font-semibold">{{ $t("tools_offerTitle") }}</h1>
         <p class="mt-[6px] max-w-3xl text-xs leading-6 text-sf-text-2">
-          逐项填写多份 Offer 的收入、福利、时间成本、稳定性与成长条件，完成后查看综合排序和逐项优劣。
+          {{ $t("tools_offerSubtitle") }}
         </p>
       </header>
 
       <section v-if="!showResult" class="mt-3 grid gap-3">
         <section class="rounded-xl border border-sf-b bg-sf-primary p-3">
           <header class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-sm font-semibold">参与对比的公司</h2>
-            <SfButton :round="false" plain @click="addCompany">增加公司</SfButton>
+            <h2 class="text-sm font-semibold">{{ $t("tools_offerCompaniesTitle") }}</h2>
+            <SfButton :round="false" plain @click="addCompany">{{ $t("tools_offerAddCompany") }}</SfButton>
           </header>
           <ul class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <li
@@ -389,14 +391,14 @@ function formatScore(score: number) {
                   size="small"
                   @click="removeCompany(company.id)"
                 >
-                  移除
+                  {{ $t("tools_offerRemove") }}
                 </SfButton>
               </header>
               <label class="mt-3 block text-sm font-semibold">
-                公司或 Offer 名称
+                {{ $t("tools_offerNameLabel") }}
                 <SfInput
                   v-model="company.name"
-                  :placeholder="`例如：${company.fallbackName} 公司名称`"
+                  :placeholder="$t('tools_offerNamePlaceholder', { name: company.fallbackName })"
                   class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
                 />
               </label>
@@ -406,14 +408,13 @@ function formatScore(score: number) {
 
         <nav
           class="rounded-xl border border-sf-b bg-sf-primary p-3"
-          aria-label="Offer 对比项目进度"
+          :aria-label="$t('tools_offerProgressNav')"
         >
           <p class="text-xs font-medium text-sf-text-2">
-            第 {{ activeMetricIndex + 1 }} / {{ offerComparisonMetrics.length }} 项 · 已完成
-            {{ completedCount }} 项
+            {{ $t("tools_progress", { current: activeMetricIndex + 1, total: offerComparisonMetrics.length, done: completedCount }) }}
           </p>
           <!-- 进度以完整填写的维度计算，不把单家公司已填误作整项完成。 -->
-          <div class="mt-3 h-[3px] overflow-hidden rounded-full bg-sf-bg-2" role="progressbar" aria-label="对比完成进度" :aria-valuenow="completedCount" :aria-valuemax="offerComparisonMetrics.length" :aria-valuemin="0">
+          <div class="mt-3 h-[3px] overflow-hidden rounded-full bg-sf-bg-2" role="progressbar" :aria-label="$t('tools_offerProgressBar')" :aria-valuenow="completedCount" :aria-valuemax="offerComparisonMetrics.length" :aria-valuemin="0">
             <div class="h-full rounded-full bg-sf-theme transition-[width] duration-300" :style="`width: ${completedCount / offerComparisonMetrics.length * 100}%`" />
           </div>
           <ol class="mt-3 grid grid-cols-5 gap-3 md:grid-cols-10">
@@ -427,7 +428,7 @@ function formatScore(score: number) {
                     ? 'border-sf-success bg-sf-success-2 text-sf-success'
                     : 'border-sf-b bg-sf-primary text-sf-text-2'"
                 :aria-current="activeMetricIndex === metricIndex ? 'step' : undefined"
-                :aria-label="`${metricIndex + 1}. ${metric.title}${isMetricCompleted(metric.key) ? '，已完成' : '，未完成'}`"
+                :aria-label="`${metricIndex + 1}. ${metric.title}${isMetricCompleted(metric.key) ? $t('tools_completed') : $t('tools_uncompleted')}`"
                 @click="switchMetric(metricIndex)"
               >
                 <span class="font-medium tabular-nums">{{ metricIndex + 1 }}</span>
@@ -465,7 +466,7 @@ function formatScore(score: number) {
                 class="mt-3 h-9 w-full rounded-lg border border-sf-b bg-sf-primary text-sm"
                 @update:model-value="setMetricValue(company.id, $event)"
               />
-              <p class="mt-3 text-sm text-sf-text-2">单位：{{ activeMetric.unit }}</p>
+              <p class="mt-3 text-sm text-sf-text-2">{{ $t("tools_offerUnitLabel", { unit: activeMetric.unit }) }}</p>
               <footer class="mt-3 flex flex-wrap gap-3 border-t border-sf-b pt-3">
                 <button
                   type="button"
@@ -478,7 +479,7 @@ function formatScore(score: number) {
                   :aria-pressed="company.metrics[activeMetric.key].status === 'unknown'"
                   @click="setMetricStatus(company.id, 'unknown')"
                 >
-                  未说明 / 不清楚
+                  {{ $t("tools_unknownChoice") }}
                 </button>
               </footer>
             </article>
@@ -506,7 +507,7 @@ function formatScore(score: number) {
                       company.metrics[activeMetric.key].status === 'value' &&
                       company.metrics[activeMetric.key].value === choice.value
                     "
-                    :aria-label="`${getCompanyName(company)}：${choice.label}`"
+                    :aria-label="$t('tools_offerChoiceAria', { name: getCompanyName(company), label: choice.label })"
                     @click="selectMetricChoice(company.id, choice.value)"
                   >
                     {{ getCompanyName(company) }}
@@ -515,7 +516,7 @@ function formatScore(score: number) {
               </ul>
             </li>
             <li class="rounded-lg bg-sf-bg p-3">
-              <p class="text-sm font-normal">未说明 / 不清楚</p>
+              <p class="text-sm font-normal">{{ $t("tools_unknownChoice") }}</p>
               <ul class="mt-3 flex flex-wrap gap-3">
                 <li v-for="company in companies" :key="company.id">
                   <button
@@ -527,7 +528,7 @@ function formatScore(score: number) {
                         : 'border-sf-b bg-sf-primary text-sf-text-2'
                     "
                     :aria-pressed="company.metrics[activeMetric.key].status === 'unknown'"
-                    :aria-label="`${getCompanyName(company)}：未说明或不清楚`"
+                    :aria-label="$t('tools_offerUnknownAria', { name: getCompanyName(company) })"
                     @click="setMetricStatus(company.id, 'unknown')"
                   >
                     {{ getCompanyName(company) }}
@@ -544,25 +545,25 @@ function formatScore(score: number) {
               :disabled="activeMetricIndex === 0"
               @click="switchMetric(activeMetricIndex - 1)"
             >
-              上一项
+              {{ $t("tools_prevItem") }}
             </SfButton>
             <SfButton
               :round="false"
               :disabled="activeMetricIndex === offerComparisonMetrics.length - 1"
               @click="switchMetric(activeMetricIndex + 1)"
             >
-              下一项
+              {{ $t("tools_nextItem") }}
             </SfButton>
           </footer>
         </fieldset>
 
         <section class="rounded-xl border border-sf-b bg-sf-primary p-3 text-center">
-          <h2 class="text-base font-semibold">查看对比结果</h2>
+          <h2 class="text-base font-semibold">{{ $t("tools_offerViewResult") }}</h2>
           <p class="mt-3 text-sm text-sf-text-2">
             {{
               isCompleted
-                ? "全部对比项已完成，可以查看结果。"
-                : `已完成 ${completedCount} / ${offerComparisonMetrics.length} 项，还需完成 ${offerComparisonMetrics.length - completedCount} 项。`
+                ? $t("tools_offerReadyAll")
+                : $t("tools_readyPartial", { done: completedCount, total: offerComparisonMetrics.length, remain: offerComparisonMetrics.length - completedCount })
             }}
           </p>
           <SfButton
@@ -571,7 +572,7 @@ function formatScore(score: number) {
             class="mx-auto mt-3"
             @click="viewComparisonResult"
           >
-            查看对比结果
+            {{ $t("tools_offerViewResult") }}
           </SfButton>
         </section>
       </section>
@@ -582,8 +583,8 @@ function formatScore(score: number) {
           aria-live="polite"
         >
 
-          <p class="text-xs font-semibold text-sf-theme">轻舟简历 · 求职工具</p>
-          <h1 class="mt-3 text-lg font-semibold">Offer 综合对比结果</h1>
+          <p class="text-xs font-semibold text-sf-theme">{{ $t("tools_brand") }}</p>
+          <h1 class="mt-3 text-lg font-semibold">{{ $t("tools_offerResultTitle") }}</h1>
           <p class="mt-3 rounded-lg bg-sf-theme-3 px-3 py-3 text-sm font-medium text-sf-theme">{{ resultTitle }}</p>
 
           <ol class="mx-auto mt-3 grid max-w-5xl gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -592,34 +593,34 @@ function formatScore(score: number) {
               :key="result.company.id"
               class="rounded-lg bg-sf-bg p-3 text-left"
             >
-              <p class="text-sm font-semibold text-sf-text-2">综合排序第 {{ resultIndex + 1 }} 名</p>
+              <p class="text-sm font-semibold text-sf-text-2">{{ $t("tools_offerRank", { rank: resultIndex + 1 }) }}</p>
               <h2 class="mt-3 text-sm font-semibold">{{ getCompanyName(result.company) }}</h2>
               <p class="mt-3 text-3xl font-semibold tabular-nums text-sf-theme">
                 {{ result.comparableWeight ? formatScore(result.score) : "—" }}
               </p>
-              <p class="mt-3 text-sm text-sf-text-2">基于已知项目折算的综合得分</p>
-              <p class="mt-3 text-sm font-semibold">优势项</p>
+              <p class="mt-3 text-sm text-sf-text-2">{{ $t("tools_offerScoreNote") }}</p>
+              <p class="mt-3 text-sm font-semibold">{{ $t("tools_offerAdvantagesTitle") }}</p>
               <p class="mt-3 text-sm leading-6 text-sf-text-2">
-                {{ getCompanyAdvantages(result.company).join("、") || "暂无明显优势项" }}
+                {{ getCompanyAdvantages(result.company).join($t("tools_listSeparator")) || $t("tools_offerNoAdvantages") }}
               </p>
-              <p class="mt-3 text-sm font-semibold">相对短板</p>
+              <p class="mt-3 text-sm font-semibold">{{ $t("tools_offerWeaknessesTitle") }}</p>
               <p class="mt-3 text-sm leading-6 text-sf-text-2">
-                {{ getCompanyWeaknesses(result.company).join("、") || "暂无明显短板" }}
+                {{ getCompanyWeaknesses(result.company).join($t("tools_listSeparator")) || $t("tools_offerNoWeaknesses") }}
               </p>
-              <p class="mt-3 text-sm font-semibold">签约前待确认</p>
+              <p class="mt-3 text-sm font-semibold">{{ $t("tools_offerPendingTitle") }}</p>
               <p class="mt-3 text-sm leading-6 text-sf-text-2">
-                {{ getCompanyPendingMetrics(result.company).join("、") || "无" }}
+                {{ getCompanyPendingMetrics(result.company).join($t("tools_listSeparator")) || $t("tools_none") }}
               </p>
             </li>
           </ol>
 
           <section class="mt-3 text-left">
-            <h2 class="text-base font-semibold text-center">逐项优劣对比</h2>
+            <h2 class="text-base font-semibold text-center">{{ $t("tools_offerTableTitle") }}</h2>
             <div class="mt-3 overflow-x-auto rounded-lg border border-sf-b">
               <table class="w-full min-w-max border-collapse bg-sf-primary text-sm">
                 <thead>
                   <tr class="border-b border-sf-b bg-sf-bg text-left">
-                    <th class="p-3">对比项目</th>
+                    <th class="p-3">{{ $t("tools_offerTableMetricHeader") }}</th>
                     <th v-for="company in companies" :key="company.id" class="p-3">
                       {{ getCompanyName(company) }}
                     </th>
@@ -646,11 +647,11 @@ function formatScore(score: number) {
           </section>
 
           <footer class="mt-3 border-t border-sf-b pt-3 text-xs text-sf-text-2">
-            不清楚的维度不参与该公司的计分，结果按实际已知信息分别折算；请结合个人优先级、风险承受能力和长期目标作出最终选择。
+            {{ $t("tools_offerFooterNote") }}
           </footer>
         </article>
 
-        <SfButton :round="false" plain class="mx-auto mt-3" @click="resetComparison">重新对比</SfButton>
+        <SfButton :round="false" plain class="mx-auto mt-3" @click="resetComparison">{{ $t("tools_offerReset") }}</SfButton>
       </section>
     </main>
   </SfScrollbar>

@@ -22,13 +22,13 @@
           class="group flex flex-col gap-3 rounded-xl border border-sf-b bg-sf-primary p-3 transition-colors hover:border-sf-theme hover:bg-sf-bg"
         >
           <article>
-            <p class="w-fit rounded-lg bg-sf-theme-3 px-3 py-[3px] text-xs font-medium text-sf-theme">离职决策工具</p>
-            <h2 class="mt-[6px] text-base leading-6 font-semibold text-sf-text">离职决策 10 项快速评分表</h2>
+            <p class="w-fit rounded-lg bg-sf-theme-3 px-3 py-[3px] text-xs font-medium text-sf-theme">{{ $t("tools_resignCategoryBadge") }}</p>
+            <h2 class="mt-[6px] text-base leading-6 font-semibold text-sf-text">{{ $t("tools_resignTitle") }}</h2>
             <p class="mt-3 text-sm leading-6 text-sf-text-2">
-              从收入、福利、通勤、加班、发展与健康等方面各选一档，1 分钟算出当前工作的综合得分。
+              {{ $t("tools_resignCardDescription") }}
             </p>
           </article>
-          <strong class="mt-auto flex items-center justify-between border-t border-sf-b pt-3 text-xs font-medium text-sf-theme"><span>开始评分</span><SfIcon icon="mingcute:arrow-right-line" size="4" /></strong>
+          <strong class="mt-auto flex items-center justify-between border-t border-sf-b pt-3 text-xs font-medium text-sf-theme"><span>{{ $t("tools_resignStart") }}</span><SfIcon icon="mingcute:arrow-right-line" size="4" /></strong>
         </RouterLink>
 
         <RouterLink
@@ -36,13 +36,13 @@
           class="group flex flex-col gap-3 rounded-xl border border-sf-b bg-sf-primary p-3 transition-colors hover:border-sf-theme hover:bg-sf-bg"
         >
           <article>
-            <p class="w-fit rounded-lg bg-sf-success-2 px-3 py-[3px] text-xs font-medium text-sf-success">选 Offer 工具</p>
-            <h2 class="mt-[6px] text-base leading-6 font-semibold text-sf-text">Offer 对比决策器</h2>
+            <p class="w-fit rounded-lg bg-sf-success-2 px-3 py-[3px] text-xs font-medium text-sf-success">{{ $t("tools_offerCategoryBadge") }}</p>
+            <h2 class="mt-[6px] text-base leading-6 font-semibold text-sf-text">{{ $t("tools_offerTitle") }}</h2>
             <p class="mt-3 text-sm leading-6 text-sf-text-2">
-              对比多份工作的收入、福利、时间成本、稳定性和成长条件，看清各自的综合优势与短板。
+              {{ $t("tools_offerCardDescription") }}
             </p>
           </article>
-          <strong class="mt-auto flex items-center justify-between border-t border-sf-b pt-3 text-xs font-medium text-sf-theme"><span>开始对比</span><SfIcon icon="mingcute:arrow-right-line" size="4" /></strong>
+          <strong class="mt-auto flex items-center justify-between border-t border-sf-b pt-3 text-xs font-medium text-sf-theme"><span>{{ $t("tools_offerStart") }}</span><SfIcon icon="mingcute:arrow-right-line" size="4" /></strong>
         </RouterLink>
 
         <RouterLink
@@ -50,13 +50,13 @@
           class="group flex flex-col gap-3 rounded-xl border border-sf-b bg-sf-primary p-3 transition-colors hover:border-sf-theme hover:bg-sf-bg"
         >
           <article>
-            <p class="w-fit rounded-lg bg-sf-warning-2 px-3 py-[3px] text-xs font-medium text-sf-warning">工作时间价值工具</p>
-            <h2 class="mt-[6px] text-base leading-6 font-semibold text-sf-text">真实时薪计算器</h2>
+            <p class="w-fit rounded-lg bg-sf-warning-2 px-3 py-[3px] text-xs font-medium text-sf-warning">{{ $t("tools_wageCategoryBadge") }}</p>
+            <h2 class="mt-[6px] text-base leading-6 font-semibold text-sf-text">{{ $t("tools_wageTitle") }}</h2>
             <p class="mt-3 text-sm leading-6 text-sf-text-2">
-              把大小周、单休、加班和通勤计入时间成本，算出这份工作的每小时真实回报。
+              {{ $t("tools_wageCardDescription") }}
             </p>
           </article>
-          <strong class="mt-auto flex items-center justify-between border-t border-sf-b pt-3 text-xs font-medium text-sf-theme"><span>开始计算</span><SfIcon icon="mingcute:arrow-right-line" size="4" /></strong>
+          <strong class="mt-auto flex items-center justify-between border-t border-sf-b pt-3 text-xs font-medium text-sf-theme"><span>{{ $t("tools_wageStart") }}</span><SfIcon icon="mingcute:arrow-right-line" size="4" /></strong>
         </RouterLink>
       </section>
 

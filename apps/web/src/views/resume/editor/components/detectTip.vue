@@ -22,7 +22,7 @@ const browser = computed(() => {
   if (ua.includes("firefox")) return "Firefox";
   if (ua.includes("safari") && !ua.includes("chrome")) return "Safari";
   if (ua.includes("chrome")) return "Chrome";
-  return "其他";
+  return $t("other");
 });
 const isRecommendedBrowser = computed(() => browser.value === "Chrome");
 

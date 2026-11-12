@@ -18,6 +18,7 @@ import { computed, onBeforeUnmount, ref } from "vue";
 import type { CSSProperties } from "vue";
 import { useClipboard, useResizeObserver } from "@vueuse/core";
 import { ElMessage } from "element-plus";
+import { $t } from "@/locales";
 import { lightThemeColors, darkThemeColors } from "@/configs";
 import { useThemeStore } from "@/stores/modules/theme";
 import type { NoteItem } from "../types";
@@ -61,14 +62,14 @@ const { copy, isSupported } = useClipboard({ legacy: true });
 const copyContent = async () => {
   topId.value = props.item.id;
   if (!isSupported.value) {
-    ElMessage.error("当前浏览器不支持复制");
+    ElMessage.error($t("resume_note_copy_unsupported"));
     return;
   }
   try {
     await copy(props.item.content);
-    ElMessage.success("已复制便签内容");
+    ElMessage.success($t("resume_note_copy_success"));
   } catch {
-    ElMessage.error("复制失败，请重试");
+    ElMessage.error($t("resume_note_copy_failed"));
   }
 };
 </script>

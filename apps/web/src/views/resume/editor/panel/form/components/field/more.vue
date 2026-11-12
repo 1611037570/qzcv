@@ -9,6 +9,7 @@ import eventBus from "@/utils/modules/eventBus";
 import { useScrollEditorTo } from "../../../../hooks/useScrollEditorTo";
 import { storeToRefs } from "pinia";
 import { translateResumeEditorText } from "@/stores/modules/resume/hooks/useResumeEditorLocale";
+import { $t } from "@/locales";
 
 const { currentForm, hasFieldData, addField, getFieldDataKey } = useFormContext();
 const resumeStore = useResumeStore();
@@ -71,7 +72,7 @@ function handleAdd(field) {
 
 // 自定义字段直接以默认名称插入更多字段配置，并写入对应的真实数据值
 function handleCreateCustomField() {
-  const label = "尚未填写";
+  const label = $t("notFilled");
   if (!runtimeConfig.value || !currentData.value) return;
 
   const key = `custom_${getUUID().substring(0, 8)}`;

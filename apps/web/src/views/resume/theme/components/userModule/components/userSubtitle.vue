@@ -6,6 +6,7 @@ import { getUserSubtitleKeys } from "@/stores/modules/resume/hooks/useUserSubtit
 import { useUserFieldVisibility } from "../useUserFieldVisibility";
 import { getInfoSeparatorMark } from "@/domain/resume/theme/uiConfig";
 import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";
+import { $t } from "@/locales";
 
 // 副标题：渲染编辑器中标记的字段值，按标记序号在姓名下方并排展示
 const {
@@ -50,7 +51,7 @@ const sizesText = (value) => {
       { key: "shoes", value: value?.shoes },
     ]
       .filter((item) => item.value != null && item.value !== "")
-      .map((item) => (item.key === "shoes" ? `${item.value}码` : item.value)),
+      .map((item) => (item.key === "shoes" ? `${item.value}${$t("themeDeco_sizeUnit")}` : item.value)),
   );
 };
 // 出生日期按所选展示形态转换为日期或年龄
@@ -58,7 +59,7 @@ const birthdayText = (value) => {
   if (birthdayDisplay.value === "date") return String(value);
   const birthday = dayjs(value);
   if (!birthday.isValid()) return "";
-  return `${Math.max(0, dayjs().diff(birthday, "year"))}岁`;
+  return `${Math.max(0, dayjs().diff(birthday, "year"))}${$t("themeDeco_ageUnit")}`;
 };
 // 单项内容：字段被隐藏或值空时不展示
 const textOf = (key) => {

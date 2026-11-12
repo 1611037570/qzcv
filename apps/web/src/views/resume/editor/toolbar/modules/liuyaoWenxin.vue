@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref } from "vue";
 import { useResumeStore } from "@/stores";
 import { storeToRefs } from "pinia";
+import { $t } from "@/locales";
 
 const resumeStore = useResumeStore();
 const { system } = storeToRefs(resumeStore);
@@ -12,16 +13,16 @@ const expanded = ref(false);
 // 工具栏卦象只由入口圆触发展开
 const entryExpanded = ref(false);
 let entryHoverTimer = null;
-// 后天八卦方位：卦名沿方位放在对应爻象外侧
+// 后天八卦方位：卦名沿方位放在对应爻象外侧，name 仅作内部标识与排序键
 const trigrams = [
-  { name: "离", x: 160, y: 36, labelX: 0, labelY: -28, rotate: 0, lines: [true, false, true] },
-  { name: "坤", x: 248, y: 72, labelX: 20, labelY: -20, rotate: 45, lines: [false, false, false] },
-  { name: "兑", x: 284, y: 160, labelX: 28, labelY: 0, rotate: 90, lines: [false, true, true] },
-  { name: "乾", x: 248, y: 248, labelX: 20, labelY: 20, rotate: -45, lines: [true, true, true] },
-  { name: "坎", x: 160, y: 284, labelX: 0, labelY: 28, rotate: 0, lines: [false, true, false] },
-  { name: "艮", x: 72, y: 248, labelX: -20, labelY: 20, rotate: 45, lines: [true, false, false] },
-  { name: "震", x: 36, y: 160, labelX: -28, labelY: 0, rotate: 90, lines: [false, false, true] },
-  { name: "巽", x: 72, y: 72, labelX: -20, labelY: -20, rotate: -45, lines: [true, true, false] },
+  { name: "li", textKey: "liuyao_triLi", x: 160, y: 36, labelX: 0, labelY: -28, rotate: 0, lines: [true, false, true] },
+  { name: "kun", textKey: "liuyao_triKun", x: 248, y: 72, labelX: 20, labelY: -20, rotate: 45, lines: [false, false, false] },
+  { name: "dui", textKey: "liuyao_triDui", x: 284, y: 160, labelX: 28, labelY: 0, rotate: 90, lines: [false, true, true] },
+  { name: "qian", textKey: "liuyao_triQian", x: 248, y: 248, labelX: 20, labelY: 20, rotate: -45, lines: [true, true, true] },
+  { name: "kan", textKey: "liuyao_triKan", x: 160, y: 284, labelX: 0, labelY: 28, rotate: 0, lines: [false, true, false] },
+  { name: "gen", textKey: "liuyao_triGen", x: 72, y: 248, labelX: -20, labelY: 20, rotate: 45, lines: [true, false, false] },
+  { name: "zhen", textKey: "liuyao_triZhen", x: 36, y: 160, labelX: -28, labelY: 0, rotate: 90, lines: [false, false, true] },
+  { name: "xun", textKey: "liuyao_triXun", x: 72, y: 72, labelX: -20, labelY: -20, rotate: -45, lines: [true, true, false] },
 ];
 
 // 正念呼吸：吸气 3 秒、吐气 3 秒
@@ -30,14 +31,14 @@ const PHASE_MS = 3000;
 const CYCLE_MS = PHASE_MS * 2;
 // 是否处于呼吸引导中
 const breathing = ref(false);
-// 当前呼吸阶段：吸气 / 吐气，空串表示未开始
+// 当前呼吸阶段：in 吸气 / out 吐气，空串表示未开始
 const phase = ref("");
 // 剩余秒数
 const remain = ref(0);
 // 呼吸引导的定时器
 let timer = null;
 // 按钮文案：引导中展示倒计时
-const buttonText = computed(() => (breathing.value ? `呼吸中 ${remain.value}s` : "开始正念"));
+const buttonText = computed(() => (breathing.value ? $t("liuyao_breathing", { remain: remain.value }) : $t("liuyao_startMindful")));
 
 const openEntry = () => {
   clearTimeout(entryHoverTimer);
@@ -64,7 +65,7 @@ const stopBreathing = () => {
 const startBreathing = () => {
   if (breathing.value) return;
   breathing.value = true;
-  phase.value = "吸气";
+  phase.value = "in";
   remain.value = PHASE_MS / 1000;
   const startAt = Date.now();
   timer = setInterval(() => {
@@ -73,7 +74,7 @@ const startBreathing = () => {
       stopBreathing();
       return;
     }
-    phase.value = elapsed < PHASE_MS ? "吸气" : "吐气";
+    phase.value = elapsed < PHASE_MS ? "in" : "out";
     remain.value = Math.ceil((PHASE_MS - (elapsed % PHASE_MS)) / 1000);
   }, 100);
 };
@@ -105,41 +106,41 @@ onUnmounted(() => {
       <div class="absolute inset-5 rounded-full border border-dashed border-sf-theme/50" />
       <div class="absolute inset-8 rounded-full border border-sf-theme/30" />
       <span class="absolute top-1 left-1/2 -translate-x-1/2 text-xs tracking-widest text-sf-theme"
-        >乾 ☰</span
+        >{{ $t("liuyao_triQian") }}</span
       >
       <span class="absolute top-6 right-5 rotate-45 text-xs tracking-widest text-sf-theme"
-        >巽 ☴</span
+        >{{ $t("liuyao_triXun") }}</span
       >
       <span class="absolute top-1/2 right-0 -translate-y-1/2 text-xs tracking-widest text-sf-theme"
-        >坎 ☵</span
+        >{{ $t("liuyao_triKan") }}</span
       >
       <span class="absolute right-5 bottom-6 -rotate-45 text-xs tracking-widest text-sf-theme"
-        >艮 ☶</span
+        >{{ $t("liuyao_triGen") }}</span
       >
       <span
         class="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs tracking-widest text-sf-theme"
-        >坤 ☷</span
+        >{{ $t("liuyao_triKun") }}</span
       >
       <span class="absolute bottom-6 left-5 rotate-45 text-xs tracking-widest text-sf-theme"
-        >震 ☳</span
+        >{{ $t("liuyao_triZhen") }}</span
       >
       <span class="absolute top-1/2 left-0 -translate-y-1/2 text-xs tracking-widest text-sf-theme"
-        >离 ☲</span
+        >{{ $t("liuyao_triLi") }}</span
       >
       <span class="absolute top-6 left-5 -rotate-45 text-xs tracking-widest text-sf-theme"
-        >兑 ☱</span
+        >{{ $t("liuyao_triDui") }}</span
       >
       <div
         class="absolute right-1/2 bottom-1/2 translate-x-1/2 translate-y-1/2 text-center text-sf-text"
       >
-        <div class="text-sm font-semibold tracking-[0.5em]">未济</div>
-        <div class="mt-1 text-xs tracking-widest text-sf-text-3">火水未济</div>
-        <div class="mt-1 text-[10px] tracking-wider text-sf-text-3">物不可穷也</div>
+        <div class="text-sm font-semibold tracking-[0.5em]">{{ $t("liuyao_weiji") }}</div>
+        <div class="mt-1 text-xs tracking-widest text-sf-text-3">{{ $t("liuyao_weijiFull") }}</div>
+        <div class="mt-1 text-[10px] tracking-wider text-sf-text-3">{{ $t("liuyao_weijiQuote") }}</div>
       </div>
     </div>
     <button
       type="button"
-      aria-label="打开六爻问心"
+      :aria-label="$t('liuyao_openAria')"
       class="relative z-10 flex h-10 w-10 cursor-pointer flex-col items-center justify-evenly rounded-xl border bg-transparent transition-all duration-300 hover:scale-105 hover:border-sf-theme active:scale-95"
       :class="visible || entryExpanded ? 'border-sf-theme' : 'border-transparent'"
       @mouseenter="openEntry"
@@ -193,7 +194,7 @@ onUnmounted(() => {
   </div>
 
   <!-- 六爻问心弹窗：正念呼吸引导 -->
-  <SfModal v-model="visible" title="六爻问心">
+  <SfModal v-model="visible" :title="$t('liuyao_title')">
     <div class="flex w-[480px] flex-col items-center gap-6 p-9">
       <div class="flex flex-col items-center gap-3" @mouseleave="expanded = false">
         <div class="relative flex h-80 w-80 items-center justify-center">
@@ -235,7 +236,7 @@ onUnmounted(() => {
                 text-anchor="middle"
                 class="fill-sf-text text-[11px] font-medium"
               >
-                {{ trigram.name }}
+                {{ $t(trigram.textKey) }}
               </text>
               <g :transform="`rotate(${trigram.rotate})`" class="fill-sf-theme">
                 <g v-for="(solid, index) in trigram.lines" :key="index">
@@ -250,15 +251,15 @@ onUnmounted(() => {
           </svg>
           <button
             type="button"
-            aria-label="开始正念呼吸"
+            :aria-label="$t('liuyao_breathAria')"
             :aria-pressed="breathing"
             :disabled="breathing"
             class="relative z-10 flex h-32 w-32 cursor-pointer items-center justify-center rounded-full border border-sf-theme/50 bg-gradient-to-br from-sf-theme to-sf-theme-2 text-sm tracking-widest text-sf-theme-text shadow-xl shadow-sf-theme/20 transition-transform ease-in-out disabled:cursor-default"
             :class="[
               breathing ? 'duration-[3000ms]' : 'duration-700',
-              phase === '吸气'
+              phase === 'in'
                 ? 'scale-110'
-                : phase === '吐气'
+                : phase === 'out'
                   ? 'scale-90'
                   : expanded
                     ? 'scale-105'
@@ -267,19 +268,19 @@ onUnmounted(() => {
             @mouseenter="expanded = true"
             @click="startBreathing"
           >
-            {{ phase || "开始" }}
+            {{ phase ? (phase === "in" ? $t("liuyao_inhale") : $t("liuyao_exhale")) : $t("liuyao_start") }}
           </button>
         </div>
         <div
           class="h-12 text-center transition-opacity duration-300"
           :class="expanded ? 'opacity-100 delay-[240ms]' : 'opacity-0 delay-0'"
         >
-          <div class="text-sm font-semibold tracking-[0.5em] text-sf-text">未济 · 火水未济</div>
-          <div class="mt-1 text-xs tracking-widest text-sf-text-3">物不可穷也</div>
+          <div class="text-sm font-semibold tracking-[0.5em] text-sf-text">{{ $t("liuyao_weijiBand") }}</div>
+          <div class="mt-1 text-xs tracking-widest text-sf-text-3">{{ $t("liuyao_weijiQuote") }}</div>
         </div>
       </div>
       <div class="h-5 text-sm tracking-widest text-sf-text-3">
-        {{ breathing ? buttonText : "悬停观卦 · 点击开始正念" }}
+        {{ breathing ? buttonText : $t("liuyao_hoverTip") }}
       </div>
     </div>
   </SfModal>

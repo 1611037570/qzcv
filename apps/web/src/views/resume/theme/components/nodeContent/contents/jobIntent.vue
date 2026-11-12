@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { JOB_INTENT_FIELDS } from "@snowflake/resume-core";
 import { useResumePreviewContext } from "@/views/resume/editor/preview/shared/previewContext";
 import { getPreviewText } from "@/views/resume/editor/preview/shared/i18n";
+import { $t } from "@/locales";
 import UserContactItem from "../../userModule/components/userContactItem.vue";
 import { resolveIcon } from "@/views/resume/editor/data/iconCategories";
 import type { NodeContentProps } from "@/views/resume/editor/preview/resumePages/render/nodeContentContract";
@@ -23,7 +24,7 @@ const fields = computed(() => {
   if (!value || module?.ui?.[key]?.hidden === true) return [];
   return [{
     key, // 求职字段标识。
-    value: key === "salary" ? String(value).replace(/^(.+?)k-$/i, "$1k以上") : value, // 未完成薪资区间沿用个人信息的展示规则。
+    value: key === "salary" ? String(value).replace(/^(.+?)k-$/i, `$1k${$t("themeDeco_salaryAbove")}`) : value, // 未完成薪资区间沿用个人信息的展示规则。
     label: getPreviewText(`${key}Label`, lang.value), // 跟随简历语言的字段名称。
     icon: resolveIcon(module?.ui?.[key]?.icon), // 保留迁移时的字段图标。
   }];

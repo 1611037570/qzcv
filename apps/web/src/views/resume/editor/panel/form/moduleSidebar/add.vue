@@ -10,7 +10,7 @@ import { jumpAll } from "../../../hooks/useModuleNav";
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
 import { getUUID } from "@/utils";
-import i18n from "@/locales";
+import i18n, { $t } from "@/locales";
 import { translateResumeEditorText } from "@/stores/modules/resume/hooks/useResumeEditorLocale";
 const resumeStore = useResumeStore();
 const { runtimeConfig, currentData } = storeToRefs(resumeStore);
@@ -82,7 +82,7 @@ const handleAddAll = () => {
 };
 
 const handleConfirm = () => {
-  const customModuleName = "尚未填写";
+  const customModuleName = $t("notFilled");
   // 生成带前缀的唯一 key,作为模块标识与数据路径
   const customKey = `custom_${getUUID().substring(0, 8)}`;
   // 模块标题写入 ui，经历记录统一保存在 list 数组

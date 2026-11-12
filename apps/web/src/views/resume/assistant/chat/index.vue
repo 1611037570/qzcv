@@ -11,6 +11,7 @@ import { ElMessage } from "element-plus";
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { debounce } from "lodash-es";
+import { $t } from "@/locales";
 import { useChatRequest } from "./useChatRequest";
 import { ALL_MODULE_KEY, ALL_MODULE_NAME } from "@/stores/modules/resume/config/defaultConfig";
 import { useResumeAiAvailability } from "@/views/resume/hooks/useResumeAiAvailability";
@@ -405,7 +406,7 @@ const handleRetry = (msg: Message) => {
   // 只重试当前轮，已写入内容先撤回，避免重复新增或重复删除
   if (msg !== displayMessages.value.at(-1)) return;
   if (msg.hasWriteChanges && !withdrawAI(msg)) {
-    ElMessage.warning("本轮修改备份已失效，请核对简历后重新发送请求");
+    ElMessage.warning($t("aiChat_backupInvalid"));
     return;
   }
   removeMessage(msg, 1);
@@ -419,7 +420,7 @@ function handleRegenerate(index: number) {
   if (!msg || generating.value || isChatLoading.value) return;
   // 历史写入没有内存备份时不能重新执行，避免累积重复修改
   if (msg.hasWriteChanges && !withdrawAI(msg)) {
-    ElMessage.warning("本轮修改备份已失效，请核对简历后重新发送请求");
+    ElMessage.warning($t("aiChat_backupInvalid"));
     return;
   }
   removeMessage(msg);
@@ -431,7 +432,7 @@ function handleWithdrawModify(index: number) {
   const msg = displayMessages.value[index];
   if (!msg || generating.value || isChatLoading.value) return;
   // 仅恢复成功时提示撤回完成
-  if (withdrawAI(msg)) ElMessage.success("已撤回 AI 修改");
+  if (withdrawAI(msg)) ElMessage.success($t("aiChat_withdrawn"));
 }
 // 通过 provide 注入重试回调，供 aiMessage 直接调用
 provide("retry", handleRetry);
@@ -548,7 +549,7 @@ const handleFlowAnswer = (answer: string) => {
   // 选择步骤只接受本轮有效选项，拒绝旧按钮或自由输入跳过授权
   const options = typeof step.options === "function" ? step.options() : step.options;
   if (!step.input && options.length && !options.includes(answer)) {
-    ElMessage.warning("请先选择当前步骤中的选项");
+    ElMessage.warning($t("aiChat_selectOptionFirst"));
     return;
   }
   // 授权被拒绝时只结束引导流程，不向模型发送请求
@@ -556,7 +557,7 @@ const handleFlowAnswer = (answer: string) => {
     addMessage({ role: "user", content: answer, typing: false, skipContext: true });
     addMessage({
       role: "assistant",
-      content: step.cancelMessage || "已取消本次操作。",
+      content: step.cancelMessage || $t("aiChat_operationCancelled"),
       typing: false,
       requestStatus: "success",
       skipContext: true,

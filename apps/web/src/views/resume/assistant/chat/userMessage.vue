@@ -1,5 +1,6 @@
 <script setup>
 import ToggleButton from "./toggleButton.vue";
+import { $t } from "@/locales";
 
 defineProps({
   msg: {
@@ -23,14 +24,14 @@ const emit = defineEmits(["recall", "updateCollapsedStatus"]);
       <!-- 我的消息切换 (美化后的胶囊风格) -->
       <ToggleButton
         v-if="msg.content"
-        label="我的消息"
+        :label="$t('aiChat_myMessage')"
         :collapsed="msg.contentCollapsed"
         icon-left
         gap="gap-1"
         @toggle="emit('updateCollapsedStatus', index, 'content')"
       />
       <div class="flex flex-col items-end gap-0.5 leading-tight">
-        <span class="text-[12px] font-black tracking-wider text-sf-text">我</span>
+        <span class="text-[12px] font-black tracking-wider text-sf-text">{{ $t("aiChat_me") }}</span>
       </div>
     </header>
 
@@ -48,7 +49,7 @@ const emit = defineEmits(["recall", "updateCollapsedStatus"]);
 
       <!-- 用户操作 -->
       <nav v-if="msg.content" class="flex items-center transition-opacity duration-300">
-        <SfTooltip content="撤回并重新编辑">
+        <SfTooltip :content="$t('aiChat_recallEdit')">
           <button class="action-btn" @click="emit('recall', msg)">
             <SfIcon icon="ph:arrow-u-up-left-duotone" size="3.5" />
           </button>

@@ -7,6 +7,7 @@ import { hasInterviewModel } from "@snowflake/interview-agent";
 import type { InterviewConfig, InterviewMode } from "@snowflake/interview-agent";
 import type { ResumeSnapshot } from "@snowflake/resume-core";
 import { useResumeStore } from "@/stores";
+import { $t } from "@/locales";
 import { useResumeName } from "../hooks/useResumeName";
 import { createInterviewConfig, INTERVIEW_LANGUAGE_KEY, INTERVIEW_MODES, isPreparationMode } from "./config";
 import { createResumeSnapshotForAi } from "../shared/resumeSnapshot";
@@ -41,13 +42,15 @@ const preparation = computed(() => isPreparationMode(config.mode));
 // 分类按实际使用方式分组，文案生成不混入逐轮面试。
 const modeGroups = [
   {
-    name: "模拟面试", // 需要逐轮真实作答的功能组。
-    description: "从两分钟自我介绍开始，逐题作答，结束后复盘。", // 本组的共同使用方式。
+    key: "mock", // 分组标识，用于模板中的样式与展示判断。
+    name: $t("interview_groupMock"), // 需要逐轮真实作答的功能组。
+    description: $t("interview_groupMockDesc"), // 本组的共同使用方式。
     modes: INTERVIEW_MODES.filter((mode) => !isPreparationMode(mode.value)), // 三类逐轮面试。
   },
   {
-    name: "面试准备", // 一次生成准备内容的功能组。
-    description: "生成后直接阅读、练习或复制。", // 本组无需进入作答流程。
+    key: "prep",
+    name: $t("interview_groupPrep"), // 一次生成准备内容的功能组。
+    description: $t("interview_groupPrepDesc"), // 本组无需进入作答流程。
     modes: INTERVIEW_MODES.filter((mode) => isPreparationMode(mode.value)), // 押题与自我介绍稿。
   },
 ];
@@ -67,13 +70,13 @@ const canStart = computed(() => !!category.value && (config.mode === "intro"
   && (!resumeId.value || (!!selectedResume.value && !loading.value)) && !starting.value);
 // 禁用主按钮时直接说明缺少什么，不让用户猜测下一步。
 const startNotice = computed(() => {
-  if (resumeId.value && (loading.value || !selectedResume.value)) return "正在读取参考简历，请稍候或清空选择。";
-  if (config.mode === "intro") return selectedResume.value || config.background.trim() ? "准备好了，生成后可直接复制。" : "选择一份简历，或简单填写自己的背景。";
-  if (!config.position.trim() || !config.experienceYears.trim()) return config.mode === "specialized" ? "确认岗位、年限和这次的训练重点。" : "填好求职岗位与工作年限即可开始。";
-  if (config.mode === "specialized" && !config.direction.trim()) return "写下这次想重点练习的内容。";
-  return preparation.value ? "按目标岗位生成准备材料。" : "先进行两分钟自我介绍，结束后统一复盘。";
+  if (resumeId.value && (loading.value || !selectedResume.value)) return $t("interview_noticeLoadingResume");
+  if (config.mode === "intro") return selectedResume.value || config.background.trim() ? $t("interview_noticeIntroReady") : $t("interview_noticeIntroNeed");
+  if (!config.position.trim() || !config.experienceYears.trim()) return config.mode === "specialized" ? $t("interview_noticeSpecializedNeed") : $t("interview_noticeBasicNeed");
+  if (config.mode === "specialized" && !config.direction.trim()) return $t("interview_noticeFocusNeed");
+  return preparation.value ? $t("interview_noticePrep") : $t("interview_noticeMock");
 });
-const startLabel = computed(() => starting.value ? "正在创建…" : config.mode === "intro" ? "生成自我介绍" : preparation.value ? "生成面试题" : "开始面试");
+const startLabel = computed(() => starting.value ? $t("interview_creating") : config.mode === "intro" ? $t("interview_generateIntro") : preparation.value ? $t("interview_generateQuestions") : $t("interview_startInterview"));
 
 // 只加载可选简历，不改变编辑器当前编辑对象。
 const loadResumes = async () => {
@@ -82,7 +85,7 @@ const loadResumes = async () => {
   try {
     await resumeStore.loadActiveResumes();
     if (resumeId.value && !selectedResume.value) resumeId.value = "";
-  } catch (error) { loadError.value = error instanceof Error ? error.message : "简历列表读取失败"; }
+  } catch (error) { loadError.value = error instanceof Error ? error.message : $t("interview_resumeListFailed"); }
   finally { loading.value = false; }
 };
 void loadResumes();
@@ -119,7 +122,7 @@ const openModelSettings = () => {
 };
 // 原地完成配置后恢复刚才选择的分类，保留已有表单与简历选择。
 const continueAfterModel = () => {
-  if (!modelReady.value) { ElMessage.warning("请先在角色模型中为面试官小羊选择可用模型"); return; }
+  if (!modelReady.value) { ElMessage.warning($t("interview_selectModelFirst")); return; }
   modelSettingsVisible.value = false;
   const mode = pendingCategory.value;
   pendingCategory.value = null;
@@ -130,13 +133,13 @@ const start = () => {
   if (!category.value || starting.value) return;
   if (!modelReady.value) { openModelSettings(); return; }
   if (config.mode === "intro") {
-    if (!selectedResume.value && !config.background.trim()) { ElMessage.warning("请选择简历，或填写自己的背景资料"); return; }
+    if (!selectedResume.value && !config.background.trim()) { ElMessage.warning($t("interview_warnNeedResumeOrBackground")); return; }
   } else {
-    if (!config.position.trim()) { ElMessage.warning("请填写求职岗位"); return; }
-    if (!config.experienceYears.trim()) { ElMessage.warning("请选择工作年限"); return; }
-    if (config.mode === "specialized" && !config.direction.trim()) { ElMessage.warning("请填写这次的训练重点"); return; }
+    if (!config.position.trim()) { ElMessage.warning($t("interview_warnNeedPosition")); return; }
+    if (!config.experienceYears.trim()) { ElMessage.warning($t("interview_warnNeedExperience")); return; }
+    if (config.mode === "specialized" && !config.direction.trim()) { ElMessage.warning($t("interview_warnNeedFocus")); return; }
   }
-  if (resumeId.value && (loading.value || !selectedResume.value)) { ElMessage.warning("请等待简历读取完成，或清空参考简历后开始"); return; }
+  if (resumeId.value && (loading.value || !selectedResume.value)) { ElMessage.warning($t("interview_warnWaitResume")); return; }
   try {
     // 参考简历固定脱敏，不在开始页增加隐私配置步骤。
     const snapshot = selectedResume.value ? createResumeSnapshotForAi(selectedResume.value, true) : {};
@@ -152,7 +155,7 @@ const start = () => {
     }, selectedResume.value?.id || "", selectedResume.value ? getResumeTitle(selectedResume.value) : "", snapshot);
   } catch {
     starting.value = false;
-    ElMessage.error("读取面试简历失败，请重新选择简历后再开始");
+    ElMessage.error($t("interview_errorReadResume"));
   }
 };
 // 再练一场也先核对模型，不绕过分类入口的检查。
@@ -164,16 +167,16 @@ if (props.initialConfig) chooseCategory(props.initialConfig.mode);
     <template v-if="!category">
       <p v-if="!modelReady" class="flex flex-wrap items-center gap-3 rounded-xl border border-sf-warning bg-sf-primary p-3 text-sm text-sf-text-2" role="status">
         <SfIcon icon="lucide:circle-alert" size="5" class="shrink-0 text-sf-warning" />
-        <span class="flex-1">先为面试官小羊选择模型，配置完成后会回到你选的功能。</span>
-        <InterviewButton type="bg" @click="openModelSettings">配置模型</InterviewButton>
+        <span class="flex-1">{{ $t("interview_chooseModelHint") }}</span>
+        <InterviewButton type="bg" @click="openModelSettings">{{ $t("interview_configureModel") }}</InterviewButton>
       </p>
       <!-- 图标与标题同排，避免装饰元素单独占用卡片高度。 -->
-      <section v-for="group in modeGroups" :key="group.name" class="flex flex-col gap-3">
+      <section v-for="group in modeGroups" :key="group.key" class="flex flex-col gap-3">
         <header class="flex flex-wrap items-baseline gap-3">
           <h2 class="text-sm font-semibold">{{ group.name }}</h2>
           <p class="text-xs leading-6 text-sf-text-2">{{ group.description }}</p>
         </header>
-        <div class="grid gap-3 sm:grid-cols-2" :class="{ 'xl:grid-cols-3': group.name === '模拟面试' }">
+        <div class="grid gap-3 sm:grid-cols-2" :class="{ 'xl:grid-cols-3': group.key === 'mock' }">
           <!-- 悬停仅改变边框，保持卡片背景不变。 -->
           <button v-for="mode in group.modes" :key="mode.value" type="button"
             class="flex h-full min-w-0 cursor-pointer flex-col gap-3 rounded-xl border border-sf-b bg-sf-primary p-3 text-left transition-colors hover:border-sf-theme focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-sf-theme"
@@ -181,12 +184,12 @@ if (props.initialConfig) chooseCategory(props.initialConfig.mode);
             <span class="flex items-center gap-3">
               <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sf-theme-3 text-sf-theme"><SfIcon :icon="mode.icon" size="5" /></span>
               <span class="min-w-0 flex-1 font-semibold">{{ mode.label }}</span>
-              <span class="shrink-0 text-xs text-sf-text-2">{{ isPreparationMode(mode.value) ? '生成内容' : '逐轮对话' }}</span>
+              <span class="shrink-0 text-xs text-sf-text-2">{{ isPreparationMode(mode.value) ? $t('interview_modeTypeGenerate') : $t('interview_modeTypeDialogue') }}</span>
             </span>
             <span class="text-sm leading-6 text-sf-text-2">{{ mode.description }}</span>
             <span class="text-xs leading-6 text-sf-text-2">{{ mode.detail }}</span>
             <span class="mt-auto flex w-full items-center justify-between gap-3 border-t border-sf-b pt-3 text-xs font-medium text-sf-theme">
-              {{ modelReady ? mode.value === 'intro' ? '准备自我介绍' : isPreparationMode(mode.value) ? '准备面试题' : '确认资料，开始面试' : '配置模型后继续' }}
+              {{ modelReady ? mode.value === 'intro' ? $t('interview_actionPrepIntro') : isPreparationMode(mode.value) ? $t('interview_actionPrepQuestions') : $t('interview_actionConfirmStart') : $t('interview_actionConfigureFirst') }}
               <SfIcon icon="mingcute:arrow-right-line" size="4" />
             </span>
           </button>
@@ -202,22 +205,22 @@ if (props.initialConfig) chooseCategory(props.initialConfig.mode);
             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sf-theme-3 text-sf-theme"><SfIcon :icon="selectedMode.icon" size="5" /></span>
             <div><h2 class="font-semibold">{{ selectedMode.label }}</h2><p class="text-xs leading-6 text-sf-text-2">{{ selectedMode.detail }}</p></div>
           </div>
-          <nav class="flex flex-wrap gap-3"><InterviewButton type="bg" @click="openModelSettings">面试设置</InterviewButton><InterviewButton type="bg" @click="category = null">更换类型</InterviewButton></nav>
+          <nav class="flex flex-wrap gap-3"><InterviewButton type="bg" @click="openModelSettings">{{ $t("interview_interviewSettings") }}</InterviewButton><InterviewButton type="bg" @click="category = null">{{ $t("interview_changeType") }}</InterviewButton></nav>
         </header>
         <section class="grid gap-3 border-t border-sf-b pt-3 sm:grid-cols-2" :class="{ 'lg:grid-cols-3': config.mode !== 'intro' }">
-          <label class="flex min-w-0 flex-col gap-3 text-sm" :class="{ 'sm:col-span-2': config.mode === 'intro' }"><span class="flex items-center justify-between gap-3 font-medium">参考简历<span class="text-xs font-normal text-sf-text-2">选填</span></span>
-            <SfSelect v-model="resumeId" :list="resumeOptions" :loading="loading" :disabled="loading || starting" filterable clearable :placeholder="config.mode === 'intro' ? '选择用来生成自我介绍的简历' : '选择后自动补齐尚未填写的岗位与年限'" />
+          <label class="flex min-w-0 flex-col gap-3 text-sm" :class="{ 'sm:col-span-2': config.mode === 'intro' }"><span class="flex items-center justify-between gap-3 font-medium">{{ $t("interview_resumeLabel") }}<span class="text-xs font-normal text-sf-text-2">{{ $t("interview_optional") }}</span></span>
+            <SfSelect v-model="resumeId" :list="resumeOptions" :loading="loading" :disabled="loading || starting" filterable clearable :placeholder="config.mode === 'intro' ? $t('interview_resumePlaceholderIntro') : $t('interview_resumePlaceholderAuto')" />
           </label>
-          <label v-if="config.mode !== 'intro'" class="flex min-w-0 flex-col gap-3 text-sm"><span class="flex items-center justify-between gap-3 font-medium">求职岗位<span class="text-xs font-normal text-sf-theme">必填</span></span><SfInput v-model="config.position" placeholder="例如：前端工程师、产品经理" maxlength="100" /></label>
-          <label v-if="config.mode !== 'intro'" class="flex min-w-0 flex-col gap-3 text-sm"><span class="flex items-center justify-between gap-3 font-medium">工作年限<span class="text-xs font-normal text-sf-theme">必填</span></span><SfSelect v-model="config.experienceYears" :list="experienceOptions" filterable allow-create default-first-option placeholder="请选择，也可输入具体年限" /></label>
-          <label v-if="config.mode !== 'intro'" class="flex min-w-0 flex-col gap-3 text-sm"><span class="flex items-center justify-between gap-3 font-medium">目标公司或行业<span class="text-xs font-normal text-sf-text-2">选填</span></span><SfInput v-model="config.company" placeholder="不填则按通用岗位场景面试" maxlength="100" /></label>
-          <label v-if="config.mode === 'intro'" class="flex min-w-0 flex-col gap-3 text-sm sm:col-span-2"><span class="font-medium">背景与补充要求<span class="ml-3 text-xs font-normal text-sf-text-2">选了简历可不填</span></span><SfInput v-model="config.background" type="textarea" :rows="3" maxlength="12000" resize="none" placeholder="简单描述经历与求职方向，也可补充想突出的内容" /></label>
-          <label v-else class="flex min-w-0 flex-col gap-3 text-sm sm:col-span-2"><span class="flex items-center justify-between gap-3 font-medium">职位描述<span class="text-xs font-normal text-sf-text-2">选填</span></span><SfInput v-model="config.jobDescription" type="textarea" :rows="2" maxlength="12000" resize="none" placeholder="粘贴岗位职责与任职要求" /></label>
-          <label v-if="config.mode === 'specialized'" class="flex min-w-0 flex-col gap-3 text-sm sm:col-span-2 lg:col-span-3"><span class="flex items-center justify-between gap-3 font-medium">训练重点<span class="text-xs font-normal text-sf-theme">必填</span></span><SfInput v-model="config.direction" placeholder="例如：接口设计、项目表达、产品需求分析" maxlength="200" /></label>
+          <label v-if="config.mode !== 'intro'" class="flex min-w-0 flex-col gap-3 text-sm"><span class="flex items-center justify-between gap-3 font-medium">{{ $t("interview_positionField") }}<span class="text-xs font-normal text-sf-theme">{{ $t("interview_required") }}</span></span><SfInput v-model="config.position" :placeholder="$t('interview_positionPlaceholder')" maxlength="100" /></label>
+          <label v-if="config.mode !== 'intro'" class="flex min-w-0 flex-col gap-3 text-sm"><span class="flex items-center justify-between gap-3 font-medium">{{ $t("interview_experienceField") }}<span class="text-xs font-normal text-sf-theme">{{ $t("interview_required") }}</span></span><SfSelect v-model="config.experienceYears" :list="experienceOptions" filterable allow-create default-first-option :placeholder="$t('interview_experiencePlaceholder')" /></label>
+          <label v-if="config.mode !== 'intro'" class="flex min-w-0 flex-col gap-3 text-sm"><span class="flex items-center justify-between gap-3 font-medium">{{ $t("interview_companyField") }}<span class="text-xs font-normal text-sf-text-2">{{ $t("interview_optional") }}</span></span><SfInput v-model="config.company" :placeholder="$t('interview_companyPlaceholder')" maxlength="100" /></label>
+          <label v-if="config.mode === 'intro'" class="flex min-w-0 flex-col gap-3 text-sm sm:col-span-2"><span class="font-medium">{{ $t("interview_backgroundField") }}<span class="ml-3 text-xs font-normal text-sf-text-2">{{ $t("interview_backgroundHint") }}</span></span><SfInput v-model="config.background" type="textarea" :rows="3" maxlength="12000" resize="none" :placeholder="$t('interview_backgroundPlaceholder')" /></label>
+          <label v-else class="flex min-w-0 flex-col gap-3 text-sm sm:col-span-2"><span class="flex items-center justify-between gap-3 font-medium">{{ $t("interview_jobDescriptionField") }}<span class="text-xs font-normal text-sf-text-2">{{ $t("interview_optional") }}</span></span><SfInput v-model="config.jobDescription" type="textarea" :rows="2" maxlength="12000" resize="none" :placeholder="$t('interview_jobDescriptionPlaceholder')" /></label>
+          <label v-if="config.mode === 'specialized'" class="flex min-w-0 flex-col gap-3 text-sm sm:col-span-2 lg:col-span-3"><span class="flex items-center justify-between gap-3 font-medium">{{ $t("interview_focusLabel") }}<span class="text-xs font-normal text-sf-theme">{{ $t("interview_required") }}</span></span><SfInput v-model="config.direction" :placeholder="$t('interview_focusPlaceholder')" maxlength="200" /></label>
         </section>
-        <p v-if="loadError" class="flex flex-wrap items-center gap-3 text-xs text-sf-error" role="alert">{{ loadError }}<InterviewButton type="bg" @click="loadResumes">重新读取</InterviewButton></p>
+        <p v-if="loadError" class="flex flex-wrap items-center gap-3 text-xs text-sf-error" role="alert">{{ loadError }}<InterviewButton type="bg" @click="loadResumes">{{ $t("interview_reload") }}</InterviewButton></p>
         <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-sf-b pt-3">
-          <span class="text-xs leading-6 text-sf-text-2" role="status">{{ startNotice }}<template v-if="selectedResume"> 简历姓名和联系方式自动隐藏。</template></span>
+          <span class="text-xs leading-6 text-sf-text-2" role="status">{{ startNotice }}<template v-if="selectedResume">{{ $t("interview_privacyNote") }}</template></span>
           <InterviewButton :disabled="!canStart" @click="start"><SfIcon v-if="starting" icon="eos-icons:loading" size="4" />{{ startLabel }}<SfIcon v-if="!starting" icon="mingcute:arrow-right-line" size="4" /></InterviewButton>
         </footer>
       </form>
