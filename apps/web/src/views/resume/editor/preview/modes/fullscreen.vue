@@ -51,13 +51,15 @@ const handleBackdropClick = (event) => {
       <!-- 顶部栏 -->
       <div class="flex h-12 shrink-0 items-center justify-between px-4">
         <span class="text-sm font-medium text-sf-text">{{ $t("resumePreview") }}</span>
-        <button
-          type="button"
-          class="flex h-8 w-8 cursor-pointer! items-center justify-center rounded-full text-sf-text transition-colors hover:bg-sf-bg-2"
-          @click.stop="emit('close')"
-        >
-          <SfIcon icon="lucide:x" size="4" />
-        </button>
+        <SfTooltip :content="$t('resumeSurveyClose')">
+          <button
+            type="button"
+            class="flex h-8 w-8 cursor-pointer! items-center justify-center rounded-full text-sf-text transition-colors hover:bg-sf-bg-2"
+            @click.stop="emit('close')"
+          >
+            <SfIcon icon="lucide:x" size="4" />
+          </button>
+        </SfTooltip>
       </div>
       <!-- 缩放预览内容 -->
       <div class="min-h-0 flex-1">

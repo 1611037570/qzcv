@@ -29,11 +29,11 @@
               <Preview class="motion-preview" :class="{ 'ai-generating': isGenerating }" />
             </Transition>
           </div>
-          <!-- 桌面工具栏仅在预览栏内悬浮，移动端入口由工作区统一承载。 -->
+          <!-- 桌面工具栏悬浮于预览栏右缘并垂直居中，容器收缩到卡片大小，不跨全高遮挡预览工具栏。 -->
           <div
             v-if="!focusMode && !isMobile"
             ref="toolbarRef"
-            :class="isMobile ? 'contents' : 'absolute inset-y-0 right-0 z-20 flex'"
+            :class="isMobile ? 'contents' : 'absolute right-0 top-1/2 z-20 flex -translate-y-1/2 flex-col items-end'"
           >
             <Transition :name="isMobile ? '' : 'resume-motion'" appear>
               <Toolbar />
@@ -105,6 +105,7 @@ import Preview from "./preview/index.vue";
 import Toolbar from "./toolbar/index.vue";
 import ModuleSidebar from "./panel/form/moduleSidebar/index.vue";
 import { PROJECT_ICON_LIST } from "./data/localIcons";
+import { $t } from "@/locales";
 
 const router = useRouter();
 const route = useRoute();
@@ -191,7 +192,7 @@ onKeyStroke("Escape", () => {
 // 路由离开前确认内容已落库，写入失败保留当前编辑页面。
 onBeforeRouteLeave(async () => {
   try { await resumeStore.savePendingResumes(); }
-  catch { ElMessage.error("简历保存失败，请重试后再离开"); return false; }
+  catch { ElMessage.error($t("editorMisc_saveFailedLeave")); return false; }
 });
 
 onUnmounted(() => {

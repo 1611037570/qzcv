@@ -214,11 +214,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 抽屉容器：展开时占位模块树宽度，收起后完全不占据布局宽度，把手以浮层形式挂在屏幕左缘 -->
+  <!-- 抽屉容器：桌面端占位模块树宽度，移动端 fixed 全高浮层；收起后宽度归零，把手以浮层形式挂在屏幕左缘 -->
+  <!-- 注意：relative 不能放在静态 class，否则 Tailwind 规则顺序会覆盖 floating 的 fixed，导致抽屉无法全高 -->
   <div
-    class="module-tree-root relative shrink-0"
+    class="module-tree-root"
     :class="[
-      floating ? 'fixed inset-y-0 left-0 z-50' : 'h-full',
+      floating
+        ? `fixed inset-y-0 left-0 ${collapsed ? 'z-50' : 'z-60'}`
+        : 'relative h-full shrink-0',
       { 'module-tree-collapsed': collapsed },
     ]"
   >
@@ -229,7 +232,7 @@ onUnmounted(() => {
       style="opacity: 0.2"
       @click="collapsed = true"
     />
-    <!-- 滑块：模块树整体滑动，收起后完全滑出屏幕 -->
+    <!-- 滑块：模块树整体滑动，收起后完全滑出屏幕；桌面端留在编辑面板内，不覆盖顶部栏头 -->
     <div class="module-tree-slider absolute inset-y-0 left-0 z-50">
       <aside
         class="module-tree flex h-full min-h-0 min-w-0 flex-col bg-sf-primary p-1.5"
@@ -299,7 +302,8 @@ onUnmounted(() => {
                 class="shrink-0 transition-colors"
                 :class="checkClass(item)"
               />
-              <span class="module-name max-w-25 truncate text-[12px]">{{
+              <!-- 名称可收缩：行宽固定，长名称必须让位给行尾的拖拽把手，否则把手会被挤出可视区 -->
+              <span class="module-name min-w-0 flex-1 truncate text-[12px]">{{
                 shortName(item.name)
               }}</span>
               <!-- 右侧为完成状态与拖拽把手：未完成显示待补充，完成后显示数量徽标，两者互斥 -->
@@ -434,22 +438,30 @@ onUnmounted(() => {
         />
       </aside>
     </div>
-    <!-- 左缘把手：绝对定位浮层，展开时隐藏，收起后才出现，不占据任何布局宽度 -->
+    <!-- 边缘把手：收起时挂在屏幕左缘用于展开；移动端展开时挂到抽屉右缘充当收起按钮（与右侧工具栏把手一致），不占布局宽度 -->
     <SfTooltip
-      :content="$t('expandModuleTree')"
+      :content="collapsed ? $t('expandModuleTree') : $t('collapseModuleTree')"
       placement="right"
-      class="absolute top-1/2 left-0 z-50 -translate-y-1/2"
+      :class="[
+        'absolute top-1/2 z-50 -translate-y-1/2',
+        floating && !collapsed ? 'left-full' : 'left-0',
+      ]"
     >
       <button
         type="button"
-        class="flex h-12 w-6 cursor-pointer items-center justify-center overflow-hidden rounded-r-2xl border border-l-0 border-sf-b bg-sf-primary text-sf-text-2 transition-all duration-300 hover:text-sf-theme"
-        :class="collapsed ? 'opacity-100' : 'pointer-events-none opacity-0'"
-        :aria-hidden="!collapsed"
-        :aria-label="$t('expandModuleTree')"
+        class="flex h-12 w-6 cursor-pointer items-center justify-center overflow-hidden bg-sf-primary text-sf-text-2 transition-all duration-300 hover:text-sf-theme"
+        :class="[
+          collapsed || !floating
+            ? 'rounded-r-2xl border border-l-0 border-sf-b'
+            : 'rounded-l-2xl border border-r-0 border-sf-b',
+          collapsed || floating ? 'opacity-100' : 'pointer-events-none opacity-0',
+        ]"
+        :aria-hidden="!(collapsed || floating)"
+        :aria-label="collapsed ? $t('expandModuleTree') : $t('collapseModuleTree')"
         tabindex="-1"
-        @click="collapsed = false"
+        @click="collapsed = !collapsed"
       >
-        <SfIcon icon="mdi:chevron-right" size="4" />
+        <SfIcon :icon="collapsed ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="4" />
       </button>
     </SfTooltip>
   </div>

@@ -86,12 +86,12 @@ const toolbarItems = computed(() => [
 </script>
 
 <template>
-  <!-- 移动端把手与工具栏共用悬浮容器，展开时整组从屏幕右侧滑入 -->
+  <!-- 移动端把手与工具栏共用悬浮容器，展开时整组从屏幕右侧滑入；展开态 z-60 高于左侧抽屉把手 z-50 -->
   <div
     class="flex items-center justify-center"
     :class="
       isMobile
-        ? 'fixed inset-y-0 right-0 z-50 transition-transform duration-300 ease-out'
+        ? `fixed inset-y-0 right-0 ${expanded ? 'z-60' : 'z-50'} transition-transform duration-300 ease-out`
         : 'relative flex-col items-center gap-3 py-3 pr-3'
     "
     :style="
@@ -131,10 +131,10 @@ const toolbarItems = computed(() => [
     </div>
   </div>
 
-  <!-- 移动端展开时的遮罩：点击空白区域收起工具栏 -->
+  <!-- 移动端展开时的遮罩：点击空白区域收起工具栏。z-55 高于左侧抽屉把手所在的 root(z-50)，低于自身 root(z-60)，因此不会挡住自己 -->
   <div
     v-if="isMobile && expanded"
-    class="fixed inset-0 z-40 bg-sf-text"
+    class="fixed inset-0 z-55 bg-sf-text"
     style="opacity: 0.2"
     @click="expanded = false"
   />

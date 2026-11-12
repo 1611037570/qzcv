@@ -296,15 +296,17 @@ onUnmounted(() => eventBus.off("resume-standard-a4", setStandardA4));
         </div>
         <div class="ml-auto flex items-center">
           <PrintMode />
-          <!-- 全屏入口与配色切换归为预览操作。 -->
-          <button
-            type="button"
-            class="flex h-6 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2 text-[11px] text-sf-text-2 transition-colors hover:bg-sf-bg"
-            @click="$emit('fullscreen')"
-          >
-            <SfIcon icon="lucide:maximize" size="4" />
-            <span class="whitespace-nowrap">{{ $t("fullscreen") }}</span>
-          </button>
+          <!-- 全屏入口与配色切换归为预览操作，写法与灰度打印一致：Tooltip 包裹保证热区完整。 -->
+          <SfTooltip :content="$t('fullscreen')">
+            <button
+              type="button"
+              class="flex h-6 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2 text-[11px] text-sf-text-2 transition-colors hover:bg-sf-bg"
+              @click="$emit('fullscreen')"
+            >
+              <SfIcon icon="lucide:maximize" size="4" />
+              <span class="whitespace-nowrap">{{ $t("fullscreen") }}</span>
+            </button>
+          </SfTooltip>
           <SfTooltip v-if="selectedModule.length" :content="$t('clearSelection')">
             <SfIcon
               icon="lucide:circle-slash"
