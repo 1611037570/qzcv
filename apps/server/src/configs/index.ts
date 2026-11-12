@@ -1,6 +1,6 @@
 import { baseConfig } from './base.config'
 import { resumeConfig } from './resume.config'
-import { env } from './env'
+import { env, envModelByPurpose } from './env'
 
 // 业务统一读取本入口，保留原有配置文件和模块行为。
 export const config = Object.freeze({
@@ -12,7 +12,9 @@ export const config = Object.freeze({
   ai: Object.freeze({
     apiKey: env.aiApiKey, // 人工智能上游密钥
     baseUrl: env.aiBaseUrl, // 人工智能上游地址
-    model: env.aiModel, // 人工智能上游模型
+    assistantModel: env.aiModelAssistant, // 兜底模型（对话与面试）
+    modelByPurpose: envModelByPurpose, // 按用途读取模型名，变量名固定为 OPENAI_MODEL_<用途>
+    freeTokens: env.llmFreeTokens, // 每个使用者的免费令牌额度
   }), // 服务端人工智能配置，接口行为不变
   integrations: Object.freeze({
     timeout: env.integrationsTimeout, // 第三方上游统一超时

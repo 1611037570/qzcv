@@ -34,6 +34,15 @@ export function envNumber(name: string, fallback: number): number {
   return value
 }
 
+/**
+ * 按用途读取上游模型名，变量名固定为 OPENAI_MODEL_<用途>。
+ * 用途只允许小写字母，避免拼出任意变量名读到其他配置；未配置时返回空串由调用方回退。
+ */
+export function envModelByPurpose(purpose: string): string {
+  if (!/^[a-z]+$/.test(purpose)) return ''
+  return envString(`OPENAI_MODEL_${purpose.toUpperCase()}`)
+}
+
 export const env = Object.freeze({
   // 简历库连接参数，真实值只写入不入库的分环境文件 .env.{运行环境}
   resumeDbHost: envStringRequired('DB_RESUME_HOST'), // 简历数据库主机
@@ -43,7 +52,8 @@ export const env = Object.freeze({
   resumeDbDatabase: envStringRequired('DB_RESUME_DATABASE'), // 简历数据库名称
   aiApiKey: envString('OPENAI_API_KEY'), // 人工智能上游密钥
   aiBaseUrl: envString('OPENAI_BASE_URL'), // 人工智能上游完整地址
-  aiModel: envStringRequired('OPENAI_MODEL'), // 人工智能上游模型
+  aiModelAssistant: envStringRequired('OPENAI_MODEL_ASSISTANT'), // 兜底模型（对话与面试），必填
+  llmFreeTokens: envNumber('LLM_FREE_TOKENS', 200000), // 每个使用者的免费令牌额度，仅用于展示剩余量，本阶段不拦截
   // 打印页面地址，由站点根地址拼接固定路由 /resume/print
   pdfRenderUrl: `${envStringRequired('PUBLIC_SITE_URL')}/resume/print`,
   pdfTimeout: envNumber('PDF_RENDER_TIMEOUT', 60000), // 单次渲染总超时（含页面加载、等待就绪与生成），单位毫秒

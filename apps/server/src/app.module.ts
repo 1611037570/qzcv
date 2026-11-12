@@ -9,11 +9,11 @@ import { PdfModule } from './modules/resume/pdf/pdf.module'
 import { StatsModule } from './modules/resume/stats/stats.module'
 import { Action } from './modules/resume/entities/action.entity'
 import { Visitor } from './modules/resume/entities/visitor.entity'
+import { LlmUsage } from './modules/llm/entities/llm-usage.entity'
 
 @Module({
   // 仅注册简历及其共用服务。
   imports: [
-    LLMModule,
     IntegrationsModule,
     PdfModule,
   ],
@@ -32,11 +32,13 @@ export class AppModule {
               TypeOrmModule.forRoot({
                 name: 'resume',
                 ...config.database.resume,
-                entities: [Visitor, Action],
+                entities: [Visitor, Action, LlmUsage],
               }),
               StatsModule,
             ]
           : []),
+        // 人工智能转发始终可用，只有消耗记账跟随简历库开关
+        LLMModule.register(resumeDatabaseEnabled),
       ],
     }
   }
