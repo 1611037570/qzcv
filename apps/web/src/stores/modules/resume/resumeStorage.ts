@@ -5,6 +5,7 @@ import { debounce } from "lodash-es";
 import { ref, watch } from "vue";
 
 import { compactResumeItem, resolveResumeUi } from "@/domain/resume/theme/resumeUi";
+import { migrateCustomFieldLabels } from "./hooks/useUserCustomField";
 
 /** 保存状态由实际事务结果驱动，不把防抖排队视为已保存。 */
 interface ResumeStorageItem {
@@ -99,7 +100,12 @@ export const createResumeStorage = () => {
           const item = value as ResumeStorageItem;
           // 旧简历缺失标签时按空列表加载，其余使用信息原样保留。
           const usage = item.usage as Record<string, unknown> | undefined;
-          return { ...item, usage: { ...usage, tags: normalizeResumeTags(usage?.tags) }, ui: resolveResumeUi(item.ui) };
+          // 自定义字段标题从配置结构迁移到数据的界面属性，重复读取无副作用
+          return migrateCustomFieldLabels({
+            ...item,
+            usage: { ...usage, tags: normalizeResumeTags(usage?.tags) },
+            ui: resolveResumeUi(item.ui),
+          });
         },
         // 压缩主题配置并解除嵌套代理，避免重复落库和存储失败
         write: (value: ResumeStorageItem | null) => value ? JSON.parse(JSON.stringify(compactResumeItem(value))) : value,

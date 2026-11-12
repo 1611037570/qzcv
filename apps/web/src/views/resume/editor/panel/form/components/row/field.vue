@@ -90,7 +90,7 @@ const openRenameModal = () => {
 const handleRename = () => {
   const value = fieldLabel.value.trim();
   if (!value || !runtimeConfig.value || !fieldKey.value) return;
-  renameUserCustomField(runtimeConfig.value, fieldKey.value, value);
+  renameUserCustomField(runtimeConfig.value, currentData.value, fieldKey.value, value);
   showRenameModal.value = false;
 };
 // 切换隐藏状态：写回字段的隐藏路径

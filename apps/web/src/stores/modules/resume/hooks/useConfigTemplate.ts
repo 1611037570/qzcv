@@ -56,7 +56,7 @@ export function expandConfigModules(modules: any[], data: any) {
       const customTitle = data?.[item.key]?.ui?.title || "";
       rewriteCustomFieldByKey(field, item.key, customTitle);
     }
-    appendUserCustomFields(field, item);
+    appendUserCustomFields(field, item, data);
     restoreFieldOrder(field, item);
     // 编辑器与 AI 共用字段归属规则，递归移除已经归属其他模块的字段。
     const keepOwnedFields = (children: any[]): any[] => children
@@ -116,8 +116,8 @@ function placeUserSubtitle(field: any) {
   fields.splice(nameIndex + 1, 0, subtitle);
 }
 
-// 自定义个人字段仅持久化 key 与标题，展开时补全为可渲染配置
-function appendUserCustomFields(field: any, persisted: any) {
+// 自定义个人字段仅持久化 key 与顺序，标题等界面属性从数据里的 ui 恢复
+function appendUserCustomFields(field: any, persisted: any, data: any) {
   if (field?.key !== "user") return;
 
   // 自定义字段可能位于更多分区或副标题分区，按所在容器分别恢复
@@ -129,7 +129,10 @@ function appendUserCustomFields(field: any, persisted: any) {
     persistedBox.fields
       .filter((item: any) => isUserCustomFieldKey(item?.key))
       .forEach((item: any) => {
-        box.fields.push(createUserCustomField(item.key, item.label || "自定义字段"));
+        // 标题与显隐、图标同属界面属性，统一放在 ui 下。
+        // item.label 是旧结构里的回落，2026-12-12 之后（存量简历都已迁移过）可删掉这段兼容。
+        const label = data?.user?.ui?.[item.key]?.label || item.label || "自定义字段";
+        box.fields.push(createUserCustomField(item.key, label));
       });
   });
 }
@@ -141,20 +144,13 @@ function hasSortableFields(field: any) {
   );
 }
 
-// 可渲染配置压缩为简历结构：只保留模块 key、字段顺序和自定义名称
-export function compactConfigModules(fields: any[], parentKey?: string) {
+// 可渲染配置压缩为简历结构：只保留模块 key 与字段顺序，标题等界面属性存在数据里
+export function compactConfigModules(fields: any[]) {
   // 无编号的表单容器不表达排序，避免备份里出现无法恢复的空字段占位。
   return fields.filter((field: any) => typeof field?.key === "string" && field.key.trim()).map((field: any) => {
     const compactField: any = { key: field.key };
-    if (
-      (parentKey === "more" || parentKey === "subtitle") &&
-      isUserCustomFieldKey(field.key)
-    ) {
-      // 标题保存在包裹组配置上
-      compactField.label = field.props.label;
-    }
     if (Array.isArray(field.fields) && hasSortableFields(field)) {
-      const children = compactConfigModules(field.fields, field.key);
+      const children = compactConfigModules(field.fields);
       if (children.length) compactField.fields = children;
     }
     return compactField;
