@@ -2,6 +2,7 @@ import { LLM as PackageLLM } from "@snowflake/ai";
 import type { LlmObserver } from "@snowflake/ai";
 import type { AiAgentKey } from "@/stores/modules/ai";
 import { startAiUsage, startAiUsageRequest, updateAiUsageTokens, finishAiUsage } from "../usage";
+import { toFriendlyError } from "../errors";
 import {
   appendLlmTraceOutput,
   appendLlmTraceReasoning,
@@ -59,6 +60,27 @@ class LLM extends PackageLLM {
       }, // 最终完成后才结算，不把中间请求当成多次服务。
     } : observer;
     super({ ...modelConfig, observer: scopedObserver });
+  }
+
+  // 统一把请求失败转换成可展示文案，避免上游原始错误直接出现在界面上。
+  async request(config: Parameters<PackageLLM["request"]>[0]) {
+    const result = await super.request({
+      ...config,
+      // 走回调的调用方同样拿到可读文案
+      onFail: (error: unknown) => config.onFail?.(toFriendlyError(error)),
+    });
+
+    return {
+      ...result,
+      // 走 catch 的调用方也拿到同一份文案，原始错误仍由请求层打印
+      sendFn: async () => {
+        try {
+          return await result.sendFn();
+        } catch (error) {
+          throw toFriendlyError(error);
+        }
+      },
+    };
   }
 }
 
