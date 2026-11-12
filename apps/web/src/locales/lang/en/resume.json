@@ -992,6 +992,8 @@
   "resumeImportInvalidBackup": "Invalid resume backup structure",
   "resumeImportJsonParseFailed": "Failed to parse the resume file. Check the file format.",
   "resumeImportModelUnconfigured": "Not configured",
+  "snowflakeModelAssistant": "Assistant Model",
+  "snowflakeModelParser": "Parser Model",
   "resumeImportInvalidJson": "The parsing result is not valid JSON",
   "resumeImportJsonNotObject": "The parsing result is not an object",
   "resumeImportWarningUnmatchedContent": "{module}: no matching field. Original content: {content}",

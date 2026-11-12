@@ -1312,6 +1312,7 @@
   "debug_tabData": "数据",
   "debug_tabUi": "界面",
   "debug_tabConfig": "配置",
+  "debug_tabUsage": "使用信息",
   "debug_tabChat": "消息对话",
   "debug_editorLoadTime": "编辑区加载耗时",
   "debug_previewLoadTime": "预览区加载耗时",

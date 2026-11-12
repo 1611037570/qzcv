@@ -335,17 +335,6 @@ async function testModel(model: string, add = false, alias = "", saved?: ModelIt
   }
 }
 
-function handleAddBuiltin() {
-  const preset = currentProvider.value.preset;
-  if (!preset || getProviderModels(currentProvider.value).length) return;
-  if (aiStore.modelList.some((model) => model.name?.trim() === preset.name)) {
-    ElMessage.error($t("aiModel_aliasExists"));
-    return;
-  }
-  aiStore.deployModel({ ...preset, builtin: true });
-  ElMessage.success($t("aiModel_modelAddedSuccess"));
-}
-
 // 删除操作仍使用原有确认机制，并由模型仓库同步解绑角色。
 function removeModel(model: ModelItem) {
   confirm($t("aiModel_removeModelConfirm"), $t("aiModel_removeModelTitle"), {
@@ -421,8 +410,8 @@ provide("bg", "bg-sf-bg");
               </div>
               <div class="flex shrink-0 items-center gap-3">
                 <SfButton :round="false" type="bg" :disabled="busy" :aria-busy="testingModel === card.key" @click="testModel(card.model, false, '', card.saved)">{{ testingModel === card.key ? $t('aiModel_testing') : $t('aiModel_testConnection') }}</SfButton>
-                <!-- 删除操作默认与检测连接一致，悬停时提示危险操作。 -->
-                <SfButton :round="false" type="bg" class="hover:bg-sf-error! hover:text-white!" :disabled="busy" @click="removeModel(card.saved)">{{ $t("delete") }}</SfButton>
+                <!-- 平台内置模型由前端固定提供，不提供删除操作。 -->
+                <SfButton v-if="!card.saved.builtin" :round="false" type="bg" class="hover:bg-sf-error! hover:text-white!" :disabled="busy" @click="removeModel(card.saved)">{{ $t("delete") }}</SfButton>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-[6px]">
@@ -435,13 +424,6 @@ provide("bg", "bg-sf-bg");
             <p v-if="session.connections[card.key]" role="status" class="break-words text-xs leading-6" :class="session.connections[card.key].status === 'success' ? 'text-sf-success' : session.connections[card.key].status === 'error' ? 'text-sf-error' : 'text-sf-text-2'">{{ session.connections[card.key].message }}</p>
           </article>
         </div>
-        <article v-else-if="currentProvider.preset" class="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-sf-bg p-3">
-          <div class="min-w-0">
-            <h5 class="text-sm font-medium text-sf-text">{{ currentProvider.name }}</h5>
-            <p class="mt-[6px] break-all text-xs text-sf-text-3">{{ currentProvider.preset.model }}</p>
-          </div>
-          <SfButton :round="false" @click="handleAddBuiltin">{{ $t("aiChat_addModel") }}</SfButton>
-        </article>
         <p v-else class="rounded-lg border border-dashed border-sf-b p-3 text-xs leading-6 text-sf-text-2">{{ !credentialReady ? $t('aiModel_emptyNeedConfig') : $t('aiModel_emptyTip') }}</p>
       </section>
     </div>

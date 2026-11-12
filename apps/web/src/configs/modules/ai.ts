@@ -12,11 +12,22 @@ export const PROVIDER_NAMES: Record<string, string> = {
   moonshot: "月之暗面 Kimi", // 月之暗面开放平台。
 };
 
-// 内置雪花服务配置
+// 本站服务端根地址，去掉结尾斜杠避免拼出双斜杠
+const apiRoot = env.apiBaseUrl.replace(/\/+$/, "");
+
+// 内置雪花服务配置：全部请求经本站服务端转发，浏览器不再持有上游密钥
 export const snowflake = {
-  baseUrl: "https://api.deepseek.com/chat/completions",
-  provider: "openai",
-  apiKey: env.aiApiKey, // 从本地环境读取密钥，保留当前前端直连方式
-  model: "deepseek-v4-flash",
-  protocol: "chatCompletions" as const,
+  // 未配置站点接口地址时退回同源地址，保证内置模型始终可用，配置问题只体现为请求失败
+  baseUrl: `${apiRoot}/llm/stream`, // 服务端流式转发接口的完整地址
+  provider: "snowflake", // 对应 PROVIDER_NAMES 中的雪花服务
+  apiKey: "builtin", // 占位密钥，服务端只使用自身配置的上游密钥
+  model: "snowflake", // 占位模型名，实际模型由服务端配置覆盖
+  protocol: "chatCompletions" as const, // 与上游保持对话补全协议
+};
+
+// 平台内置模型的用途标识：服务端按 "snowflake:<用途>" 读取 OPENAI_MODEL_<用途>。
+// 增加用途时只需在这里加一项，并在服务端 .env 补同名变量，服务端没有需要同步的常量。
+export const SNOWFLAKE_MODELS = {
+  assistant: "snowflake:assistant", // 助手对话与面试使用，对应 OPENAI_MODEL_ASSISTANT
+  parser: "snowflake:parser", // 导入简历解析使用，对应 OPENAI_MODEL_PARSER
 };

@@ -1312,6 +1312,7 @@
   "debug_tabData": "Data",
   "debug_tabUi": "UI",
   "debug_tabConfig": "Config",
+  "debug_tabUsage": "Usage",
   "debug_tabChat": "Messages",
   "debug_editorLoadTime": "Editor load time",
   "debug_previewLoadTime": "Preview load time",

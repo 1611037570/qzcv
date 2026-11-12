@@ -992,6 +992,8 @@
   "resumeImportInvalidBackup": "无效的简历备份结构",
   "resumeImportJsonParseFailed": "简历文件解析失败，请检查文件格式",
   "resumeImportModelUnconfigured": "未配置",
+  "snowflakeModelAssistant": "助手模型",
+  "snowflakeModelParser": "解析模型",
   "resumeImportInvalidJson": "简历解析结果不是有效 JSON",
   "resumeImportJsonNotObject": "简历解析结果不是对象",
   "resumeImportWarningUnmatchedContent": "{module}：未能匹配字段，原内容：{content}",

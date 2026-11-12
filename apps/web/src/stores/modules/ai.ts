@@ -5,6 +5,8 @@ import { computed, ref } from "vue";
 import { useResumeStore } from "@/stores/modules/resume";
 import type { AiChatSummary } from "@/stores/modules/resume/resumeCatalog";
 import type { ResumeAgentTaskState, ResumeAssistantMode } from "@snowflake/resume-agent";
+import { SNOWFLAKE_MODELS, snowflake } from "@/configs/modules/ai";
+import { $t } from "@/locales";
 export type Chat = {
   // 对话记录id
   id: string;
@@ -116,7 +118,7 @@ export type ProviderCredential = {
   /** 新添加模型默认使用的请求协议。 */
   protocol: ModelProtocol;
 };
-// 已添加的模型（用户实际使用的模型配置）
+// 模型条目：平台内置模型与用户自行添加的模型共用同一结构
 export type ModelItem = {
   // 模型唯一标识
   id: string;
@@ -139,6 +141,12 @@ export type AiAgentKey = "xiaoZhou" | "xiaoYang" | "resumeParser";
 export type AiAgentModels = Record<AiAgentKey, string>;
 // 添加模型时提交的配置（表单或内置模板，不含 id）
 type ModelDraft = Omit<ModelItem, "id">;
+// 每个角色默认使用的内置模型
+const DEFAULT_AGENT_MODEL: AiAgentModels = {
+  xiaoZhou: "builtin-assistant", // 简历助手使用助手模型
+  xiaoYang: "builtin-assistant", // 面试官使用助手模型
+  resumeParser: "builtin-parser", // 简历解析使用解析模型
+};
 // 默认对话记录标题
 const DEFAULT_CHAT_TITLE = "新对话";
 // 默认系统提示
@@ -153,10 +161,36 @@ const resumeAssistantChatKey = (id: string) => `resume-assistant-chat:${id}`;
 export const useAiStore = defineStore(
   "ai",
   () => {
-    // 已添加的用户模型列表（持久化到 localStorage）
-    const modelList = ref<ModelItem[]>([]);
+    // 平台内置的两个模型：固定存在、不可删除，请求统一经本站后端转发
+    const builtinModels = computed<ModelItem[]>(() => [
+      {
+        id: DEFAULT_AGENT_MODEL.xiaoZhou, // 内置助手模型标识
+        provider: snowflake.provider, // 平台类型
+        name: $t("snowflakeModelAssistant"), // 展示名称
+        model: SNOWFLAKE_MODELS.assistant, // 服务端据此路由到助手对应的上游模型
+        key: snowflake.apiKey, // 访问密钥（占位）
+        url: snowflake.baseUrl, // 完整接口地址
+        protocol: snowflake.protocol, // 接口协议类型
+        builtin: true, // 标记为平台内置
+      },
+      {
+        id: DEFAULT_AGENT_MODEL.resumeParser, // 内置解析模型标识
+        provider: snowflake.provider, // 平台类型
+        name: $t("snowflakeModelParser"), // 展示名称
+        model: SNOWFLAKE_MODELS.parser, // 服务端据此路由到解析对应的上游模型
+        key: snowflake.apiKey, // 访问密钥（占位）
+        url: snowflake.baseUrl, // 完整接口地址
+        protocol: snowflake.protocol, // 接口协议类型
+        builtin: true, // 标记为平台内置
+      },
+    ]);
+    // 用户自行添加的模型（持久化），由浏览器带自己的密钥直连服务商，不经过本站后端
+    // 不兼容旧版本地存储：历史上混合内置项的 modelList 直接丢弃，用户重新添加即可
+    const storedModels = ref<ModelItem[]>([]);
     // 服务商凭据单独持久化，尚未添加模型也能保存密钥。
     const providerCredentials = ref<Record<string, ProviderCredential>>({});
+    // 对外统一列表：平台内置在前，用户自建在后
+    const modelList = computed<ModelItem[]>(() => [...builtinModels.value, ...storedModels.value]);
     // 小舟负责简历、小羊负责面试，各自独立绑定模型。
     const agentModels = ref<AiAgentModels>({
       xiaoZhou: "", // 简历助手小舟绑定的模型编号。
@@ -339,7 +373,7 @@ export const useAiStore = defineStore(
       chat.title = content.length > 15 ? `${content.slice(0, 15)}...` : content;
     }
 
-    // ========== 模型管理方法 ==========
+    // ========== 角色与模型 ==========
 
     // 保存用户明确提交的服务商配置，不覆盖已有模型的独立配置。
     function saveProviderCredential(provider: string, credential: ProviderCredential) {
@@ -350,7 +384,7 @@ export const useAiStore = defineStore(
       };
     }
 
-    /** 部署表单或内置模板提交的配置到已添加列表 */
+    /** 部署表单提交的配置到用户自建列表，平台内置模型不经过此处 */
     function deployModel(draft: ModelDraft) {
       const deployed: ModelItem = {
         id: `custom-${getUUID().slice(0, 8)}`,
@@ -362,15 +396,15 @@ export const useAiStore = defineStore(
         protocol: draft.protocol,
         builtin: draft.builtin,
       };
-      modelList.value.push(deployed);
+      storedModels.value.push(deployed);
       return deployed;
     }
 
-    /** 删除已添加的模型 */
+    /** 删除用户自建的模型；平台内置模型不在自建列表里，天然无法删除 */
     function deleteModel(modelId: string) {
-      const idx = modelList.value.findIndex((model) => model.id === modelId);
+      const idx = storedModels.value.findIndex((model) => model.id === modelId);
       if (idx > -1) {
-        modelList.value.splice(idx, 1);
+        storedModels.value.splice(idx, 1);
       }
       // 同步解绑引用了该模型的角色，避免删除后仍保持选中态
       (Object.keys(agentModels.value) as AiAgentKey[]).forEach((agent) => {
@@ -378,9 +412,11 @@ export const useAiStore = defineStore(
       });
     }
 
-    // 获取角色绑定的模型
+    // 获取角色绑定的模型：存储里可能残留已下线的标识，统一回落到默认内置模型
     function getAgentModelId(agent: AiAgentKey) {
-      return agentModels.value[agent];
+      const current = agentModels.value[agent];
+      if (current && modelList.value.some((model) => model.id === current)) return current;
+      return modelList.value.length ? DEFAULT_AGENT_MODEL[agent] : "";
     }
 
     // 保存角色绑定的模型
@@ -400,6 +436,7 @@ export const useAiStore = defineStore(
 
     return {
       modelList,
+      storedModels,
       providerCredentials,
       agentModels,
       thinkMode,
@@ -431,8 +468,10 @@ export const useAiStore = defineStore(
     persist: {
       // 简历助手对话一并持久化到 localStorage，刷新后可恢复最近对话
       storage: localStorage,
+      // 这里的键必须与 setup 返回值一致，否则插件取不到也不会报错，数据会静默丢失。
       pick: [
-        "modelList",
+        // 只持久化用户自建模型；平台内置模型由前端常量提供，不写入本地存储
+        "storedModels",
         "providerCredentials",
         "agentModels",
         "thinkMode",

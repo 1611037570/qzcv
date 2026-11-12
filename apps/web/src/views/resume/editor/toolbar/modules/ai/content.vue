@@ -53,7 +53,7 @@ const agentCards = computed<Array<{
   },
 ]);
 
-// 角色选择器展示已添加的模型配置
+// 角色选择器展示可用的模型配置：平台内置两个，另有用户自建的模型
 const modelOptions = computed(() =>
   modelList.value.map((model) => ({
     value: model.id,

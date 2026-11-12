@@ -14,7 +14,7 @@ const dropdownRef = ref();
 // 编辑器模型下拉与设置中的小舟角色共用持久化模型配置
 const selectedModel = computed(() => aiStore.getAgentModelId("xiaoZhou"));
 
-// 模型选项列表：仅已添加的自定义模型（至少要有 provider 和 key 才展示）
+// 模型选项列表：平台内置模型与用户自建模型（至少要有 provider 和 key 才展示）
 const configuredModels = computed(() => {
   const options: Array<{ id: string; name: string; active: boolean }> = [];
   modelList.value.forEach((model) => {
@@ -33,7 +33,7 @@ const modelOptions = computed(() => [
   { id: ADD_MODEL_OPTION_ID, name: $t("aiChat_addModel"), active: false },
 ]);
 
-// 触发按钮文本：选中的自定义模型名，未选中自定义模型时回退到内置雪花服务
+// 触发按钮文本：选中的模型名，未选中时回退到内置雪花服务
 const activeName = computed(() => {
   const current = configuredModels.value.find((item) => item.id === selectedModel.value);
   return current ? current.name : $t("aiChat_snowflakeService");
@@ -57,7 +57,7 @@ function goToAddModel() {
 </script>
 
 <template>
-  <!-- 无已添加模型：按钮直接变为「去添加模型」 -->
+  <!-- 无可用模型：按钮直接变为「去添加模型」 -->
   <div
     v-if="!configuredModels.length"
     class="flex cursor-pointer items-center gap-0.5 truncate rounded-3xl border border-transparent px-2 py-1.5 text-[12px] font-semibold text-sf-warning select-none hover:bg-sf-bg-2"
