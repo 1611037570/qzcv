@@ -9,8 +9,8 @@
     @click="drawerVisible = !drawerVisible"
   />
 
-  <!-- 抽屉：关闭时销毁内容，避免内容常驻导致关闭后仍持续序列化整份数据 -->
-  <el-drawer v-model="drawerVisible" :title="$t('debug_consoleTitle')" direction="rtl" size="50%" destroy-on-close>
+  <!-- 抽屉挂到 body：工具栏容器带 transform，若不脱离会按工具栏宽度计算尺寸 -->
+  <el-drawer v-model="drawerVisible" append-to-body :title="$t('debug_consoleTitle')" direction="rtl" :size="isMobile ? '100%' : '50%'" destroy-on-close>
     <div v-if="drawerVisible" class="flex flex-col gap-3 p-3">
       <SfTab :list="tabList" v-model="activeTab">
         <SfTabPane value="performance">
@@ -68,35 +68,45 @@
           </SfCollapse>
         </SfTabPane>
         <SfTabPane value="config">
-          <SfCollapse>
-            <!-- 运行时配置展示编辑器实际使用的完整表单结构 -->
-            <SfCollapseItem name="runtimeConfig">
-              <template #title>{{ $t("debug_runtimeConfigTitle") }}</template>
-              <div class="max-h-[50vh] overflow-y-auto">
-                <div v-for="(value, key) in runtimeConfig ?? {}" :key="key" class="mb-3">
-                  <div class="mb-3 font-medium">{{ key }}</div>
-                  <SfMdPreview
-                    :modelValue="fieldMd(value)"
-                    editorId="debug-runtime-config"
-                    :codeFoldable="false"
-                    class="bg-transparent! p-0!"
-                  />
-                </div>
-              </div>
-            </SfCollapseItem>
-            <SfCollapseItem name="currentConfig">
-              <template #title>{{ $t("debug_currentConfigTitle") }}</template>
-              <div class="max-h-[50vh] overflow-y-auto">
-                <div v-for="(value, key) in currentConfig ?? {}" :key="key" class="mb-3">
-                  <div class="mb-3 font-medium">{{ key }}</div>
-                  <SfMdPreview
-                    :modelValue="fieldMd(value)"
-                    editorId="debug-config"
-                    :codeFoldable="false"
-                    class="bg-transparent! p-0!"
-                  />
-                </div>
-              </div>
+          <!-- 按模块拆开，避免整份表单结构挤在一个代码块里 -->
+          <div class="flex flex-col gap-3">
+            <h3 class="text-xs font-medium text-sf-text-2">{{ $t("debug_runtimeConfigTitle") }}</h3>
+            <SfCollapse v-model="runtimeActiveNames">
+              <SfCollapseItem v-for="module in runtimeModules" :key="module.key" :name="module.key">
+                <template #title>{{ module.key }}</template>
+                <SfMdPreview
+                  :modelValue="fieldMd(module)"
+                  :editorId="`debug-runtime-${module.key}`"
+                  :codeFoldable="false"
+                  class="bg-transparent! p-0!"
+                />
+              </SfCollapseItem>
+            </SfCollapse>
+            <h3 class="text-xs font-medium text-sf-text-2">{{ $t("debug_currentConfigTitle") }}</h3>
+            <SfCollapse v-model="configActiveNames">
+              <SfCollapseItem v-for="module in currentModules" :key="module.key" :name="module.key">
+                <template #title>{{ module.key }}</template>
+                <SfMdPreview
+                  :modelValue="fieldMd(module)"
+                  :editorId="`debug-config-${module.key}`"
+                  :codeFoldable="false"
+                  class="bg-transparent! p-0!"
+                />
+              </SfCollapseItem>
+            </SfCollapse>
+          </div>
+        </SfTabPane>
+        <SfTabPane value="usage">
+          <SfCollapse v-model="usageActiveNames">
+            <!-- 使用信息按顶层 key 独立折叠，与界面 Tab 保持一致 -->
+            <SfCollapseItem v-for="(value, key) in currentUsage ?? {}" :key="key" :name="key">
+              <template #title>{{ key }}</template>
+              <SfMdPreview
+                :modelValue="fieldMd(value)"
+                :editorId="`debug-usage-${key}`"
+                :codeFoldable="false"
+                class="bg-transparent! p-0!"
+              />
             </SfCollapseItem>
           </SfCollapse>
         </SfTabPane>
@@ -156,16 +166,22 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { useAiStore, useResumeStore } from "@/stores";
+import { useAiStore, useResumeStore, useSystemStore } from "@/stores";
 import { storeToRefs } from "pinia";
 import confirm from "@/components/business/confirm";
 import { $t } from "@/locales";
 import Icon from "../components/icon.vue";
 
 const drawerVisible = ref(false);
+// 移动端抽屉全屏展示，避免半屏宽度下内容被压缩
+const systemStore = useSystemStore();
+const { isMobile } = storeToRefs(systemStore);
 // 数据和界面 Tab 均按顶层 key 各自折叠
 const dataActiveNames = ref([]);
 const uiActiveNames = ref([]);
+const usageActiveNames = ref([]);
+const runtimeActiveNames = ref([]);
+const configActiveNames = ref([]);
 
 // 顶部 Tab：性能 / 数据 / 界面 / 配置 / 消息对话
 const activeTab = ref("performance");
@@ -174,6 +190,7 @@ const tabList = computed(() => [
   { name: $t("debug_tabData"), value: "data" },
   { name: $t("debug_tabUi"), value: "ui" },
   { name: $t("debug_tabConfig"), value: "config" },
+  { name: $t("debug_tabUsage"), value: "usage" },
   { name: $t("debug_tabChat"), value: "chat" },
 ]);
 // 性能折叠面板：默认展开
@@ -181,8 +198,12 @@ const performanceActiveNames = ref(["runtime", "env"]);
 
 // 获取原始数据
 const resumeStore = useResumeStore();
-const { currentData, currentConfig, currentUI, runtimeConfig, system, runtimeData } =
+const { currentData, currentConfig, currentUI, currentUsage, runtimeConfig, system, runtimeData } =
   storeToRefs(resumeStore);
+
+// 配置按模块拆开展示：运行时结构在 fields 上，持久化结构在 modules 上
+const runtimeModules = computed(() => runtimeConfig.value?.fields ?? []);
+const currentModules = computed(() => currentConfig.value?.modules ?? []);
 
 // 运行性能数据展示：耗时统一按毫秒展示
 const performanceRows = computed(() => {
