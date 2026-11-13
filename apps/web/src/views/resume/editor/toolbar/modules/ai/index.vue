@@ -23,7 +23,8 @@ function openDrawer() {
     <!-- 由统一滚动条承载设置内容，外壳负责留白，不重复增加横向间距。 -->
     <div class="h-[min(660px,calc(90svh-84px))] overflow-hidden">
       <SfScrollbar flush>
-        <ProviderSettingsContent />
+        <!-- 内容禁止被滚动视图压缩：卡片被压矮后会用自身 overflow-hidden 裁掉内容，滚动条永远不出现。 -->
+        <ProviderSettingsContent class="shrink-0" />
       </SfScrollbar>
     </div>
   </SfModal>
