@@ -141,11 +141,10 @@ export type AiAgentKey = "xiaoZhou" | "xiaoYang" | "resumeParser";
 export type AiAgentModels = Record<AiAgentKey, string>;
 // 添加模型时提交的配置（表单或内置模板，不含 id）
 type ModelDraft = Omit<ModelItem, "id">;
-// 每个角色默认使用的内置模型
-const DEFAULT_AGENT_MODEL: AiAgentModels = {
-  xiaoZhou: "builtin-assistant", // 简历助手使用助手模型
-  xiaoYang: "builtin-assistant", // 面试官使用助手模型
-  resumeParser: "builtin-parser", // 简历解析使用解析模型
+// 平台内置模型的稳定标识，仅供内置模型声明使用；角色未绑定时不自动指向它们
+const BUILTIN_MODEL_IDS = {
+  assistant: "builtin-assistant", // 内置助手模型标识
+  parser: "builtin-parser", // 内置解析模型标识
 };
 // 默认对话记录标题
 const DEFAULT_CHAT_TITLE = "新对话";
@@ -164,7 +163,7 @@ export const useAiStore = defineStore(
     // 平台内置的两个模型：固定存在、不可删除，请求统一经本站后端转发
     const builtinModels = computed<ModelItem[]>(() => [
       {
-        id: DEFAULT_AGENT_MODEL.xiaoZhou, // 内置助手模型标识
+        id: BUILTIN_MODEL_IDS.assistant, // 内置助手模型标识
         provider: snowflake.provider, // 平台类型
         name: $t("snowflakeModelAssistant"), // 展示名称
         model: SNOWFLAKE_MODELS.assistant, // 服务端据此路由到助手对应的上游模型
@@ -174,7 +173,7 @@ export const useAiStore = defineStore(
         builtin: true, // 标记为平台内置
       },
       {
-        id: DEFAULT_AGENT_MODEL.resumeParser, // 内置解析模型标识
+        id: BUILTIN_MODEL_IDS.parser, // 内置解析模型标识
         provider: snowflake.provider, // 平台类型
         name: $t("snowflakeModelParser"), // 展示名称
         model: SNOWFLAKE_MODELS.parser, // 服务端据此路由到解析对应的上游模型
@@ -412,11 +411,10 @@ export const useAiStore = defineStore(
       });
     }
 
-    // 获取角色绑定的模型：存储里可能残留已下线的标识，统一回落到默认内置模型
+    // 获取角色绑定的模型：未绑定或存储残留已下线标识时返回空，不自动提供默认值
     function getAgentModelId(agent: AiAgentKey) {
       const current = agentModels.value[agent];
-      if (current && modelList.value.some((model) => model.id === current)) return current;
-      return modelList.value.length ? DEFAULT_AGENT_MODEL[agent] : "";
+      return current && modelList.value.some((model) => model.id === current) ? current : "";
     }
 
     // 保存角色绑定的模型

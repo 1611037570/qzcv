@@ -33,10 +33,10 @@ const modelOptions = computed(() => [
   { id: ADD_MODEL_OPTION_ID, name: $t("aiChat_addModel"), active: false },
 ]);
 
-// 触发按钮文本：选中的模型名，未选中时回退到内置雪花服务
+// 触发按钮文本：选中的模型名，未绑定时不显示默认模型，如实提示未配置
 const activeName = computed(() => {
   const current = configuredModels.value.find((item) => item.id === selectedModel.value);
-  return current ? current.name : $t("aiChat_snowflakeService");
+  return current ? current.name : $t("aiChat_modelNotConfigured");
 });
 
 // 点击模型项：切换为当前使用模型
