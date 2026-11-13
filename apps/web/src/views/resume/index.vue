@@ -79,9 +79,10 @@ if (!route.meta.hideResumeLayout) statisticsStore.initStartDate();
     <SfButton plain @click="router.push('/resume')">{{ $t("resumeLoadBackHome") }}</SfButton>
   </section>
   <LoadingComponent v-else-if="!resumeReady" class="h-svh w-full" />
-  <router-view v-else-if="route.meta.hideResumeLayout" class="h-screen w-full" />
+  <router-view v-else-if="route.meta.hideResumeLayout" class="h-svh w-full" />
   <!-- 公开布局就绪标记供构建预渲染等待，不改变页面显示。 -->
-  <main v-else :data-prerender-route="route.path" class="relative flex h-screen min-w-full flex-col bg-sf-page">
+  <!-- 根容器用 svh 对齐移动端实际可见高度，避免 100vh 超出视口导致 body 与页面内部出现双滚动条。 -->
+  <main v-else :data-prerender-route="route.path" class="relative flex h-svh min-w-full flex-col bg-sf-page">
     <!-- 首页使用独立顶部导航，保持全宽。 -->
     <template v-if="isResumeHome">
       <HomeNavigation />

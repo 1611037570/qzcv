@@ -12,7 +12,7 @@
         <!-- 弹窗容器 -->
         <div
           class="flex flex-col border border-sf-b p-3"
-          :class="[bgClass, full ? 'h-screen w-screen rounded-none' : 'max-h-[90vh] max-w-[90vw] rounded-3xl']"
+          :class="[bgClass, full ? 'h-svh w-screen rounded-none' : 'max-h-[90vh] max-w-[90vw] rounded-3xl']"
           :style="widthStyle"
         >
           <!-- 标题和关闭按钮 -->
