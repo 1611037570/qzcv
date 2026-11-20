@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { AI_USAGE_AGENTS, pruneAiUsageModels, useAiUsage, type AiUsageStats } from "@/apis/llm/usage";
+import { formatCount } from "@/utils";
 import { useAiStore } from "@/stores";
 import type { AiAgentKey } from "@/stores/modules/ai";
 import UsageShareBar from "./usageShareBar.vue";
@@ -116,7 +117,7 @@ void load();
           <strong class="text-2xl font-semibold tabular-nums text-sf-theme">{{ showNumbers ? formatNumber(totalCount) : '—' }}</strong>
           <span class="text-sm text-sf-text-2">{{ t("resumeAiUsageTimes") }}</span>
           <span class="text-sm text-sf-text-2">{{ t("resumeAiUsageTotalTokens") }}</span>
-          <strong class="text-2xl font-semibold tabular-nums text-sf-theme">{{ showNumbers ? formatNumber(totalTokens) : '—' }}</strong>
+          <strong class="text-2xl font-semibold tabular-nums text-sf-theme">{{ showNumbers ? formatCount(totalTokens) : '—' }}</strong>
         </div>
         <UsageShareBar v-if="roleShares.length" :items="roleShares" />
       </section>
@@ -140,7 +141,7 @@ void load();
           <dl class="flex flex-wrap gap-3 text-xs text-sf-text-2">
             <div class="flex gap-[3px]"><dt>{{ t("resumeAiUsageCount") }}</dt><dd class="tabular-nums text-sf-text">{{ formatNumber(row.stat.count) }}</dd></div>
             <div class="flex gap-[3px]"><dt>{{ t("resumeAiUsageFailedCount") }}</dt><dd class="tabular-nums text-sf-text">{{ formatNumber(row.stat.failed) }}</dd></div>
-            <div class="flex gap-[3px]"><dt>{{ t("resumeAiUsageTokens") }}</dt><dd class="tabular-nums text-sf-text">{{ formatNumber(row.stat.totalTokens) }}</dd></div>
+            <div class="flex gap-[3px]"><dt>{{ t("resumeAiUsageTokens") }}</dt><dd class="tabular-nums text-sf-text">{{ formatCount(row.stat.totalTokens) }}</dd></div>
           </dl>
           <UsageShareBar v-if="row.models.length" :items="row.models" />
         </article>

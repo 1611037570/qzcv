@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useClipboard } from "@vueuse/core";
 import { ElMessage } from "element-plus";
 import { $t } from "@/locales";
+import { formatCount } from "@/utils";
 
 const props = defineProps({
   // 本轮 Agent 运行观测数据
@@ -42,7 +43,7 @@ const copySnapshot = async () => {
     <div class="flex flex-wrap items-center gap-3">
       <span>{{ $t("aiChat_runEntry") }} {{ run.source }}</span>
       <span>{{ $t("aiChat_runDuration", { time: ((run.durationMs || 0) / 1000).toFixed(1) }) }}</span>
-      <span v-if="run.tokens">{{ $t("aiChat_runTokens", { tokens: run.tokens }) }}</span>
+      <span v-if="run.tokens">{{ $t("aiChat_runTokens", { tokens: formatCount(run.tokens) }) }}</span>
       <span>{{ $t("aiChat_runToolCount", { count: stepCount }) }}</span>
       <span v-if="blockedCount">{{ $t("aiChat_runBlocked", { count: blockedCount }) }}</span>
       <button

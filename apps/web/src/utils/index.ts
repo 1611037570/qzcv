@@ -9,5 +9,6 @@ import "./modules/fontRegistry";
 export * from "./modules/base";
 
 export * from "./modules/sizeConvert";
+export * from "./modules/formatCount";
 export * from "./modules/url";
 export { default as eventBus } from "./modules/eventBus";

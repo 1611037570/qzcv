@@ -9,6 +9,7 @@ import ReportPanel from "./reportPanel.vue";
 import ChangeList from "./changeList.vue";
 import { parseResumeReport, stripResumeReportBlock } from "@snowflake/resume-agent";
 import { onBeforeUnmount, ref, watch } from "vue";
+import { formatCount } from "@/utils";
 
 const props = defineProps({
   msg: {
@@ -171,7 +172,7 @@ const animatedTokens = useTransition(
 
       <div class="flex items-center gap-3 text-[11px] text-sf-text-2">
         <div v-if="msg.total_tokens" class="flex items-center gap-1">
-          <span>{{ Math.round(animatedTokens) }} tokens</span>
+          <span>{{ formatCount(animatedTokens) }} tokens</span>
         </div>
         <span v-if="showTotalTime"> {{ $t("aiChat_totalTime", { time: totalTime }) }} </span>
       </div>
