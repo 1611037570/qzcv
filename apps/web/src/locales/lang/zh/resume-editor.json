@@ -541,6 +541,8 @@
   "template": "模板",
   "renameResume": "重命名简历",
   "feedbackShort": "反馈",
+  "updateLog": "更新日志",
+  "currentVersion": "当前版本",
   "editTitle": "编辑标题",
   "moduleTitleHint": "优先使用默认标题，如需修改请保留原语义，避免影响 ATS 识别。",
   "titlePlaceholder": "请输入标题",

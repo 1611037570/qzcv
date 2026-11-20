@@ -6,6 +6,8 @@ import { useMediaQuery } from "@vueuse/core";
 import version from "@/configs/modules/version";
 const start = "2020-09-03";
 const MOBILE_WIDTH = 768;
+// 调试开关：true 时 dev 环境也执行版本检测，便于验证更新提示；上线前改回 false
+const DEBUG_FORCE_VERSION_CHECK = true;
 export const useSystemStore = defineStore(
   "system",
   () => {
@@ -37,6 +39,8 @@ export const useSystemStore = defineStore(
     const isConnected = ref<boolean>(false);
     // 记录主要输入设备是否支持悬停。
     const canHover = useMediaQuery("(hover: hover)");
+    // 已读更新日志的最新标识，用于判断编辑器是否提示更新内容
+    const lastReadLogId = ref<string>("");
 
     /**
      * 获取最新版本号
@@ -56,23 +60,24 @@ export const useSystemStore = defineStore(
 
     /**
      * 检测版本更新
-     * 当最新版本与当前版本不匹配时，刷新页面
+     * 发现新版本时直接刷新页面，加载最新资源，避免继续使用旧缓存
      */
     const checkVersionUpdate = async () => {
-      // 非生产环境跳过版本检测，dev 无需请求 version.json
-      if (!config.app.prod) return;
+      // 非生产环境跳过版本检测，dev 无需请求 version.json；调试开关打开时不跳过
+      if (!config.app.prod && !DEBUG_FORCE_VERSION_CHECK) return;
       try {
         // 使用新的getVersion方法获取版本号
         const newVersion = await getVersion();
 
-        // 版本不一致，执行强制刷新
+        // 版本不一致，记录新版本并直接刷新加载最新资源
         if (newVersion !== currentVersion.value) {
-          console.log("版本不一致，执行强制刷新");
           currentVersion.value = newVersion;
           window.location.reload();
           return;
         }
-      } catch {}
+      } catch {
+        // 检测失败静默跳过，等待下次路由切换重试
+      }
     };
 
     /**
@@ -108,6 +113,7 @@ export const useSystemStore = defineStore(
       pastePlainText,
       isConnected,
       canHover,
+      lastReadLogId,
       getVersion,
       checkVersionUpdate,
       // initVersion,
@@ -116,7 +122,7 @@ export const useSystemStore = defineStore(
   {
     persist: {
       storage: localStorage,
-      pick: ["monitorWatch", "currentVersion", "performanceMode", "pastePlainText"],
+      pick: ["monitorWatch", "currentVersion", "performanceMode", "pastePlainText", "lastReadLogId"],
     },
   },
 );
