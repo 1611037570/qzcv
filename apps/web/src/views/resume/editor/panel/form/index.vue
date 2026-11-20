@@ -9,6 +9,7 @@ import { defineAsyncComponent, nextTick } from "vue";
 import { RESUME_OPTIONS } from "@/stores/modules/resume/config/resumeOptions";
 import { useRuntimeData } from "../../hooks/useRuntimeData";
 import ModuleSidebar from "./moduleSidebar/index.vue";
+import MobileModuleNav from "./components/mobileModuleNav.vue";
 import HeightWeight from "./components/field/heightWeight.vue";
 import Portfolio from "./components/field/portfolio.vue";
 import SchoolLogo from "./components/field/schoolLogo.vue";
@@ -250,12 +251,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="relative h-full"
+    class="relative flex h-full flex-col"
     @click.capture="markEditingModule"
     @keydown.capture="prepareKeyboardModuleFocus"
     @focusin.capture="markKeyboardEditingModule"
   >
-    <div class="flex h-full min-h-0 w-full">
+    <!-- 移动端模块横滑导航：编辑标签顶部提供模块名称快捷定位，替代抽屉内的操作按钮形态 -->
+    <MobileModuleNav v-if="isMobile" />
+    <div class="flex min-h-0 w-full flex-1">
       <ModuleSidebar v-if="!isMobile" />
       <SfScrollbar class="resume-editor-form relative h-full min-h-0">
         <FormLoading v-if="!showDynamicForm || !runtimeConfig" />
