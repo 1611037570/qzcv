@@ -7,7 +7,7 @@ import version from "@/configs/modules/version";
 const start = "2020-09-03";
 const MOBILE_WIDTH = 768;
 // 调试开关：true 时 dev 环境也执行版本检测，便于验证更新提示；上线前改回 false
-const DEBUG_FORCE_VERSION_CHECK = true;
+const DEBUG_FORCE_VERSION_CHECK = false;
 export const useSystemStore = defineStore(
   "system",
   () => {

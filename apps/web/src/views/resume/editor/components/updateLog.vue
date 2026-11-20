@@ -8,7 +8,7 @@ import { useSystemStore } from "@/stores/modules/system";
 import { $t } from "@/locales";
 
 // 调试开关：true 时每次进入编辑器都强制提示且不写已读，便于反复验证展示与自动关闭；上线前改回 false
-const DEBUG_FORCE_UPDATE_LOG = true;
+const DEBUG_FORCE_UPDATE_LOG = false;
 
 const systemStore = useSystemStore();
 const { lastReadLogId } = storeToRefs(systemStore);
