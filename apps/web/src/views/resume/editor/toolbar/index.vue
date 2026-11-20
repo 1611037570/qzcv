@@ -10,6 +10,7 @@ import CopyResume from "./modules/copyResume.vue";
 import Donation from "./modules/donation.vue";
 import QaAnswer from "./modules/qaAnswer.vue";
 import LiuyaoWenxin from "./modules/liuyaoWenxin.vue";
+import OneToOneOptimize from "./modules/oneToOneOptimize.vue";
 import OnlineWriters from "../../components/onlineWriters.vue";
 import { $t } from "@/locales";
 
@@ -113,7 +114,7 @@ const toolbarItems = computed(() => [
     </button>
 
     <div
-      class="flex flex-col items-center justify-center"
+      class="flex flex-col items-center justify-center gap-3"
       :class="isMobile && 'mobile-toolbar-panel h-svh  border-l border-sf-b bg-sf-primary p-3'"
     >
       <!-- 工具栏按内容自然撑开，不在工具轨内部生成滚动条。 -->
@@ -128,6 +129,10 @@ const toolbarItems = computed(() => [
           <component v-else :is="item.component" v-bind="item.attrs" />
         </template>
       </div>
+
+      <!-- 悬浮窗下方独立广告位：线条分隔后单独显示 1v1 简历优化，不并入工具轨 -->
+      <div class="h-px w-6 bg-sf-b opacity-60"></div>
+      <OneToOneOptimize />
     </div>
   </div>
 
