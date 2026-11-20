@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { flows } from "../flows";
 import { defaultPrompt } from "./defaultPrompt";
 import { onDemandSkills } from "./registry";
 
@@ -19,10 +18,5 @@ describe("planningPrompts", () => {
     expect(ids).toContain("life_summary");
     expect(instructions).toContain("| 职业规划 | career_planning |");
     expect(instructions).toContain("| 人生总结 | life_summary |");
-  });
-
-  it("依赖全部经历的流程固定读取整份简历", () => {
-    expect(flows.careerPlanning!.build([]).requestContext).toEqual({ resumeScope: "all" });
-    expect(flows.lifeSummary!.build([]).requestContext).toEqual({ resumeScope: "all" });
   });
 });

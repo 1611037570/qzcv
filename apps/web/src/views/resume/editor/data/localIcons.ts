@@ -126,6 +126,7 @@ import PhExamDuotoneIcon from "@iconify-vue/ph/exam-duotone";
 import PhFilePlusDuotoneIcon from "@iconify-vue/ph/file-plus-duotone";
 import PhHandWavingDuotoneIcon from "@iconify-vue/ph/hand-waving-duotone";
 import PhInfoDuotoneIcon from "@iconify-vue/ph/info-duotone";
+import PhListChecksDuotoneIcon from "@iconify-vue/ph/list-checks-duotone";
 import PhListDuotoneIcon from "@iconify-vue/ph/list-duotone";
 import PhMagicWandDuotoneIcon from "@iconify-vue/ph/magic-wand-duotone";
 import PhMicrophoneDuotoneIcon from "@iconify-vue/ph/microphone-duotone";
@@ -307,6 +308,7 @@ export const PROJECT_ICON_LIST: Record<string, Component> = {
   "ph:file-plus-duotone": PhFilePlusDuotoneIcon,
   "ph:hand-waving-duotone": PhHandWavingDuotoneIcon,
   "ph:info-duotone": PhInfoDuotoneIcon,
+  "ph:list-checks-duotone": PhListChecksDuotoneIcon,
   "ph:list-duotone": PhListDuotoneIcon,
   "ph:magic-wand-duotone": PhMagicWandDuotoneIcon,
   "ph:microphone-duotone": PhMicrophoneDuotoneIcon,

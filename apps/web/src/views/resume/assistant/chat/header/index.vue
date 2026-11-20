@@ -53,7 +53,7 @@ function createNewChat() {
           :list="modeTabs"
           :model-value="props.mode"
           :disabled="props.isGenerating"
-          class="h-9 w-48! text-sm"
+          class="mode-tab h-9 w-48! text-sm"
           :aria-label="$t('aiChat_newChatMode')"
           @update:model-value="emit('selectMode', $event)"
         />
@@ -95,4 +95,19 @@ function createNewChat() {
   </div>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+/* 智能体/聊天模式标签改用中性配色：激活指示器与底色区分，不再使用主题色。 */
+.mode-tab {
+  :deep(.bg-sf-theme) {
+    background-color: var(--color-sf-primary);
+  }
+
+  :deep(.text-sf-theme-text) {
+    color: var(--color-sf-text);
+  }
+
+  :deep(.hover\:bg-sf-theme-2:hover) {
+    background-color: var(--color-sf-bg-2);
+  }
+}
+</style>

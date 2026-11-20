@@ -35,15 +35,6 @@ export type SuggestCard = {
   flow: string; // 对应简历引导流程。
   // 编辑器建议仅保留简历功能，面试由独立栏目承接。
   category: "resume";
-  // 功能介绍用于建议卡片启动前展示能力、耗时与适用场景
-  intro?: {
-    badge?: string; // 功能介绍标签。
-    duration: string; // 预计耗时说明。
-    description: string; // 功能用途。
-    features: string[]; // 能力说明列表。
-    scene: string; // 适用场景。
-    action: string; // 开始操作文案。
-  };
 };
 
 // 宿主组装后传给 chat 的配置，技能与工具均由调用方传入
