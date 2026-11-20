@@ -223,7 +223,7 @@ const handleConfirmCrop = async (cropper) => {
           @click="openPicker"
         >
           <SfIcon icon="ic:round-file-upload" size="5" />
-          <span class="text-xs">{{ $t("reuploadImage") }}</span>
+          <span class="text-xs">{{ $t("reselectImage") }}</span>
         </div>
         <div
           class="flex cursor-pointer items-center gap-[3px] rounded-md transition-colors hover:text-sf-theme"

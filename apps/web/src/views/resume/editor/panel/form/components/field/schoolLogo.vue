@@ -43,6 +43,21 @@ const handleConfirmCrop = async (cropper) => {
     console.error("校徽裁切压缩失败:", error);
   }
 };
+
+// 图片查看器显隐
+const previewVisible = ref(false);
+
+// 导出当前校徽，并根据图片格式设置文件扩展名。
+const exportLogo = () => {
+  const format = image.value.match(/^data:image\/([a-zA-Z0-9.+-]+)/)?.[1]?.toLowerCase();
+  const extension = format === "jpeg" ? "jpg" : format === "svg+xml" ? "svg" : format || "webp";
+  const link = document.createElement("a");
+  link.href = image.value;
+  link.download = `${$t("schoolLogo")}.${extension}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
 onBeforeUnmount(closeCrop);
 </script>
 
@@ -62,7 +77,7 @@ onBeforeUnmount(closeCrop);
         <span class="text-xs">{{ loading ? $t("processing") : $t("uploadSchoolLogo") }}</span>
       </template>
     </button>
-    <div v-if="image" class="flex flex-col items-start gap-3">
+    <div v-if="image" class="flex h-full flex-col items-start gap-1">
       <button
         type="button"
         class="flex cursor-pointer items-center gap-[3px] rounded-md text-xs text-sf-text transition-colors hover:text-sf-theme disabled:cursor-wait"
@@ -70,10 +85,27 @@ onBeforeUnmount(closeCrop);
         @click="openPicker"
       >
         <SfIcon icon="ic:round-file-upload" size="5" />
-        <span>{{ loading ? $t("processing") : $t("reuploadImage") }}</span>
+        <span>{{ loading ? $t("processing") : $t("reselectImage") }}</span>
+      </button>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-[3px] rounded-md text-xs text-sf-text transition-colors hover:text-sf-theme"
+        @click="previewVisible = true"
+      >
+        <SfIcon icon="ic:round-zoom-in" size="5" />
+        <span>{{ $t("viewImage") }}</span>
+      </button>
+      <button
+        type="button"
+        class="flex cursor-pointer items-center gap-[3px] rounded-md text-xs text-sf-text transition-colors hover:text-sf-theme"
+        @click="exportLogo"
+      >
+        <SfIcon icon="material-symbols:download" size="5" />
+        <span>{{ $t("exportAvatar") }}</span>
       </button>
     </div>
   </div>
+  <el-image-viewer v-if="previewVisible" :url-list="[image]" @close="previewVisible = false" />
   <ImageCropModal
     :model-value="cropVisible"
     :src="cropSrc"
