@@ -46,6 +46,13 @@ export const findLatestSuccessfulActualEvidence = (
   return undefined;
 };
 
+// 效果级覆盖口径：最近一次执行成功且为真实执行（非复用、非同值）。
+// 完成验收与需求确认共用同一判断，避免两处口径漂移。
+export const hasFreshSuccessfulEvidence = (
+  evidence: ResumeAgentTaskEvidence[],
+  kind: ResumeAgentEvidenceKind,
+) => Boolean(findLatestSuccessfulEvidence(evidence, kind) && findLatestSuccessfulActualEvidence(evidence, kind));
+
 // 每类证据只采用最后一次真实执行结果，汇总其中完整成功证明的业务事实。
 export const collectLatestSuccessfulFacts = (evidence: ResumeAgentTaskEvidence[]) => {
   const latestEvidenceByKind = new Map<ResumeAgentEvidenceKind, ResumeAgentTaskEvidence>();

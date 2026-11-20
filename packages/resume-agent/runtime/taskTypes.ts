@@ -80,6 +80,19 @@ export type ResumeAgentTaskBlocker = {
   suggestion?: string;
 };
 
+export type ResumeAgentTaskRequirement = {
+  // 需求条目的稳定标识，供确认工具与失败计数引用。
+  id: string;
+  // 单条诉求的目标描述。
+  objective: string;
+  // 该条诉求要求真实产生的业务效果；空数组表示文字回复即可。
+  requiredEffects: ResumeAgentRequiredEffect[];
+  // 运行时维护的覆盖状态：pending 待处理，covered 已确认处理。
+  status: "pending" | "covered";
+  // 确认时留下的处理结果说明。
+  note?: string;
+};
+
 export type ResumeAgentTaskState = {
   // 本次任务的稳定标识。
   id: string;
@@ -97,6 +110,8 @@ export type ResumeAgentTaskState = {
   successCondition: string;
   // 本轮选中的通用能力标识。
   capabilityIds: string[];
+  // 用户一条消息拆出的需求清单；单条诉求可省略，清单存在时收口前逐条确认。
+  requirements?: ResumeAgentTaskRequirement[];
   // 由运行时维护的当前执行阶段。
   phase: ResumeAgentTaskPhase;
   // 等待用户补充时保存的缺失事实和问题。
@@ -123,6 +138,8 @@ export type ResumeAgentIncompleteReason = {
     | "evidence_order"
     // 读取范围内的模块没有全部改动。
     | "scope_uncovered"
+    // 多需求清单里仍有未确认的条目。
+    | "requirement_uncovered"
     // 专用报告未按契约输出。
     | "report_invalid"
     // 报告改动与实际写入不一致。

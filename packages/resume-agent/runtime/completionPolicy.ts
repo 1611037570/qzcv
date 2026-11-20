@@ -12,6 +12,7 @@ import {
   findLatestActualChangeEvidence,
   findLatestSuccessfulActualEvidence,
   findLatestSuccessfulEvidence,
+  hasFreshSuccessfulEvidence,
 } from "./taskEvidence";
 
 export type ResolvedResumeAgentCompletionPolicy = {
@@ -36,7 +37,8 @@ export type ResumeAgentCompletionResult = {
   reason: ResumeAgentIncompleteReason | null;
 };
 
-const EVIDENCE_NAMES: Record<ResumeAgentEvidenceKind, string> = {
+// 证据类型的用户可读名称，验收提示与确认工具共用同一口径。
+export const EVIDENCE_NAMES: Record<ResumeAgentEvidenceKind, string> = {
   read: "资料读取", // 资料读取证据的用户可读名称。
   resume_change: "简历写入", // 简历写入证据的用户可读名称。
   draft_submit: "草稿提交", // 草稿提交证据的用户可读名称。
@@ -141,8 +143,7 @@ export const evaluateResumeAgentCompletion = (
 ): ResumeAgentCompletionResult => {
   const missingEvidence = policy.requiredEvidence.filter(
     // 业务效果既要最近一次尝试成功，也要本轮真实执行过，跳过写入不能单独充数。
-    (kind) => !findLatestSuccessfulEvidence(evidence, kind) ||
-      !findLatestSuccessfulActualEvidence(evidence, kind),
+    (kind) => !hasFreshSuccessfulEvidence(evidence, kind),
   );
   const successfulFacts = collectLatestSuccessfulFacts(evidence);
   const missingFacts = policy.requiredFacts.filter((fact) => !successfulFacts.has(fact));

@@ -11,8 +11,10 @@ import type {
 import {
   evaluateResumeAgentCompletion,
   resolveResumeAgentCompletionPolicy,
+  EVIDENCE_NAMES,
   type ResolvedResumeAgentCompletionPolicy,
 } from "./completionPolicy";
+import { hasFreshSuccessfulEvidence } from "./taskEvidence";
 import { createResumeAgentToolExecution } from "./toolExecution";
 import {
   cloneResumeAgentTask,
@@ -22,6 +24,7 @@ import {
   type ResumeAgentIncompleteReason,
   type ResumeAgentTaskEvidence,
   type ResumeAgentTaskRelation,
+  type ResumeAgentTaskRequirement,
   type ResumeAgentTaskState,
 } from "./taskTypes";
 
@@ -39,6 +42,57 @@ const resolveDefaultSuccessCondition = (effects: ResumeAgentRequiredEffect[]) =>
   if (effects.includes("draft_submit")) return "已提交符合用户要求的结构化草稿";
   if (effects.includes("language_update")) return "简历展示语言已同步";
   return "已向用户给出所需结果";
+};
+
+// 校验并归一化规划参数中的需求清单；未提供时返回空清单。
+// 用户一条消息包含多个诉求时必须逐条拆出，收口阶段按清单逐条核对，防止部分诉求被静默遗漏。
+const normalizeTaskRequirements = (
+  raw: unknown,
+): { error?: string; requirements?: ResumeAgentTaskRequirement[] } => {
+  if (raw === undefined) return { requirements: [] };
+  if (!Array.isArray(raw)) return { error: "requirements 必须是数组；只有单一诉求时可省略该字段" };
+  for (const item of raw) {
+    const entry = item as Record<string, unknown> | null;
+    if (!entry || typeof entry.objective !== "string" || !entry.objective.trim()) {
+      return { error: "requirements 每一项都必须提供非空的 objective" };
+    }
+    if (entry.requiredEffects === undefined) continue;
+    if (!Array.isArray(entry.requiredEffects)) {
+      return { error: "requirements 的 requiredEffects 必须是数组" };
+    }
+    const unknownEffect = entry.requiredEffects.find(
+      (effect) => !TASK_REQUIRED_EFFECTS.includes(effect as ResumeAgentRequiredEffect),
+    );
+    if (unknownEffect !== undefined) {
+      return { error: `未知的必需效果 ${String(unknownEffect)}，可选值：${TASK_REQUIRED_EFFECTS.join("、")}` };
+    }
+  }
+  return {
+    requirements: (raw as Record<string, unknown>[]).map((entry, index) => ({
+      // 稳定标识供确认工具与失败计数引用。
+      id: `requirement-${index + 1}`,
+      objective: (entry.objective as string).trim(),
+      // 该条诉求要求真实产生的业务效果；空数组表示文字回复即可。
+      requiredEffects: ((entry.requiredEffects as ResumeAgentRequiredEffect[] | undefined) ?? []).filter(
+        (effect) => TASK_REQUIRED_EFFECTS.includes(effect),
+      ),
+      // 清单条目从待处理开始，由确认工具推进。
+      status: "pending",
+    })),
+  };
+};
+
+// 统计目标描述中的编号罗列（如 1）…2）、①②…）。
+// 编号必须紧跟编号符才算命中，金额、日期等数字不会误伤；
+// 同时出现 1 和 2 起始的编号才认定为罗列，避免「第 1 条」这类单一引用误判。
+const countObjectiveEnumeration = (objective: string) => {
+  const circled = new Set(objective.match(/[①②③④⑤⑥⑦⑧⑨⑩]/g) ?? []);
+  const arabic = new Set<string>();
+  const pattern = /(?:^|[^0-9a-zA-Z])([1-9]|1[0-9])(?=[）)．.、])/g;
+  for (const match of objective.matchAll(pattern)) arabic.add(match[1]!);
+  return circled.size >= 2 || (arabic.has("1") && arabic.has("2"))
+    ? Math.max(circled.size, arabic.size)
+    : 0;
 };
 
 // 同一个 Agent 只负责规划与行动，任务阶段和完成结果由运行时依据工具事实维护。
@@ -72,6 +126,11 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
   // 当前入口是否允许把缺失信息抛回给用户：一次性修复入口必须自行补齐。
   const allowRequestInput = options.allowTaskPause !== false &&
     options.taskProfile?.allowRequestInput !== false;
+  // 固定入口（按钮与一次性任务）的目标和验收已由入口声明，不引入需求清单机制，
+  // 避免模型对单一用途任务误拆清单后白耗确认轮次。
+  const allowRequirements = !options.taskProfile &&
+    !options.fixedRequiredEffects?.length &&
+    !options.fixedSuccessCondition;
   let completionPolicy: ResolvedResumeAgentCompletionPolicy = {
     requiredEffects: [], // 建立任务后写入最终任务效果。
     requiredEvidence: [], // 建立任务后再按必需效果和能力填充。
@@ -89,14 +148,16 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
   const planTaskTool: ReactTool = {
     name: "plan_resume_task",
     description:
-      "根据用户原始消息、功能入口、近期对话和上一轮任务建立本轮任务契约。判断文字回复是否足以完成请求；若用户需要当前简历、草稿或展示语言真实变化，必须声明对应 requiredEffects。选择 capabilityIds 后会返回对应能力全文。",
+      "根据用户原始消息、功能入口、近期对话和上一轮任务建立本轮任务契约。判断文字回复是否足以完成请求；若用户需要当前简历、草稿或展示语言真实变化，必须声明对应 requiredEffects。" +
+      (allowRequirements ? "用户一条消息包含多个诉求时必须逐条拆入 requirements，不得合并或遗漏；objective 只保留一句概括，不要罗列条目。" : "") +
+      "选择 capabilityIds 后会返回对应能力全文。",
     parameters: {
       type: "object",
       properties: {
         relation: {
           type: "string",
           enum: TASK_RELATIONS,
-          description: "new 表示可独立完成或需要不同业务效果的请求；continue 表示继续上一任务并继承其业务效果；revise 表示修正上一结果并继承其业务效果。",
+          description: "new 表示可独立完成或需要不同业务效果的请求；continue 表示继续上一任务并继承其业务效果与需求清单；revise 表示修正上一结果并继承其业务效果，需要重做的已确认条目必须重新拆入 requirements。",
         },
         objective: {
           type: "string",
@@ -128,6 +189,32 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
           uniqueItems: true,
           description: capabilityDescription,
         },
+        ...(allowRequirements ? {
+          requirements: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                objective: {
+                  type: "string",
+                  description: "单条诉求的目标描述。",
+                },
+                requiredEffects: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                    enum: TASK_REQUIRED_EFFECTS,
+                  },
+                  uniqueItems: true,
+                  description: "该条诉求要求真实产生的业务效果；文字回复即可的条目传空数组。",
+                },
+              },
+              required: ["objective"],
+              additionalProperties: false,
+            },
+            description: "本轮需求清单：用户一条消息包含多个诉求时必须逐条拆出，不得合并或遗漏；执行和收口会按清单逐条核对。只有单一诉求时可省略整个字段。continue 承接上一清单；revise 只承接未完成条目，需要重做的已确认条目重新拆入。",
+          },
+        } : {}),
       },
       required: options.source === "chat" && previousTask
         ? ["relation", "objective", "requiredEffects"]
@@ -171,6 +258,33 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
         options.source === "chat" && previousTask && TASK_RELATIONS.includes(args?.relation)
           ? (args.relation as ResumeAgentTaskRelation)
           : "new";
+      // 固定入口不接受清单拆分：任务目标与验收已由入口固定，误拆只会浪费确认轮次。
+      if (args?.requirements !== undefined && !allowRequirements) {
+        return { accepted: false, error: "当前入口的任务目标与验收已固定，不拆需求清单，请省略 requirements" };
+      }
+      // 需求清单校验：多诉求必须逐条拆出；未提供时按关系承接上一任务清单。
+      const normalizedRequirements = normalizeTaskRequirements(args?.requirements);
+      if (normalizedRequirements.error) {
+        return { accepted: false, error: normalizedRequirements.error };
+      }
+      const requirements =
+        args?.requirements !== undefined
+          ? normalizedRequirements.requirements ?? []
+          : relation !== "new"
+            ? (previousTask?.requirements ?? []).filter(
+                // revise 只承接未完成条目：需要重做的已确认条目由规划重新拆入，状态从待处理开始；
+                // 继续任务保持原状，已确认结果不重复验收。
+                (item) => relation === "continue" || item.status !== "covered",
+              )
+            : [];
+      // 目标里罗列多条诉求会绕过清单核对，必须让模型改拆成 requirements 再建立任务。
+      const enumeratedCount = countObjectiveEnumeration(objective);
+      if (allowRequirements && enumeratedCount >= 2 && requirements.length < enumeratedCount) {
+        return {
+          accepted: false,
+          error: `objective 只保留一句概括，不要罗列 ${enumeratedCount} 条诉求；请把每条诉求逐项拆入 requirements（当前只有 ${requirements.length} 条）`,
+        };
+      }
       const requestedCapabilityIds = (Array.isArray(args?.capabilityIds) ? args.capabilityIds : []).filter(
         (id: unknown): id is string => typeof id === "string" && capabilityMap.has(id),
       );
@@ -196,6 +310,7 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
       // 正式规划接管隐式任务时保留实际执行过的业务效果和工具证据。
       const effectiveEffects = [...new Set([
         ...plannedEffects,
+        ...requirements.flatMap((item) => item.requiredEffects), // 需求条目声明的效果一并纳入总验收。
         ...(implicitTask ? task?.requiredEffects ?? [] : []),
       ])];
       const existingEvidence = implicitTask ? task?.evidence ?? [] : [];
@@ -214,6 +329,7 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
             ? args.successCondition.trim()
             : resolveDefaultSuccessCondition(resolvedPolicy.requiredEffects)),
         capabilityIds: selectedCapabilityIds,
+        requirements: requirements.length ? requirements : undefined,
         phase: "planned",
         evidence: existingEvidence,
       };
@@ -225,6 +341,10 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
       return {
         accepted: true,
         task,
+        ...(requirements.length > 1 ? {
+          // 需求清单在结果中原样返回，收口前必须逐条处理并确认。
+          requirementNotice: "本轮包含多个需求：执行和最终回答必须逐条覆盖清单中的每个条目，收口前调用 confirm_resume_requirements 逐条确认处理结果。",
+        } : {}),
         capabilities: selectedCapabilities.map((capability) => {
           return { id: capability.id, name: capability.name, instructions: capability.instructions };
         }),
@@ -331,6 +451,90 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
     },
   };
 
+  // 多需求任务的收口确认工具：逐条核对清单处理结果，防止部分诉求被静默遗漏。
+  const confirmRequirementsTool: ReactTool = {
+    name: "confirm_resume_requirements",
+    description:
+      "任务收口前逐条确认需求清单的处理结果。带业务效果的需求必须先取得对应工具证据，确认不能替代证据；文字需求在最终回答中逐条回应后确认。写入后的复核读取可以与本工具同轮调用，节省执行轮次。单条需求无需调用。",
+    parameters: {
+      type: "object",
+      properties: {
+        results: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            properties: {
+              id: {
+                type: "string",
+                description: "需求条目标识，来自规划返回的需求清单。",
+              },
+              note: {
+                type: "string",
+                description: "该条需求的处理结果说明；尚未真正处理时不得确认。",
+              },
+            },
+            required: ["id", "note"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["results"],
+      additionalProperties: false,
+    },
+    execute: (args) => {
+      if (!task) return { accepted: false, error: "请先调用 plan_resume_task 建立本轮任务" };
+      // 固定当前任务引用：回调闭包内读取证据不依赖可变变量的收窄。
+      const currentTask = task;
+      const requirements = currentTask.requirements ?? [];
+      // 单条任务沿用原有效果验收，不额外消耗确认轮次。
+      if (requirements.length <= 1) {
+        return { accepted: false, error: "本轮没有多需求清单，无需调用确认工具" };
+      }
+      if (!Array.isArray(args?.results) || !args.results.length) {
+        return { accepted: false, error: "results 不能为空，请逐条提供需求确认结果" };
+      }
+      const byId = new Map(requirements.map((entry) => [entry.id, entry]));
+      const unknownIds = args.results
+        .filter((item: { id?: unknown }) => !byId.has(String(item?.id)))
+        .map((item: { id?: unknown }) => String(item?.id));
+      if (unknownIds.length) {
+        return { accepted: false, error: `未找到需求条目：${unknownIds.join("、")}，请使用规划返回的需求清单标识` };
+      }
+      // 先整体校验再统一落账，避免部分确认后又被错误打断产生半截状态。
+      for (const item of args.results) {
+        const requirement = byId.get(String(item?.id))!;
+        if (typeof item?.note !== "string" || !item.note.trim()) {
+          return { accepted: false, error: `需求 ${requirement.id} 的处理说明不能为空` };
+        }
+        // 带业务效果的需求以真实证据为底线，确认只负责逐条核对，不放宽验收口径。
+        const missingEffect = requirement.requiredEffects.find(
+          (kind) => !hasFreshSuccessfulEvidence(currentTask.evidence, kind),
+        );
+        if (missingEffect) {
+          return {
+            accepted: false,
+            error: `需求 ${requirement.id}「${requirement.objective}」还缺少${EVIDENCE_NAMES[missingEffect]}的成功证据，请先完成对应工具执行再确认`,
+          };
+        }
+      }
+      for (const item of args.results) {
+        const requirement = byId.get(String(item?.id))!;
+        requirement.status = "covered";
+        requirement.note = item.note.trim();
+      }
+      const pending = requirements.filter((entry) => entry.status !== "covered");
+      return {
+        accepted: true,
+        confirmed: args.results.map((item: { id?: unknown }) => String(item?.id)),
+        // 剩余条目原样返回，提示模型继续处理而不是提前收口。
+        ...(pending.length
+          ? { pending: pending.map((entry) => ({ id: entry.id, objective: entry.objective })) }
+          : { allCovered: true }),
+      };
+    },
+  };
+
   // 规划缺失时按入口契约和实际工具效果建立隐式任务，保留按钮的验收策略。
   const ensureImplicitTask = (tool?: ResumeAgentTool) => {
     const target = tool?.taskMeta ? TOOL_EFFECT_TARGETS[tool.taskMeta.effect] : undefined;
@@ -374,6 +578,22 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
     options.onTrace?.({ type: "implicit", task: cloneResumeAgentTask(task)!, tool: tool?.name ?? "入口任务" });
   };
 
+  // 多需求任务的收口核对：任何未确认条目都会拦截最终回答。
+  // 单条任务由原有效果验收覆盖，不引入额外确认轮次。
+  const checkRequirementCoverage = (): ResumeAgentIncompleteReason | null => {
+    const requirements = task?.requirements ?? [];
+    if (requirements.length <= 1) return null;
+    const pending = requirements.filter((item) => item.status !== "covered");
+    if (!pending.length) return null;
+    const names = pending.map((item) => item.objective).join("；");
+    return {
+      code: "requirement_uncovered",
+      target: pending.map((item) => item.id).join(","), // 未确认条目按稳定标识分别计数。
+      detail: names,
+      text: `需求清单还有未确认的条目：${names}。请先完成对应工具执行，再调用 confirm_resume_requirements 逐条确认处理结果。`,
+    };
+  };
+
   // 完成检查返回稳定编码，修正提示的变化不会重置同一问题的失败计数。
   const retryCheck = (issue: ResumeAgentIncompleteReason): AgentFinalCheck => ({
     status: "retry", // 当前业务条件尚未满足。
@@ -409,6 +629,13 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
           message: task.pendingInput?.question ?? task.blocker?.reason ?? "当前任务已暂停", // 具体暂停原因。
         }, // 宿主无需解析最终回答判断暂停。
       };
+    }
+    // 多需求任务收口前逐条核对清单，防止部分诉求被静默遗漏。
+    const requirementIssue = checkRequirementCoverage();
+    if (requirementIssue) {
+      incompleteReason = requirementIssue;
+      options.onTrace?.({ type: "verdict", completed: false, reason: requirementIssue.text });
+      return retryCheck(requirementIssue);
     }
     const finalIssue = options.taskProfile?.validateFinal?.(answer, task.evidence);
     if (finalIssue) {
@@ -457,6 +684,8 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
         return "操作顺序不符合要求，结果没有生效。";
       case "scope_uncovered":
         return `这些内容还没有实际改动：${issue.detail ?? "部分模块"}。`;
+      case "requirement_uncovered":
+        return `还有未确认的需求：${issue.detail ?? "部分条目"}。`;
       case "report_invalid":
         return issue.text;
       case "report_mismatch":
@@ -511,6 +740,7 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
           requiredEffects: previousTask.requiredEffects, // 上一任务要求真实产生的业务效果。
           successCondition: previousTask.successCondition, // 上一任务的用户可核对完成条件。
           capabilityIds: previousTask.capabilityIds, // 上一任务使用的能力。
+          requirements: previousTask.requirements, // 上一任务的需求清单与逐条状态。
           phase: previousTask.phase, // 上一任务结束阶段。
           pendingInput: previousTask.pendingInput, // 上一任务等待补充的信息。
           blocker: previousTask.blocker, // 上一任务阻塞原因。
@@ -527,10 +757,14 @@ export const createResumeAgentTaskRuntime = (options: CreateResumeAgentTaskRunti
     const taskProfile = options.taskProfile
       ? `\n# 当前按钮任务\n目标：${options.taskProfile.objective}\n完成条件：${options.taskProfile.successCondition}\n${options.taskProfile.instructions}`
       : "";
+    // 需求清单规则只对支持清单的入口生效，固定入口不注入无关指令。
+    const requirementRule = allowRequirements
+      ? "用户一条消息包含多个诉求时，规划必须逐条拆入 requirements，不得合并或遗漏；objective 只写一句概括，逐条诉求进 requirements。执行和最终回答按清单逐条核对，收口前调用 confirm_resume_requirements 确认每条结果，确认不能替代真实工具证据；写入后的复核读取可以与 confirm_resume_requirements 同轮调用，不必单独消耗一轮。revise 需要重做上一任务已确认的条目时，必须把该条重新拆入 requirements。"
+      : "";
     return `# 任务运行规则
 当前入口：${options.source}。
 先调用 plan_resume_task 建立本轮任务契约，各项参数按工具说明填写；上一任务的等待状态仅供参考，按当前目标重新判断能否执行。
-规划后自行决定步骤与工具：需要事实依据时读取资料，需要实际业务变化时调用对应工具，不以文字答复代替提交。
+${requirementRule ? `${requirementRule}\n` : ""}规划后自行决定步骤与工具：需要事实依据时读取资料，需要实际业务变化时调用对应工具，不以文字答复代替提交。
 写入前核对作用范围、字段与布局；只有需要写入或核对字段格式时才读取数据规范，并按目标模块读取。根据工具结果处理部分失败，只继续未完成的部分；后续判断依赖最新数据或任务要求写后复核时重新读取。只有实际证据满足完成条件才说明完成，不制造无关改动或重复提交相同参数。
 缺少会改变结果的关键事实时先核对已有资料；确实无法继续时按当前入口的暂停规则处理，不消耗轮次反复生成最终回答。${pauseRule}
 最终回答只区分实际完成的结果、带 XX 占位的内容和未完成原因。
@@ -540,13 +774,16 @@ ${OPTIONAL_FIELD_RULE}
 ${DRAFT_REQUEST_RULE}${taskProfile}${previous}`;
   };
 
+  // 固定入口没有清单机制，确认工具不进入声明，节省每轮请求的工具声明开销。
+  const requirementConfirmTools = allowRequirements ? [confirmRequirementsTool] : [];
+
   return {
-    // 任务控制工具用于规划、等待补充和记录阻塞；关闭追问时只保留规划与阻塞。
+    // 任务控制工具用于规划、需求确认、等待补充和记录阻塞；关闭追问时只保留规划、需求确认与阻塞。
     controlTools: options.allowTaskPause === false
-      ? [planTaskTool]
+      ? [planTaskTool, ...requirementConfirmTools]
       : allowRequestInput
-        ? [planTaskTool, requestInputTool, reportBlockerTool]
-        : [planTaskTool, reportBlockerTool],
+        ? [planTaskTool, ...requirementConfirmTools, requestInputTool, reportBlockerTool]
+        : [planTaskTool, ...requirementConfirmTools, reportBlockerTool],
     // 包装业务工具并记录真实执行证据；执行前补齐隐式任务。
     wrapTools: (tools: ReactTool[]) => {
       // 包装阶段补登记：创建后才加入的工具同样参与验收推导。

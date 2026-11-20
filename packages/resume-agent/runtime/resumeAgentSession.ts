@@ -132,8 +132,21 @@ export const createResumeAgentSession = async (
         };
       }, // 采用真实业务结果识别失败，部分成功仍允许继续处理。
       initialTool: "plan_resume_task", // 保留原有简历任务规划入口。
-      // 首轮只发规划工具，后续轮次恢复完整工具集。
-      resolveTools: (step) => (step === 0 && planTool ? [planTool] : undefined),
+      // 首轮只发规划工具；任务建立后规划工具已无法生效，多需求清单全部确认后确认工具同理，
+      // 按轮次剔除死声明，避免每轮请求重复携带不再可用的大 schema。
+      resolveTools: (step) => {
+        if (step === 0 && planTool) return [planTool];
+        const task = taskRuntime.getTask();
+        if (!task) return undefined; // 规划尚未建立时保留完整工具集，no_plan 重试仍可调用规划。
+        const staleNames = new Set<string>(["plan_resume_task"]);
+        const requirements = task.requirements ?? [];
+        if (requirements.every((item) => item.status === "covered")) {
+          staleNames.add("confirm_resume_requirements"); // 单条或无清单时确认工具本就不生效，一并剔除。
+        }
+        const staleTools = tools.filter((tool) => staleNames.has(tool.name));
+        if (!staleTools.length) return undefined;
+        return tools.filter((tool) => !staleNames.has(tool.name));
+      },
       beforeFinal: taskRuntime.beforeFinal, // 保留简历业务完成证据校验。
       onIncomplete: taskRuntime.onIncomplete, // 保留简历未完成结果处理。
       onFinal: (result) => options.onFinal?.(result, taskRuntime.getTask()), // 结构化结果与任务证据一起返回。

@@ -1,4 +1,5 @@
 // 导入LLM接口
+import type { ResumeAgentTaskState } from "@snowflake/resume-agent";
 import { AbortError, isAbortError } from "@/apis";
 import {
   createResumeAgentSession,
@@ -100,12 +101,37 @@ export const useChatRequest = ({
   // 工具动作面向用户描述，避免把内部工具名直接展示给用户
   const TOOL_NAMES: Record<string, string> = {
     plan_resume_task: "梳理本次任务目标与处理范围",
+    confirm_resume_requirements: "逐条核对需求完成情况",
     request_resume_input: "确认补充信息",
     report_resume_blocker: "记录阻塞原因",
     read_resume_data: "读取本次任务需要的简历内容",
     propose_resume_edits: "应用简历修改并记录结果",
     read_resume_guidance: "查阅与本次任务相关的写作建议",
     update_resume_language: "同步简历语言",
+  };
+
+  // 需求条目业务效果的用户可读标记，与任务运行时的效果枚举保持一致。
+  const REQUIREMENT_EFFECT_LABELS: Record<string, string> = {
+    resume_change: "写入简历",
+    draft_submit: "提交草稿",
+    language_update: "同步语言",
+  };
+
+  // 多需求任务的过程区清单：逐条分行展示目标、业务效果与当前状态，单条任务不展示。
+  const formatTaskRequirements = (
+    task: ResumeAgentTaskState | undefined,
+    confirmedIds: Set<string>,
+  ) => {
+    const requirements = task?.requirements ?? [];
+    if (requirements.length <= 1) return "";
+    const lines = requirements.map((item, index) => {
+      const effects = item.requiredEffects.length
+        ? `【${item.requiredEffects.map((effect) => REQUIREMENT_EFFECT_LABELS[effect] ?? effect).join("、")}】`
+        : "【文字回复】";
+      const status = confirmedIds.has(item.id) ? "已完成" : "待处理";
+      return `${index + 1}. ${item.objective}${effects}（${status}）`;
+    });
+    return `**需求清单**：\n${lines.join("\n")}`;
   };
 
   // 独立处理思考、正文和令牌回调，维护请求状态与耗时计数。
@@ -297,6 +323,8 @@ export const useChatRequest = ({
       state.onReasoning();
       // 思考与执行记录共用过程区，分段展示且不伪造模型内容。
       let reasoningStarted = false;
+      // 需求清单的确认进度：confirm 工具每确认一条就更新过程区清单状态。
+      const confirmedRequirementIds = new Set<string>();
       const appendProcess = (text: string) => {
         if (!isCurrentRequest() || !lastMsg || !text.trim()) return;
         lastMsg.thought += `${lastMsg.thought.trim() ? "\n\n" : ""}${text}`;
@@ -372,6 +400,7 @@ export const useChatRequest = ({
               `**任务目标**：${event.task.objective}`,
               event.task.scope ? `**处理范围**：${event.task.scope}` : "",
               event.task.successCondition ? `**完成要求**：${event.task.successCondition}` : "",
+              formatTaskRequirements(event.task, confirmedRequirementIds),
             ].filter(Boolean).join("\n\n"));
             return;
           }
@@ -417,6 +446,17 @@ export const useChatRequest = ({
           onAct: (toolCall) => {
             if (!isCurrentRequest() || !lastMsg) return;
             const displayName = TOOL_NAMES[toolCall.function.name] || "处理本次任务所需的操作";
+            // 确认工具的参数就是逐条处理结果，落到清单状态上让过程区展示逐条进度
+            if (toolCall.function.name === "confirm_resume_requirements") {
+              try {
+                const args = JSON.parse(toolCall.function.arguments) as { results?: { id?: unknown }[] };
+                args.results?.forEach((item) => {
+                  if (typeof item?.id === "string") confirmedRequirementIds.add(item.id);
+                });
+                // 参数解析失败不阻断流程：清单只是展示，逐条核对仍由收口校验保证
+                appendProcess(formatTaskRequirements(lastMsg.agentRun?.task, confirmedRequirementIds));
+              } catch { /* 非法参数交给运行时的确认校验返回修正错误 */ }
+            }
             // 工具开始只记录执行动作，不写入参数与数据
             appendProcess(`正在${displayName}…`);
             lastMsg.stepLabel = `正在${displayName}…`;
