@@ -100,8 +100,8 @@ onMounted(() => {
       <div
         class="group hover:border-sf-b-hover relative flex flex-col rounded-3xl border border-sf-b bg-sf-bg p-1 transition-all duration-500"
       >
-        <!-- 输入框区域 -->
-        <el-input
+        <!-- 输入框区域：统一走项目的 SfInput 封装。 -->
+        <SfInput
           ref="inputRef"
           v-model="modelValue"
           type="textarea"

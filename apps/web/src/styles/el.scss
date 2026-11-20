@@ -72,6 +72,30 @@
   }
 }
 
+/* 多行输入内部滚动条：textarea 无法套用 SfScrollbar，单独定制避免原生样式突兀 */
+.el-textarea__inner {
+  scrollbar-width: thin; /* Firefox 降级为细滚动条 */
+  scrollbar-color: var(--sf-theme-3) transparent; /* Firefox 滑块与轨道颜色 */
+
+  &::-webkit-scrollbar {
+    width: 6px; /* 输入框内使用比全局更窄的滚动条 */
+    height: 6px; /* 水平滚动条同步收窄 */
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent; /* 输入框内不显示轨道底色 */
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--sf-theme-3); /* 滑块沿用主题浅色 */
+    border-radius: 3px; /* 圆角与 6px 宽度匹配 */
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--sf-theme); /* hover 加深提示可拖拽 */
+  }
+}
+
 // 日期组件结束
 // 选择组件开始
 .el-select {
