@@ -42,8 +42,8 @@ const onNavWheel = (event) => {
 </script>
 
 <template>
-  <!-- 外层包装承载分割线与背景：分割线不放进滚动区域，横滑不会影响它 -->
-  <div class="shrink-0 border-b border-sf-b bg-sf-primary">
+  <!-- 外层包装承载分割线与背景 -->
+  <div class="shrink-0 border-b border-sf-bg-3 bg-sf-primary">
     <!-- 模块行内横向滚动：与模板面板筛选行同一实现，隐藏滚动条 -->
     <div
       class="module-nav-row flex flex-nowrap items-center gap-1.5 px-3 py-1.5"

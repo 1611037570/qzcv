@@ -18,9 +18,10 @@ const panelOptions = [
 
 <template>
   <!-- :style="{ marginBottom: 'max(0.75rem,env(safe-area-inset-bottom))' }" -->
-  <nav class="relative w-full">
+  <!-- 分割线与底栏背景放在同一元素：与顶部横滑条同模式；z-50 保证高于面板动画层与右侧工具栏收起态 -->
+  <nav class="relative z-50 w-full shrink-0">
     <div
-      class="relative z-30 flex w-full shrink-0 items-center justify-center gap-1 border-t border-sf-b bg-sf-primary p-1"
+      class="flex w-full items-center justify-center gap-1 border-t border-sf-bg-3 bg-sf-primary p-1"
       :aria-label="$t('resumePreview')"
     >
       <!-- 底栏铺满宽度，按钮等分空间并保留圆角与选中样式。 -->
