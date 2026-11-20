@@ -10,7 +10,7 @@ import CopyResume from "./modules/copyResume.vue";
 import Donation from "./modules/donation.vue";
 import QaAnswer from "./modules/qaAnswer.vue";
 import LiuyaoWenxin from "./modules/liuyaoWenxin.vue";
-import OneToOneOptimize from "./modules/oneToOneOptimize.vue";
+import OneToOneOptimize from "../../components/oneToOneOptimize.vue";
 import OnlineWriters from "../../components/onlineWriters.vue";
 import { $t } from "@/locales";
 

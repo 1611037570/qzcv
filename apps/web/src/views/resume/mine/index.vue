@@ -19,6 +19,7 @@ import ImportResume from "./components/importResume.vue";
 import SendResume from "@/views/resume/components/sendResume/index.vue";
 import RenameResumeModal from "../components/renameResumeModal.vue";
 import CreateResume from "./components/createResume.vue";
+import OneToOneOptimize from "../components/oneToOneOptimize.vue";
 import { ElNotification } from "element-plus";
 // 草稿预览复用模板页专用全屏预览组件，保持两处预览布局一致。
 const TemplatePreview = markRaw(
@@ -231,6 +232,8 @@ const handlePermanentDelete = async (index) => {
         <span class="border-l border-sf-b pl-3 text-sm text-sf-text">{{ $t("resumeMineDraftsCount", { current: list.length, max: maxCount }) }}</span>
       </div>
       <div class="flex flex-wrap items-center gap-3">
+        <!-- 1v1 简历优化入口：与页头按钮同高的横向广告位 -->
+        <OneToOneOptimize variant="card" />
         <ImportResume>
           <template #trigger="{ open }">
             <button type="button" :class="entryButtonClass" @click="open">

@@ -4,6 +4,12 @@ import { ref } from "vue";
 // 闲鱼 1v1 简历优化下单地址，弹窗内渲染为二维码
 const XIAN_YU_URL = "https://m.tb.cn/h.jlndDta?tk=AOT06UHeWna";
 
+// 展示形态：banner 为编辑器右侧竖排广告位，card 为页面内的横向入口
+defineProps({
+  /** 展示形态，取值 banner / card */
+  variant: { type: String, default: "banner" },
+});
+
 // 弹窗状态
 const visible = ref(false);
 
@@ -33,8 +39,9 @@ const services = [
 </script>
 
 <template>
-  <!-- 1v1 简历优化广告位：渐变竖排横幅，hover 有柔光扫过 -->
+  <!-- 竖排广告位：编辑器右侧工具轨下方使用 -->
   <button
+    v-if="variant === 'banner'"
     type="button"
     class="group relative flex w-12 cursor-pointer flex-col items-center gap-3 overflow-hidden rounded-3xl bg-gradient-to-b from-sf-theme to-sf-theme-2 py-3 text-sf-theme-text shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-95"
     @click="visible = true"
@@ -50,6 +57,21 @@ const services = [
       <span>优</span>
       <span>化</span>
     </span>
+  </button>
+
+  <!-- 横向入口：页面内与按钮同高使用 -->
+  <button
+    v-else
+    type="button"
+    class="group relative flex h-9 cursor-pointer items-center overflow-hidden rounded-3xl bg-gradient-to-r from-sf-theme to-sf-theme-2 px-3 text-sm text-sf-theme-text shadow-sm transition-all duration-300 hover:shadow-md active:scale-95"
+    @click="visible = true"
+  >
+    <!-- 柔光扫过：hover 时一道高光自左向右掠过，与竖排形态保持一致 -->
+    <span
+      class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white to-transparent opacity-25 transition-transform duration-700 group-hover:translate-x-full"
+    ></span>
+    <span class="relative font-extrabold">1v1</span>
+    <span class="relative font-semibold">简历优化</span>
   </button>
 
   <SfModal v-model="visible" title="1v1简历优化" width="380px">
