@@ -10,7 +10,7 @@ Skiff Resume is a free, open-source online resume builder for writing resumes, i
 
 Start with an example or import an existing resume, use AI to draft content, improve experience descriptions, and assess job fit, then continue with interview practice and application tracking.
 
-The project began as a dynamic form experiment in 2024 and gradually grew into a complete resume builder. V1 focused on templates, editing, layout, and export. V2 builds on that foundation with AI-assisted resume generation, content refinement, job tailoring, and interview practice, connecting your experience with the next steps in your job search.
+The project began as a dynamic form experiment in 2024 and gradually grew into a complete resume builder. V1 focused on templates, editing, layout, and export. V2 builds on that foundation with AI-assisted resume generation, content refinement, job tailoring, and interview practice. V3 breaks device and language limits, working on both phone and desktop with cross-device resume transfer and Chinese-English interface switching.
 
 Built with Vue 3, TypeScript, Vite, and NestJS, the project uses a pnpm workspace for its frontend, backend, and shared packages. Resume data, the layout engine, and agent capabilities are maintained separately by responsibility.
 

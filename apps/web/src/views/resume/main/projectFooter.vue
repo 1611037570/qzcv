@@ -5,6 +5,7 @@ import resumeBeta from "@/assets/images/resume/resume-beta.awebp";
 import resumeBeta1 from "@/assets/images/resume/beta1.webp";
 import resumeV1 from "@/assets/images/resume/v1.png";
 import resumeV2 from "@/assets/images/resume/v2.webp";
+import resumeV3 from "@/assets/images/resume/v3.webp";
 import resumeStart from "@/assets/images/resume/start.png";
 
 const visible = ref(false);
@@ -17,7 +18,7 @@ useOverlayKeys({ escape: () => { previewVisible.value = false; } }, previewVisib
 
 // 仅迁入旧项目中简历及其技术演进的记录，保留原始日期与文案。
 const milestones = [
-  { date: "2026-11-22", /* 历史日期 */ text: "resumeProjectHistoryV3", /* 历史文案标识 */ },
+  { date: "2026-11-22", /* 历史日期 */ text: "resumeProjectHistoryV3", /* 历史文案标识 */ image: resumeV3, /* 版本截图 */ },
   { date: "2026-11-06", /* 历史日期 */ text: "resumeProjectHistoryV2", /* 历史文案标识 */ image: resumeV2, /* 版本截图 */ },
   { date: "2026-09-16", /* 历史日期 */ text: "resumeProjectHistoryDomain", /* 历史文案标识 */ },
   { date: "2026-08-15", /* 历史日期 */ text: "resumeProjectHistoryRelease", /* 历史文案标识 */ image: resumeV1, /* 版本截图 */ },
