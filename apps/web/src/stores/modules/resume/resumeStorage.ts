@@ -1,6 +1,6 @@
 import { normalizeResumeTags } from "@/domain/resume/resumeTags";
 import { useIDBKeyval } from "@vueuse/integrations/useIDBKeyval";
-import { del, set } from "idb-keyval";
+import { del, get, set } from "idb-keyval";
 import { debounce } from "lodash-es";
 import { ref, watch } from "vue";
 
@@ -25,6 +25,32 @@ export const createResumeStorage = () => {
   const readErrors = new Map<string, unknown>();
   const pendingItems = new Map<string, ResumeStorageItem>();
   const storageKey = (id: string) => `snowflake-resume:${id}`;
+  // 解析原始存储值：编号以存储键为准，兼容历史遗留的字符串快照
+  const parseResumeStorageItem = (id: string, value: unknown) => {
+    let raw: unknown = value;
+    if (typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw);
+      } catch {
+        throw new Error("简历存储数据格式无效");
+      }
+    }
+    // 数据库读入先确认简历身份，再进入已约束的配置解析入口
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new Error("简历存储数据格式无效");
+    }
+    const item = raw as ResumeStorageItem;
+    // 旧简历缺失标签时按空列表加载，其余使用信息原样保留
+    const usage = item.usage as Record<string, unknown> | undefined;
+    // 自定义字段标题从配置结构迁移到数据的界面属性，重复读取无副作用
+    return migrateCustomFieldLabels({
+      ...item,
+      // 编号以存储键为准，值内编号不一致时也能按目录编号正常加载
+      id,
+      usage: { ...usage, tags: normalizeResumeTags(usage?.tags) },
+      ui: resolveResumeUi(item.ui),
+    });
+  };
   const saveStates = ref<Record<string, ResumeSaveState>>({}); // 按简历编号记录保存结果
   const writeTasks = new Map<string, Promise<void>>(); // 同一简历的写入按调用顺序完成
   const deletingIds = new Set<string>(); // 删除期间阻止同一简历重新排队写入
@@ -91,33 +117,7 @@ export const createResumeStorage = () => {
       // 嵌套字段可能包含响应式代理，落库前转为可结构化克隆的纯数据
       serializer: {
         // 读取主题编号与覆盖项，完整参数仅在运行时展开
-        read: (value: unknown) => {
-          if (value == null) return null;
-          // 兼容历史遗留的字符串快照，只有解析不出对象才判定格式无效
-          let raw: unknown = value;
-          if (typeof raw === "string") {
-            try {
-              raw = JSON.parse(raw);
-            } catch {
-              throw new Error("简历存储数据格式无效");
-            }
-          }
-          // 数据库读入先确认简历身份，再进入已约束的配置解析入口。
-          if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-            throw new Error("简历存储数据格式无效");
-          }
-          const item = raw as ResumeStorageItem;
-          // 旧简历缺失标签时按空列表加载，其余使用信息原样保留。
-          const usage = item.usage as Record<string, unknown> | undefined;
-          // 自定义字段标题从配置结构迁移到数据的界面属性，重复读取无副作用
-          return migrateCustomFieldLabels({
-            ...item,
-            // 编号以存储键为准，值内编号不一致时也能按目录编号正常加载
-            id,
-            usage: { ...usage, tags: normalizeResumeTags(usage?.tags) },
-            ui: resolveResumeUi(item.ui),
-          });
-        },
+        read: (value: unknown) => (value == null ? null : parseResumeStorageItem(id, value)),
         // 压缩主题配置并解除嵌套代理，避免重复落库和存储失败
         write: (value: ResumeStorageItem | null) => value ? JSON.parse(JSON.stringify(compactResumeItem(value))) : value,
       },
@@ -138,11 +138,10 @@ export const createResumeStorage = () => {
   const loadResumeItems = async (ids: string[]) => {
     const items = await Promise.all(
       ids.map(async (id) => {
-        const storage = getResumeStorage(id);
-        await waitForResumeStorage(storage);
-        if (readErrors.has(id)) throw readErrors.get(id);
-        const item = storage.data.value;
-        return item?.id === id ? item : null;
+        // 直接读取数据库原文，不等待实例完成态，避免首次进入时整批读取卡在初始化上
+        const stored = await get(storageKey(id));
+        if (stored === undefined) return null;
+        return parseResumeStorageItem(id, stored);
       }),
     );
     return items.filter(Boolean);
