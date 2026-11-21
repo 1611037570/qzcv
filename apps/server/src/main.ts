@@ -41,6 +41,16 @@ async function bootstrap() {
   // 启用全局参数验证
   app.useGlobalPipes(new ValidationPipe())
   // 允许处理JSON请求体上限
+  // 设备互传单条只收 5MB，先按请求头拦住，避免大包先被全局解析器读进内存
+  app.use('/sync', (req, res, next) => {
+    const length = Number(req.headers['content-length'] ?? 0)
+    if (Number.isFinite(length) && length > 5 * 1024 * 1024) {
+      res.status(413).json({ statusCode: 413, message: '简历超过 4MB，无法同步' })
+      return
+    }
+    next()
+  })
+  app.use('/sync', json({ limit: '5mb' }))
   app.use(json({ limit: config.app.bodyLimit }))
   // 开启跨域请求
   app.enableCors(config.app.cors)

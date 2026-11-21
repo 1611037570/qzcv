@@ -2,7 +2,7 @@
 import HistoryNav from "./historyNav.vue";
 import Title from "./title.vue";
 import FeedbackAction from "./feedbackAction.vue";
-import LearningCenter from "./learningCenter/index.vue";
+import CloudSync from "./cloudSync/index.vue";
 import ExportResume from "./exportResume/index.vue";
 import ProjectTitle from "../../../components/projectTitle.vue";
 </script>
@@ -22,7 +22,7 @@ import ProjectTitle from "../../../components/projectTitle.vue";
     <div class="flex shrink-0 items-center gap-3">
       <HistoryNav />
       <FeedbackAction />
-      <LearningCenter />
+      <CloudSync />
       <ExportResume />
       <div class="hidden h-5 w-px shrink-0 bg-sf-b md:block"></div>
       <div><SfTheme /></div>

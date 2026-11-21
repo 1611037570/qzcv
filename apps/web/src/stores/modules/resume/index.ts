@@ -208,6 +208,7 @@ export const useResumeStore = defineStore(
     });
     const {
       addResume,
+      receiveSyncedResume,
       duplicateResume,
       deleteResume,
       restoreResume,
@@ -403,6 +404,7 @@ export const useResumeStore = defineStore(
       swapModuleOrder,
       setLayoutColumns,
       addResume,
+      receiveSyncedResume, // 设备互传取回：同编号覆盖，未命中按原编号新增。
       duplicateResume,
       deleteResume,
       restoreResume,

@@ -18,6 +18,7 @@ import RevealGrid from "../components/revealGrid.vue";
 import ImportResume from "./components/importResume.vue";
 import SendResume from "@/views/resume/components/sendResume/index.vue";
 import RenameResumeModal from "../components/renameResumeModal.vue";
+import CloudSync from "../components/cloudSync/index.vue";
 import CreateResume from "./components/createResume.vue";
 import OneToOneOptimize from "../components/oneToOneOptimize.vue";
 import { ElNotification } from "element-plus";
@@ -126,6 +127,12 @@ const copyResume = (item) => {
     position: "top-right",
     offset: 40,
   });
+};
+
+// 设备互传弹窗在内部选择简历，页头一个入口即可
+const cloudSyncVisible = ref(false);
+const openCloudSync = () => {
+  cloudSyncVisible.value = true;
 };
 
 // 草稿卡片操作菜单。
@@ -248,6 +255,10 @@ const handlePermanentDelete = async (index) => {
             <span>{{ $t("resumeSendResume") }}</span>
           </button>
         </SendResume>
+        <button type="button" :class="entryButtonClass" @click="openCloudSync()">
+          <SfIcon icon="lucide:cloud-upload" size="4" />
+          <span>{{ $t("resumeCloudSyncMenu") }}</span>
+        </button>
         <button type="button" :class="entryButtonClass" @click="openTrash">
           <SfIcon icon="lucide:trash-2" size="4" />
           <span>{{ $t("resumeMineTrash") }}</span>
@@ -468,6 +479,7 @@ const handlePermanentDelete = async (index) => {
     </SfModal>
     <ResumeTagsModal v-model="tagsVisible" :item="tagsItem" />
     <RenameResumeModal v-model="renameVisible" :item="renameItem" />
+    <CloudSync v-model="cloudSyncVisible" />
   </div>
 </template>
 

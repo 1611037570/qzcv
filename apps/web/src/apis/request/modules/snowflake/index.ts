@@ -3,6 +3,8 @@ import XyRequest from "../../request";
 import axios from "axios";
 // 简历使用统计相关接口
 export * from "./stats";
+// 设备互传取件码相关接口
+export * from "./sync";
 const request = new XyRequest({
   baseURL: config.api.baseUrl,
 });

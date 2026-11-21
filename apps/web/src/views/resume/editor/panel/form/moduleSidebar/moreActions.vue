@@ -1,5 +1,5 @@
 <script setup>
-import { computed, defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useResumeStore } from "@/stores";
 import ModuleSearch from "./moduleSearch/index.vue";
@@ -7,9 +7,16 @@ import SortByTime from "./sortByTime.vue";
 
 // 导入弹窗在操作列表出现时加载。
 const ImportResume = defineAsyncComponent(() => import("@/views/resume/mine/components/importResume.vue"));
+// 学习中心按需加载，浏览指引不打断编辑。
+const LearningCenterModal = defineAsyncComponent(
+  () => import("@/views/resume/editor/components/header/learningCenter/learningCenterModal.vue"),
+);
 const resumeStore = useResumeStore();
 const { currentData, runtimeConfig } = storeToRefs(resumeStore);
 const moduleItems = computed(() => runtimeConfig.value?.fields || []);
+
+// 学习中心弹窗显隐
+const learningVisible = ref(false);
 
 // 批量收起全部模块，保留每条记录原有的展开状态。
 function collapseAll() {
@@ -51,6 +58,14 @@ function showAll() {
         </button>
       </template>
     </ImportResume>
+    <button
+      type="button"
+      class="rail-action flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-3xl p-1 text-[12px] text-sf-text transition-colors select-none hover:bg-sf-bg"
+      @click="learningVisible = true"
+    >
+      <SfIcon icon="mdi:book-open-page-variant" size="4" />
+      <span>{{ $t("learningCenterTitle") }}</span>
+    </button>
     <ModuleSearch />
     <SortByTime />
     <button
@@ -71,5 +86,6 @@ function showAll() {
       <SfIcon icon="fa-solid:caret-up" size="4" />
       <span>{{ $t("collapseAllModules") }}</span>
     </button>
+    <LearningCenterModal v-if="learningVisible" v-model="learningVisible" />
   </div>
 </template>

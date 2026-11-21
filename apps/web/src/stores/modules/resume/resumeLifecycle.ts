@@ -94,6 +94,40 @@ export const createResumeLifecycle = (options: ResumeLifecycleOptions) => {
     }
     return true;
   };
+  // 设备互传取回：同编号直接覆盖正文，未命中才按云端编号新增，不重新生成编号
+  const receiveSyncedResume = (config: any, jump = false) => {
+    const incomingId = typeof config?.id === "string" ? config.id.trim() : "";
+    if (!incomingId) return "";
+    const activeEntry = list.value.find((item) => item.id === incomingId && item.deletedAt === null);
+    const activeCount = list.value.filter((item) => item.deletedAt === null).length;
+    // 覆盖已有简历不占新名额，新增或从回收站恢复才受上限约束
+    if (!activeEntry && activeCount >= maxCount) {
+      onResumeLimit();
+      return "";
+    }
+    const resume = mergeResumeItem(config);
+    migrateCustomFieldLabels(resume);
+    resume.usage.tags = normalizeResumeTags(resume.usage.tags);
+    resume.ui = resolveResumeUi(compactResumeUi(config?.ui));
+    // 取回的是同一份简历，沿用云端编号，覆盖时才能命中同一个本地记录
+    resume.id = incomingId;
+    if (config?.usage?.lastUseTime === undefined) resume.usage.lastUseTime = Date.now();
+    setConfigModules(resume, resume.config.modules);
+    const storage = getResumeStorage(incomingId, resume, true);
+    storage.data.value = resume;
+    const recordIndex = resumeRecords.value.findIndex((item) => item.id === incomingId);
+    if (recordIndex === -1) resumeRecords.value.push(storage.data.value);
+    else resumeRecords.value[recordIndex] = storage.data.value;
+    // 同编号还在回收站时恢复原条目，避免出现两条相同编号
+    const entry = list.value.find((item) => item.id === incomingId);
+    if (!entry) list.value.unshift(createResumeListItem(incomingId));
+    else if (entry.deletedAt !== null) list.value[list.value.indexOf(entry)] = setResumeDeletedAt(entry, null);
+    if (jump) {
+      currentIndex.value = resumeList.value.findIndex((item) => item.id === incomingId);
+      navigateToEditor(incomingId);
+    }
+    return incomingId;
+  };
   const duplicateResume = (item?: any) => {
     const source = item ?? resumeList.value[currentIndex.value];
     if (!source) return false;
@@ -188,6 +222,7 @@ export const createResumeLifecycle = (options: ResumeLifecycleOptions) => {
 
   return {
     addResume,
+    receiveSyncedResume,
     duplicateResume,
     deleteResume,
     restoreResume,

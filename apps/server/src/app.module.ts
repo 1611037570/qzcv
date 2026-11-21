@@ -7,6 +7,7 @@ import { LLMModule } from './modules/llm/llm.module'
 import { config } from './configs'
 import { PdfModule } from './modules/resume/pdf/pdf.module'
 import { StatsModule } from './modules/resume/stats/stats.module'
+import { SyncModule } from './modules/sync/sync.module'
 import { Action } from './modules/resume/entities/action.entity'
 import { Visitor } from './modules/resume/entities/visitor.entity'
 import { LlmUsage } from './modules/llm/entities/llm-usage.entity'
@@ -37,6 +38,8 @@ export class AppModule {
               StatsModule,
             ]
           : []),
+        // 设备互传只用进程内存，不依赖简历库
+        SyncModule,
         // 人工智能转发始终可用，只有消耗记账跟随简历库开关
         LLMModule.register(resumeDatabaseEnabled),
       ],
