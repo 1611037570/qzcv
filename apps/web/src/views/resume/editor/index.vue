@@ -161,10 +161,14 @@ watch(
       router.push("/resume/mine");
       return;
     }
-    await resumeStore.loadResume(String(id));
+    const loaded = await resumeStore.loadResume(String(id));
     if (String(route.query.id || "") !== String(id)) return;
     const index = list.value.findIndex((item) => item.id === id);
     if (index == -1) {
+      // 目录仍存在该简历却没能读出正文时给出提示，避免静默退回列表被误认为数据丢失
+      if (loaded === null && resumeStore.list.some((entry) => entry.id === id && entry.deletedAt === null)) {
+        ElMessage.error($t("resumeLoadFailed"));
+      }
       router.push("/resume/mine");
       return;
     }

@@ -250,6 +250,11 @@ export const useResumeStore = defineStore(
           );
           return item;
         })
+        // 读取失败不等同于简历不存在，保留目录条目等待重试，避免误删本地简历
+        .catch((error) => {
+          console.error("简历读取失败：", id, error);
+          return null;
+        })
         .finally(() => resumeLoadPromises.delete(id));
       resumeLoadPromises.set(id, loading);
       return loading;
@@ -272,9 +277,15 @@ export const useResumeStore = defineStore(
     };
     const loadActiveResumes = async () => {
       await init();
-      await Promise.all(
-        list.value.filter((item) => item.deletedAt === null).map((item) => loadResumeRecord(item.id)),
-      );
+      const ids = list.value.filter((item) => item.deletedAt === null).map((item) => item.id);
+      await Promise.all(ids.map((id) => loadResumeRecord(id)));
+      // 首轮整体读取失败多为存储连接尚未就绪，让出事件循环后重建实例再读一次
+      if (ids.length && !resumeList.value.length) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.all(ids.map((id) => loadResumeRecord(id)));
+      }
+      // 重试后仍一条都读不出来说明存储整体不可用，抛出交给页面展示重试入口
+      if (ids.length && !resumeList.value.length) throw new Error("简历正文读取失败");
       return resumeList.value;
     };
     const loadTrashResumes = async () => {

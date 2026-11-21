@@ -93,16 +93,27 @@ export const createResumeStorage = () => {
         // 读取主题编号与覆盖项，完整参数仅在运行时展开
         read: (value: unknown) => {
           if (value == null) return null;
+          // 兼容历史遗留的字符串快照，只有解析不出对象才判定格式无效
+          let raw: unknown = value;
+          if (typeof raw === "string") {
+            try {
+              raw = JSON.parse(raw);
+            } catch {
+              throw new Error("简历存储数据格式无效");
+            }
+          }
           // 数据库读入先确认简历身份，再进入已约束的配置解析入口。
-          if (typeof value !== "object" || typeof (value as ResumeStorageItem).id !== "string") {
+          if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
             throw new Error("简历存储数据格式无效");
           }
-          const item = value as ResumeStorageItem;
+          const item = raw as ResumeStorageItem;
           // 旧简历缺失标签时按空列表加载，其余使用信息原样保留。
           const usage = item.usage as Record<string, unknown> | undefined;
           // 自定义字段标题从配置结构迁移到数据的界面属性，重复读取无副作用
           return migrateCustomFieldLabels({
             ...item,
+            // 编号以存储键为准，值内编号不一致时也能按目录编号正常加载
+            id,
             usage: { ...usage, tags: normalizeResumeTags(usage?.tags) },
             ui: resolveResumeUi(item.ui),
           });
