@@ -44,6 +44,15 @@ const handleConfirmCrop = async (cropper) => {
   }
 };
 
+// 预览框与头像一致为正方形，图片按已保存的裁切比例在框内居中
+const PREVIEW_SIZE = 70;
+const innerStyle = computed(() => {
+  const ratio = resumeStore.currentUI?.user?.logo?.ratio ?? DEFAULT_SCHOOL_LOGO_APPEARANCE.ratio;
+  return ratio === "3:1"
+    ? { width: `${PREVIEW_SIZE}px`, height: `${Math.round(PREVIEW_SIZE / 3)}px` }
+    : { width: `${PREVIEW_SIZE}px`, height: `${PREVIEW_SIZE}px` };
+});
+
 // 图片查看器显隐
 const previewVisible = ref(false);
 
@@ -62,47 +71,53 @@ onBeforeUnmount(closeCrop);
 </script>
 
 <template>
-  <!-- 图片删除统一交给标题行右侧，此处保留上传操作。 -->
-  <div class="flex w-full items-start gap-3">
+  <div class="flex flex-col gap-1.5">
+    <!-- 正方形预览框：横版校徽按 3:1 居中显示，不再被方形框压成一条 -->
     <button
       type="button"
-      class="group relative flex h-[70px] w-[70px] shrink-0 cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-3xl border border-dashed border-sf-b text-sf-text-3 transition-colors hover:border-sf-theme disabled:cursor-wait"
+      class="group relative flex cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-sf-b bg-sf-bg text-sf-text-3 transition-colors hover:border-sf-theme hover:text-sf-theme disabled:cursor-wait"
+      :style="{ width: `${PREVIEW_SIZE}px`, height: `${PREVIEW_SIZE}px` }"
       :disabled="loading"
       :aria-label="$t('uploadSchoolLogo')"
       @click="openPicker"
     >
-      <img v-if="image" :src="image" :alt="$t('schoolLogo')" class="h-full w-full object-contain" />
-      <template v-else>
-        <SfIcon icon="mdi:image-plus" size="6" />
+      <img v-if="image" :src="image" :style="innerStyle" class="rounded-lg object-contain" :alt="$t('schoolLogo')" />
+      <div v-else class="flex flex-col items-center gap-1">
+        <SfIcon icon="mdi:image-plus" size="5" />
         <span class="text-xs">{{ loading ? $t("processing") : $t("uploadSchoolLogo") }}</span>
-      </template>
+      </div>
     </button>
-    <div v-if="image" class="flex h-full flex-col items-start gap-1">
-      <button
-        type="button"
-        class="flex cursor-pointer items-center gap-[3px] rounded-md text-xs text-sf-text transition-colors hover:text-sf-theme disabled:cursor-wait"
-        :disabled="loading"
-        @click="openPicker"
-      >
-        <SfIcon icon="ic:round-file-upload" size="5" />
-        <span>{{ loading ? $t("processing") : $t("reselectImage") }}</span>
-      </button>
-      <button
-        type="button"
-        class="flex cursor-pointer items-center gap-[3px] rounded-md text-xs text-sf-text transition-colors hover:text-sf-theme"
-        @click="previewVisible = true"
-      >
-        <SfIcon icon="ic:round-zoom-in" size="5" />
-        <span>{{ $t("viewImage") }}</span>
-      </button>
-      <button
-        type="button"
-        class="flex cursor-pointer items-center gap-[3px] rounded-md text-xs text-sf-text transition-colors hover:text-sf-theme"
-        @click="exportLogo"
-      >
-        <SfIcon icon="material-symbols:download" size="5" />
-        <span>{{ $t("exportAvatar") }}</span>
-      </button>
+
+    <!-- 操作统一收进图标行，未上传时保留空行以维持与头像卡片等高 -->
+    <div class="flex h-7 items-center gap-1">
+      <SfTooltip v-if="image" :content="$t('reselectImage')">
+        <button
+          type="button"
+          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-sf-text-2 transition-colors hover:bg-sf-bg hover:text-sf-theme disabled:cursor-wait"
+          :disabled="loading"
+          @click="openPicker"
+        >
+          <SfIcon icon="ic:round-file-upload" size="4" />
+        </button>
+      </SfTooltip>
+      <SfTooltip v-if="image" :content="$t('viewImage')">
+        <button
+          type="button"
+          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-sf-text-2 transition-colors hover:bg-sf-bg hover:text-sf-theme"
+          @click="previewVisible = true"
+        >
+          <SfIcon icon="ic:round-zoom-in" size="4" />
+        </button>
+      </SfTooltip>
+      <SfTooltip v-if="image" :content="$t('exportAvatar')">
+        <button
+          type="button"
+          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-sf-text-2 transition-colors hover:bg-sf-bg hover:text-sf-theme"
+          @click="exportLogo"
+        >
+          <SfIcon icon="material-symbols:download" size="4" />
+        </button>
+      </SfTooltip>
     </div>
   </div>
   <el-image-viewer v-if="previewVisible" :url-list="[image]" @close="previewVisible = false" />

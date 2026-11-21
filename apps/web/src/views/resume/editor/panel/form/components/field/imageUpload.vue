@@ -6,15 +6,14 @@ import { useResumeStore } from "@/stores";
 import { storeToRefs } from "pinia";
 import {
   AVATAR_OUTPUT_SCALE,
-  AVATAR_RADIUS_LIMITS,
   DEFAULT_AVATAR_APPEARANCE,
   DEFAULT_PORTRAIT_AVATAR_SIZE,
   resolveAvatarAspectRatio,
 } from "@/domain/resume/theme/avatar";
 import { resolveThemeDecisions } from "@/domain/resume/theme/themeDecisions";
 
-// 编辑区头像保持紧凑显示，裁剪输出继续使用高分辨率提升预览与导出清晰度
-const DISPLAY_WIDTH = 70;
+// 预览框固定正方形，图片按裁切比例在框内居中，头像与校徽卡片才能等高
+const PREVIEW_SIZE = 70;
 
 const props = defineProps({
   /** 裁剪输出宽度（px），默认使用显示尺寸的三倍 */
@@ -50,16 +49,12 @@ const displayRatio = computed(() =>
     ? themeAvatarSize.value.width / themeAvatarSize.value.height
     : resolveAvatarAspectRatio(avatarAppearance.value),
 );
-const displayHeight = computed(() => Math.round(DISPLAY_WIDTH / displayRatio.value));
-const displayRadius = computed(() => {
-  const configuredRadius = Number(avatarAppearance.value.borderRadius);
-  if (avatarAppearance.value.borderRadius !== null && Number.isFinite(configuredRadius)) {
-    return `${Math.min(AVATAR_RADIUS_LIMITS.max, Math.max(AVATAR_RADIUS_LIMITS.min, configuredRadius))}%`;
-  }
-  if (avatarAppearance.value.shape === "square") return "0";
-  if (avatarAppearance.value.shape === "rounded") return "0.75rem";
-  if (avatarAppearance.value.shape === "circle") return "50%";
-  return "1.5rem";
+// 图片在正方形预览框内按比例撑满，超出部分不裁切
+const innerStyle = computed(() => {
+  const ratio = displayRatio.value;
+  return ratio >= 1
+    ? { width: `${PREVIEW_SIZE}px`, height: `${Math.round(PREVIEW_SIZE / ratio)}px` }
+    : { width: `${Math.round(PREVIEW_SIZE * ratio)}px`, height: `${PREVIEW_SIZE}px` };
 });
 
 // 图片查看器显隐
@@ -189,55 +184,56 @@ const handleConfirmCrop = async (cropper) => {
 </script>
 
 <template>
-  <!-- 固定整体高度，保证上传前后表单区域不跳动 -->
-  <div class="flex flex-col" :style="{ minHeight: `${displayHeight}px` }">
-    <div class="flex gap-1">
-      <!-- 始终保留上传入口：未上传展示占位，已上传时点击图片进入上传弹窗 -->
+  <!-- 固定正方形预览框，图片按裁切比例居中，上传前后卡片高度不变 -->
+  <div class="flex flex-col gap-1.5">
+    <div
+      class="group relative flex cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-sf-b bg-sf-bg text-sf-text-3 transition-colors hover:border-sf-theme hover:text-sf-theme"
+      :style="{ width: `${PREVIEW_SIZE}px`, height: `${PREVIEW_SIZE}px` }"
+      @click="uploadVisible = true"
+    >
+      <img v-if="image" :src="image" :style="innerStyle" class="rounded-lg object-cover" :alt="$t('avatar')" />
+      <!-- 已上传时鼠标悬停显示"更换头像"遮罩提示 -->
       <div
-        class="border-sf-border group relative flex cursor-pointer items-center justify-center overflow-hidden rounded-3xl border border-dashed text-sf-text-3 transition-colors hover:border-sf-theme hover:text-sf-theme"
-        :style="{
-          width: `${DISPLAY_WIDTH}px`,
-          height: `${displayHeight}px`,
-          borderRadius: displayRadius,
-        }"
-        @click="uploadVisible = true"
+        v-if="image"
+        class="absolute inset-0 flex items-center justify-center bg-black/50 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
       >
-        <img v-if="image" :src="image" :alt="$t('uploadAvatarImage')" class="h-full w-full shrink-0 object-cover" />
-        <!-- 已上传时鼠标悬停显示"更换头像"遮罩提示 -->
-        <div
-          v-if="image"
-          class="absolute inset-0 flex items-center justify-center bg-black/50 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
-        >
-          {{ $t("changeAvatar") }}
-        </div>
-        <div v-else class="flex h-full w-full flex-col items-center justify-center gap-1">
-          <SfIcon icon="mdi:image-plus" size="6" />
-          <span class="text-xs">{{ $t("uploadAvatarImage") }}</span>
-        </div>
+        {{ $t("changeAvatar") }}
       </div>
+      <div v-else class="flex flex-col items-center gap-1">
+        <SfIcon icon="mdi:image-plus" size="5" />
+        <span class="text-xs">{{ loading ? $t("processing") : $t("uploadAvatar") }}</span>
+      </div>
+    </div>
 
-      <!-- 右侧垂直操作栏：图标加文字描述，参考 image 项目操作栏布局 -->
-      <div v-if="image" class="flex h-full flex-col gap-1">
-        <div
-          class="flex cursor-pointer items-center gap-[3px] rounded-md transition-colors hover:text-sf-theme"
+    <!-- 操作统一收进图标行，未上传时保留空行以维持两卡等高 -->
+    <div class="flex h-7 items-center gap-1">
+      <SfTooltip v-if="image" :content="$t('reselectImage')">
+        <button
+          type="button"
+          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-sf-text-2 transition-colors hover:bg-sf-bg hover:text-sf-theme"
           @click="openPicker"
         >
-          <SfIcon icon="ic:round-file-upload" size="5" />
-          <span class="text-xs">{{ $t("reselectImage") }}</span>
-        </div>
-        <div
-          class="flex cursor-pointer items-center gap-[3px] rounded-md transition-colors hover:text-sf-theme"
+          <SfIcon icon="ic:round-file-upload" size="4" />
+        </button>
+      </SfTooltip>
+      <SfTooltip v-if="image" :content="$t('viewImage')">
+        <button
+          type="button"
+          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-sf-text-2 transition-colors hover:bg-sf-bg hover:text-sf-theme"
           @click="previewVisible = true"
         >
-          <SfIcon icon="ic:round-zoom-in" size="5" />
-          <span class="text-xs">{{ $t("viewImage") }}</span>
-        </div>
-        <!-- 已上传头像可单独导出。 -->
-        <button type="button" class="flex cursor-pointer items-center gap-[3px] rounded-md text-sf-text transition-colors hover:text-sf-theme" @click="exportAvatar">
-          <SfIcon icon="material-symbols:download" size="5" />
-          <span class="text-xs">{{ $t("exportAvatar") }}</span>
+          <SfIcon icon="ic:round-zoom-in" size="4" />
         </button>
-      </div>
+      </SfTooltip>
+      <SfTooltip v-if="image" :content="$t('exportAvatar')">
+        <button
+          type="button"
+          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-sf-text-2 transition-colors hover:bg-sf-bg hover:text-sf-theme"
+          @click="exportAvatar"
+        >
+          <SfIcon icon="material-symbols:download" size="4" />
+        </button>
+      </SfTooltip>
     </div>
     <!-- 图片查看器：点击查看上传的大图 -->
     <el-image-viewer v-if="previewVisible" :url-list="[image]" @close="previewVisible = false" />
