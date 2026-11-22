@@ -1,7 +1,7 @@
 @font-face {
   font-family: "LXGW WenKai Lite";
   /* 字体自托管在前端 public/fonts，避免云端渲染依赖外部 CDN */
-  src: url("/fonts/LXGWWenKaiLite-Regular.ttf") format("truetype");
+  src: url("/fonts/LXGWWenKaiLite-Regular.woff2") format("woff2");
   font-display: swap;
 }
 
