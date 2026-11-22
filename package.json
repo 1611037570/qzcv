@@ -8,6 +8,8 @@
     "dev:server": "pnpm --filter @snowflake/server dev",
     "build": "turbo run build",
     "build:web": "pnpm --filter @snowflake/web build-only",
+    "build:web:spa": "pnpm --filter @snowflake/web build:spa",
+    "build:web:compile": "pnpm --filter @snowflake/web build:compile",
     "build:server": "pnpm --filter @snowflake/server build",
     "seo": "node apps/web/scripts/submit-search-urls.mjs",
     "prompt:size": "node scripts/prompt-size.mjs",

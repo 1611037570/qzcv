@@ -1,0 +1,11 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      // nest build 的 outDir 是 ../../dist/server（apps/server/tsconfig.json），
+      // 相对本包目录输出到仓库根，根配置里的 dist/** 匹配不到。
+      "outputs": ["../../dist/server/**"]
+    }
+  }
+}

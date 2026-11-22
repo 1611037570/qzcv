@@ -6,6 +6,16 @@ import { fileURLToPath } from "node:url";
 import { gzipSync, brotliCompressSync } from "node:zlib";
 import { chromium } from "playwright";
 
+// 预渲染是构建里最慢的一段，需要跳过时置 PRERENDER=0（只产出 SPA 入口，线上 SEO 会退化）
+if (process.env.PRERENDER === "0") {
+  console.log("[预渲染] 已通过 PRERENDER=0 跳过。");
+  process.exit(0);
+}
+
+// 同时渲染的页面数：每个页面独占一个浏览器上下文，实测 2 路最稳；
+// 机器核多时可用 PRERENDER_CONCURRENCY 上调，但并发过高会因 CPU 争抢变慢。
+const concurrency = Math.max(1, Number(process.env.PRERENDER_CONCURRENCY) || 2);
+
 const output = fileURLToPath(new URL("../../../dist/web/", import.meta.url));
 const manifest = JSON.parse(await readFile(resolve(output, "seo-prerender.json"), "utf8"));
 if (!manifest.routes.length) {
@@ -152,9 +162,9 @@ try {
       await context.close();
     }
   };
-  for (let index = 0; index < manifest.routes.length; index += 2) {
+  for (let index = 0; index < manifest.routes.length; index += concurrency) {
     // 同批页面全部结束后再继续或退出，避免失败时提前关闭仍在使用的浏览器。
-    const results = await Promise.allSettled(manifest.routes.slice(index, index + 2).map(renderRoute));
+    const results = await Promise.allSettled(manifest.routes.slice(index, index + concurrency).map(renderRoute));
     const failure = results.find((result) => result.status === "rejected");
     if (failure) throw failure.reason;
   }

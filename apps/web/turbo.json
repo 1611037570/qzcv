@@ -1,0 +1,11 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      // 产物实际输出到仓库根的 dist/web（vite.config.ts 的 build.outDir），
+      // 相对本包目录就是 ../../dist/web；根配置里的 dist/** 匹配不到这里，缓存会存不到产物。
+      "outputs": ["../../dist/web/**"]
+    }
+  }
+}
