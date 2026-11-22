@@ -48,9 +48,11 @@ const loadRouteResumes = async () => {
   resumeLoadError.value = false;
   try {
     await resumeStore.init();
-    if (route.path === "/resume/editor" || route.path === "/resume/print") {
+    // 地址末尾斜杠不影响业务判断，与首页判断保持同一归一规则
+    const currentPath = route.path.replace(/\/+$/, "");
+    if (currentPath === "/resume/editor" || currentPath === "/resume/print") {
       await resumeStore.loadResume(String(route.query.id || ""));
-    } else if (route.path === "/resume/mine") {
+    } else if (currentPath === "/resume/mine") {
       await resumeStore.loadActiveResumes();
     }
   } catch (error) {

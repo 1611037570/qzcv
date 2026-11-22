@@ -36,8 +36,12 @@ const { getExportFileName, getResumeTitle } = useResumeName();
 const { proxy } = getCurrentInstance();
 
 // 每次进入简历页：清理回收站中超过保留天数的简历
-onMounted(() => {
+onMounted(async () => {
   resumeStore.cleanExpiredTrash();
+  // 列表页自行触发正文加载，不依赖外层布局的路径判断，避免刷新后列表为空
+  await resumeStore.loadActiveResumes().catch((error) => {
+    console.error("我的简历加载失败：", error);
+  });
 });
 
 const sortedList = computed(() => {
