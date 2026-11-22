@@ -4,9 +4,10 @@ import { ElMessage } from "element-plus";
 import { useAiStore, type ModelItem, type ProviderCredential } from "@/stores/modules/ai";
 import confirm from "@/components/business/confirm";
 import { LLM } from "@/apis";
-import { PROVIDER_NAMES, snowflake } from "@/configs";
+import { PROVIDER_NAMES, builtinServiceEnabled, snowflake } from "@/configs";
 import { getProviderIcon } from "./providerIcons";
 import { MODEL_PRESETS, type ModelPreset } from "./modelPresets";
+import RechargePanel from "./rechargePanel.vue";
 import { $t } from "@/locales";
 
 const props = defineProps<{
@@ -134,8 +135,11 @@ interface ModelCard {
   saved: ModelItem;
 }
 
-// 官方服务商优先展示，内置服务保留在列表末尾。
-const providerList = [...providerTemplates.filter((item) => !item.builtin), ...providerTemplates.filter((item) => item.builtin)];
+// 内置雪花服务置顶，用户自行接入的服务商排在其后；内置服务未上线时整项不出现。
+const providerList = [
+  ...providerTemplates.filter((item) => item.builtin && builtinServiceEnabled),
+  ...providerTemplates.filter((item) => !item.builtin),
+];
 
 function getProviderModels(provider: ProviderTemplate) {
   return aiStore.modelList.filter((model) => provider.builtin
@@ -157,7 +161,8 @@ function getCredential(provider: ProviderTemplate): ProviderCredential | undefin
   };
 }
 
-const selectedProvider = ref(providerList.find((provider) => getCredential(provider))?.id || "openai");
+// 默认落在已配置密钥的服务商；都没有配置时取列表第一项，内置服务关闭后不会再指向雪花服务。
+const selectedProvider = ref(providerList.find((provider) => getCredential(provider))?.id || providerList[0].id);
 const currentProvider = computed(() => providerList.find((provider) => provider.id === selectedProvider.value)!);
 const keyLink = computed(() => keyLinks[selectedProvider.value] || "");
 const sessions = reactive<Record<string, ProviderSession>>({});
@@ -368,12 +373,13 @@ provide("bg", "bg-sf-bg");
     <div class="flex min-w-0 flex-col gap-3 p-3">
       <!-- 连接配置由外层统一留白，与下方模型区域对齐，输入控件保留自身边框。 -->
       <section class="flex min-w-0 flex-col gap-3 bg-sf-primary">
-        <header class="flex flex-wrap items-center justify-between gap-3">
+        <!-- 内置服务的品牌头由充值面板自带，这里只处理需要填写配置的外部服务商。 -->
+        <header v-if="!currentProvider.builtin" class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-[6px]">
-            <!-- 详情中的雪花服务图标与导航保持一致。 -->
-            <SfIcon :icon="getProviderIcon(currentProvider.id, currentProvider.builtin)" size="5" box-size="9" class="shrink-0 rounded-lg bg-sf-primary" :class="{ 'text-sf-theme': currentProvider.builtin }" />
+            <!-- 详情中的服务商图标与导航保持一致。 -->
+            <SfIcon :icon="getProviderIcon(currentProvider.id, currentProvider.builtin)" size="5" box-size="9" class="shrink-0 rounded-lg bg-sf-primary" />
             <h3 class="text-sm font-semibold text-sf-text">{{ currentProvider.name }}</h3>
-            <span v-if="!currentProvider.builtin" class="rounded-full px-[6px] py-[3px] text-[11px]" :class="credentialReady ? 'bg-sf-success-2 text-sf-success' : 'bg-sf-primary text-sf-text-3'">{{ credentialReady ? $t('aiModel_saved') : $t('aiModel_pendingConfig') }}</span>
+            <span class="rounded-full px-[6px] py-[3px] text-[11px]" :class="credentialReady ? 'bg-sf-success-2 text-sf-success' : 'bg-sf-primary text-sf-text-3'">{{ credentialReady ? $t('aiModel_saved') : $t('aiModel_pendingConfig') }}</span>
           </div>
           <!-- 获取密钥入口沿用按钮的圆角。 -->
           <a v-if="keyLink" :href="keyLink" target="_blank" rel="noopener noreferrer" class="rounded-xl bg-sf-primary px-3 py-[6px] text-xs text-sf-theme transition-colors hover:bg-sf-theme-3">{{ $t("aiModel_getApiKey") }}</a>
@@ -389,7 +395,8 @@ provide("bg", "bg-sf-bg");
             <SfInput v-model="form.url" class="h-9 w-full rounded-lg! border border-sf-b bg-sf-bg!" :placeholder="currentProvider.defaultUrl" :aria-label="$t('aiModel_endpointAria')" :disabled="busy" />
           </div>
         </div>
-        <p v-else class="text-xs leading-6 text-sf-text-2">{{ $t("aiModel_builtinTip") }}</p>
+        <!-- 内置服务无需密钥，面板自带品牌介绍、服务状态与充值。 -->
+        <RechargePanel v-else />
       </section>
 
       <!-- 已添加模型以独立边框明确各条配置及其操作范围。 -->

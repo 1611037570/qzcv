@@ -49,6 +49,8 @@ class LLM {
   model;
   /** @type {string} 接口协议类型 */
   protocol;
+  /** @type {Record<string,string>|undefined} 宿主附加请求头，如内置服务凭证 */
+  headers;
   /**
    * 初始化 LLM 实例
    * @param {Object} config - 配置对象
@@ -56,6 +58,7 @@ class LLM {
    * @param {string} [config.provider="cool"] - AI 供应商标识，如 'cool' 等
    * @param {string} [config.apiKey] - 请求认证所需的 API Key
    * @param {string} [config.model] - 默认模型名
+   * @param {Record<string,string>} [config.headers] - 附加请求头，随每次请求发送
    */
   constructor(config: {
     url?: string;
@@ -63,15 +66,17 @@ class LLM {
     apiKey?: string;
     model?: string;
     protocol?: "chatCompletions" | "responses";
+    headers?: Record<string, string>;
     observer?: LlmObserver;
   }) {
-    const { url = "", provider = "cool", apiKey, model, protocol = "chatCompletions", observer = noopLlmObserver } = config;
+    const { url = "", provider = "cool", apiKey, model, protocol = "chatCompletions", headers, observer = noopLlmObserver } = config;
 
     this.url = url;
     this.provider = provider;
     this.apiKey = apiKey;
     this.model = model;
     this.protocol = protocol;
+    this.headers = headers;
     this.observer = observer;
 
     // 校验配置完整性，任一缺失时输出警告
@@ -213,6 +218,7 @@ class LLM {
               protocol: this.protocol,
               timeout,
               traceId,
+              headers: this.headers,
             };
 
             // 流式与非流式请求体不同，分别组装后发送

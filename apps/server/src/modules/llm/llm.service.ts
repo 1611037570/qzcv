@@ -49,6 +49,13 @@ export class LLMService {
     const url = `${baseURL}`
     // 前端传的模型标识在这里被替换成实际上游模型名
     const model = this.resolveModel(data?.model)
+    // 外部可以传入极大的 max_tokens，先按上限钳制再转发，避免单次请求的成本与扣费失控。
+    // 未传时保持上游默认值，不改变现有对话的输出长度。
+    const requestedMaxTokens = Number(data?.max_tokens)
+    const maxTokens =
+      Number.isFinite(requestedMaxTokens) && requestedMaxTokens > 0
+        ? Math.min(Math.floor(requestedMaxTokens), config.ai.maxOutputTokens)
+        : undefined
 
     const response = await fetch(url, {
       method: 'POST',
@@ -60,6 +67,7 @@ export class LLMService {
       body: JSON.stringify({
         ...data,
         model,
+        ...(maxTokens ? { max_tokens: maxTokens } : {}),
         // 上游密钥只保存在服务端，流式用量必须由服务端索取，不能依赖前端传参
         stream_options: {
           ...(data?.stream_options ?? {}),

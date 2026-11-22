@@ -2,6 +2,7 @@ import { DynamicModule, Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
+import { BillingModule } from './modules/billing/billing.module'
 import { IntegrationsModule } from './modules/integrations/integrations.module'
 import { LLMModule } from './modules/llm/llm.module'
 import { config } from './configs'
@@ -38,10 +39,12 @@ export class AppModule {
               StatsModule,
             ]
           : []),
-        // 设备互传只用进程内存，不依赖简历库
+        // 云同步只用进程内存，不依赖简历库
         SyncModule,
         // 人工智能转发始终可用，只有消耗记账跟随简历库开关
         LLMModule.register(resumeDatabaseEnabled),
+        // 充值计费：余额、订单、流水固定走简历库，库不可用时接口返回不可用而不阻断启动
+        BillingModule,
       ],
     }
   }

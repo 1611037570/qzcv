@@ -1,8 +1,10 @@
 import { DynamicModule, Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { BillingModule } from '../billing/billing.module'
 import { LLMController } from './llm.controller'
 import { LLMService } from './llm.service'
 import { LlmUsageService } from './llm-usage.service'
+import { LlmStatusService } from './llm-status.service'
 import { LlmUsage } from './entities/llm-usage.entity'
 
 @Module({})
@@ -11,9 +13,10 @@ export class LLMModule {
   static register(usageEnabled: boolean): DynamicModule {
     return {
       module: LLMModule,
-      imports: usageEnabled ? [TypeOrmModule.forFeature([LlmUsage], 'resume')] : [],
+      // 计费模块提供钱包结算，余额为零时仍按免费额度放行
+      imports: [...(usageEnabled ? [TypeOrmModule.forFeature([LlmUsage], 'resume')] : []), BillingModule],
       controllers: [LLMController],
-      providers: [LLMService, LlmUsageService],
+      providers: [LLMService, LlmUsageService, LlmStatusService],
       exports: [LLMService],
     }
   }

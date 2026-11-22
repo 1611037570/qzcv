@@ -5,6 +5,7 @@ import { ExpressAdapter } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 import { json } from 'express' // 引入express
+import type { IncomingMessage } from 'node:http'
 import { config } from './configs'
 import mysql from 'mysql2/promise'
 
@@ -40,8 +41,8 @@ async function bootstrap() {
   )
   // 启用全局参数验证
   app.useGlobalPipes(new ValidationPipe())
-  // 允许处理JSON请求体上限
-  // 设备互传单条只收 5MB，先按请求头拦住，避免大包先被全局解析器读进内存
+  // 允许处理JSON请求体上限；支付回调必须用原始字节验签，这里额外保留一份未反序列化的副本
+  // 云同步单条只收 5MB，先按请求头拦住，避免大包先被全局解析器读进内存
   app.use('/sync', (req, res, next) => {
     const length = Number(req.headers['content-length'] ?? 0)
     if (Number.isFinite(length) && length > 5 * 1024 * 1024) {
@@ -51,7 +52,15 @@ async function bootstrap() {
     next()
   })
   app.use('/sync', json({ limit: '5mb' }))
-  app.use(json({ limit: config.app.bodyLimit }))
+  app.use(
+    json({
+      limit: config.app.bodyLimit,
+      verify: (req, _res, buffer) => {
+        const target = req as IncomingMessage & { rawBody?: Buffer }
+        target.rawBody = Buffer.from(buffer)
+      },
+    }),
+  )
   // 开启跨域请求
   app.enableCors(config.app.cors)
   // Swagger 接口文档

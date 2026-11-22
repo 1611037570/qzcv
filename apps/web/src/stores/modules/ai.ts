@@ -5,7 +5,7 @@ import { computed, ref } from "vue";
 import { useResumeStore } from "@/stores/modules/resume";
 import type { AiChatSummary } from "@/stores/modules/resume/resumeCatalog";
 import type { ResumeAgentTaskState, ResumeAssistantMode } from "@snowflake/resume-agent";
-import { SNOWFLAKE_MODELS, snowflake } from "@/configs/modules/ai";
+import { SNOWFLAKE_MODELS, builtinServiceEnabled, snowflake } from "@/configs/modules/ai";
 import { $t } from "@/locales";
 export type Chat = {
   // 对话记录id
@@ -160,8 +160,9 @@ const resumeAssistantChatKey = (id: string) => `resume-assistant-chat:${id}`;
 export const useAiStore = defineStore(
   "ai",
   () => {
-    // 平台内置的两个模型：固定存在、不可删除，请求统一经本站后端转发
-    const builtinModels = computed<ModelItem[]>(() => [
+    // 平台内置的两个模型：固定存在、不可删除，请求统一经本站后端转发。
+    // 内置服务未上线时不注入，角色上的历史绑定会因标识不存在而自动失效。
+    const builtinModels = computed<ModelItem[]>(() => (builtinServiceEnabled ? [
       {
         id: BUILTIN_MODEL_IDS.assistant, // 内置助手模型标识
         provider: snowflake.provider, // 平台类型
@@ -182,7 +183,7 @@ export const useAiStore = defineStore(
         protocol: snowflake.protocol, // 接口协议类型
         builtin: true, // 标记为平台内置
       },
-    ]);
+    ] : []));
     // 用户自行添加的模型（持久化），由浏览器带自己的密钥直连服务商，不经过本站后端
     // 不兼容旧版本地存储：历史上混合内置项的 modelList 直接丢弃，用户重新添加即可
     const storedModels = ref<ModelItem[]>([]);

@@ -15,6 +15,10 @@ export const PROVIDER_NAMES: Record<string, string> = {
 // 本站服务端根地址，去掉结尾斜杠避免拼出双斜杠
 const apiRoot = env.apiBaseUrl.replace(/\/+$/, "");
 
+// 内置雪花服务开关：关闭后服务商列表不出现该项、内置模型也不再注入，
+// 角色原来绑定的内置模型会被视为已下线，需要用户自行接入服务商。先不上线时置为 false。
+export const builtinServiceEnabled = false;
+
 // 内置雪花服务配置：全部请求经本站服务端转发，浏览器不再持有上游密钥
 export const snowflake = {
   // 未配置站点接口地址时退回同源地址，保证内置模型始终可用，配置问题只体现为请求失败

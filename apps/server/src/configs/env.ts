@@ -53,7 +53,10 @@ export const env = Object.freeze({
   aiApiKey: envString('OPENAI_API_KEY'), // 人工智能上游密钥
   aiBaseUrl: envString('OPENAI_BASE_URL'), // 人工智能上游完整地址
   aiModelAssistant: envStringRequired('OPENAI_MODEL_ASSISTANT'), // 兜底模型（对话与面试），必填
+  aiBalanceUrl: envString('OPENAI_BALANCE_URL'), // 上游额度查询地址，留空时只对已知服务商自动推导
+  aiQuotaLowYuan: envNumber('OPENAI_QUOTA_LOW_YUAN', 20), // 上游余额低于该值（元）判定为额度偏低
   llmFreeTokens: envNumber('LLM_FREE_TOKENS', 200000), // 每个使用者的免费令牌额度，仅用于展示剩余量，本阶段不拦截
+  llmMaxOutputTokens: envNumber('LLM_MAX_OUTPUT_TOKENS', 4000), // 单次请求输出令牌上限，防止外部传入过大的 max_tokens
   // 打印页面地址，由站点根地址拼接固定路由 /resume/print
   pdfRenderUrl: `${envStringRequired('PUBLIC_SITE_URL')}/resume/print`,
   pdfTimeout: envNumber('PDF_RENDER_TIMEOUT', 60000), // 单次渲染总超时（含页面加载、等待就绪与生成），单位毫秒

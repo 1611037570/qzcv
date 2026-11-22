@@ -18,6 +18,8 @@ type RequestConfig = {
   provider: string;
   protocol?: "chatCompletions" | "responses";
   timeout: number;
+  /** 宿主附加的请求头，例如内置服务的访问凭证；同名时覆盖默认值 */
+  headers?: Record<string, string>;
 };
 
 // 请求观察事件由宿主处理，避免传输层依赖监控存储。
@@ -89,6 +91,7 @@ export function createRequest(token: string, isStream = true, observer: RequestO
     provider,
     protocol,
     timeout,
+    headers,
   }: RequestConfig) {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let isTimeoutAbort = false;
@@ -111,6 +114,7 @@ export function createRequest(token: string, isStream = true, observer: RequestO
           "Content-Type": "application/json",
           Authorization: processToken(token),
           ...getProviderHeaders(provider, url), // 兼容入口需要的服务商请求头。
+          ...headers, // 宿主透传的附加请求头。
         },
         body: data,
       });

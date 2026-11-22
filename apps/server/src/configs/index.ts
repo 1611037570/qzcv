@@ -1,4 +1,5 @@
 import { baseConfig } from './base.config'
+import { billingConfig } from './billing.config'
 import { resumeConfig } from './resume.config'
 import { env, envModelByPurpose } from './env'
 
@@ -13,8 +14,11 @@ export const config = Object.freeze({
     apiKey: env.aiApiKey, // 人工智能上游密钥
     baseUrl: env.aiBaseUrl, // 人工智能上游地址
     assistantModel: env.aiModelAssistant, // 兜底模型（对话与面试）
+    balanceUrl: env.aiBalanceUrl, // 上游额度查询地址，空串表示按服务商自动推导
+    quotaLowYuan: env.aiQuotaLowYuan, // 上游额度偏低阈值（元）
     modelByPurpose: envModelByPurpose, // 按用途读取模型名，变量名固定为 OPENAI_MODEL_<用途>
     freeTokens: env.llmFreeTokens, // 每个使用者的免费令牌额度
+    maxOutputTokens: env.llmMaxOutputTokens, // 单次请求输出令牌上限，超出时向下钳制
   }), // 服务端人工智能配置，接口行为不变
   integrations: Object.freeze({
     timeout: env.integrationsTimeout, // 第三方上游统一超时
@@ -22,4 +26,6 @@ export const config = Object.freeze({
       starsCacheTtl: env.githubStarsCacheTtl, // 星标缓存有效期
     }), // 仓库星标配置
   }), // 第三方集成配置，上游地址与凭据不暴露给浏览器
+  // 充值计费配置：售价、倍率与毛利红线集中在此，避免散落到业务代码中
+  billing: billingConfig,
 })

@@ -1,4 +1,5 @@
 import { LLM } from "./request/core";
+import { readLicenseKey } from "@/apis/billing/license";
 import { useAiStore } from "@/stores";
 import type { AiAgentKey } from "@/stores/modules/ai";
 
@@ -12,6 +13,9 @@ const getAgentLLM = (agent: AiAgentKey) => {
     return;
   }
 
+  // 内置服务的余额归属于访问凭证：有凭证就随请求带上，没有则由服务端按免费额度处理
+  const licenseKey = config.builtin ? readLicenseKey() : "";
+
   return new LLM({
     usageAgent: agent, // 仅真实业务调用进入个人使用统计，模型连接检测不计入。
     url: config.url,
@@ -19,6 +23,7 @@ const getAgentLLM = (agent: AiAgentKey) => {
     provider: config.provider,
     model: config.model,
     protocol: config.protocol === "responses" ? "responses" : "chatCompletions",
+    headers: licenseKey ? { "x-license-key": licenseKey } : undefined, // 仅内置服务携带凭证。
   });
 };
 

@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Get, Headers, Post, Req, Res } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
-import { createHash } from 'node:crypto'
 import type { Request, Response } from 'express'
+import { BillingService } from '../billing/billing.service'
+import { resolveClientIdentity } from '../shared/client-identity'
 import { LLMService } from './llm.service'
 import { LlmUsageService, type LlmUsageResult } from './llm-usage.service'
+import { LlmStatusService } from './llm-status.service'
 
 // 中英文混合内容按约 1.5 个字符一个令牌粗估，仅在上游没有回传用量时兜底
 const CHARS_PER_TOKEN = 1.5
@@ -35,17 +37,27 @@ export class LLMController {
   constructor(
     private readonly llmService: LLMService,
     private readonly usageService: LlmUsageService,
+    // 钱包有余额时按输入/输出、模型倍率与时段倍率结算扣减
+    private readonly billingService: BillingService,
+    // 上游健康度与额度状态，供面板展示（与用户余额无关）
+    private readonly statusService: LlmStatusService,
   ) {}
 
   @ApiOperation({ summary: 'AI 流式对话' })
   @Post('stream')
-  async chatStream(@Body() data: Record<string, any>, @Req() req: Request, @Res() res: Response) {
+  async chatStream(
+    @Body() data: Record<string, any>,
+    @Req() req: Request,
+    @Res() res: Response,
+    // 访问凭证：有余额就从凭证扣，没有凭证继续走免费额度
+    @Headers('x-license-key') licenseKey?: string,
+  ) {
     // 空请求体没有转发价值，直接拒绝以免占用上游额度
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
       return res.status(400).send('请求体不能为空')
     }
 
-    const identity = this.resolveIdentity(req)
+    const identity = resolveClientIdentity(req)
     // 浏览器断开后立即中止上游，否则服务端会继续读取并计费
     const abortController = new AbortController()
     res.on('close', () => abortController.abort())
@@ -53,12 +65,17 @@ export class LLMController {
     let usage: ParsedUsage | null = null
     let outputChars = 0
     let streamStarted = false
+    // 上游状态埋点：状态码用于区分故障与限流
+    let upstreamStatus = 0
+    let upstreamFailed = false
 
     try {
       const upstreamRes = await this.llmService.getUpstreamResponse(data, abortController.signal)
+      upstreamStatus = upstreamRes.status
 
       if (!upstreamRes.ok) {
         // 上游原始错误只留在服务端日志，浏览器只拿到可读结论
+        upstreamFailed = true
         const errorText = await upstreamRes.text()
         console.error('上游返回错误', upstreamRes.status, errorText)
         const failure = describeUpstreamFailure(upstreamRes.status)
@@ -129,6 +146,7 @@ export class LLMController {
     } catch (error) {
       // 客户端主动断开属于正常结束，不按错误处理
       if (!abortController.signal.aborted) {
+        upstreamFailed = true
         const message = error instanceof Error ? error.message : String(error)
         console.error('中转流出错:', message)
         if (!res.headersSent) {
@@ -136,21 +154,33 @@ export class LLMController {
           res.status(502).send({ error: { code: 'relay_failed', message: 'AI 服务连接失败，请稍后重试' } })
         }
       }
+    } finally {
+      // 成功、失败、客户端断开都记录一次，面板据最近窗口判断服务是否可用
+      this.statusService.record({
+        ok: !upstreamFailed,
+        status: upstreamStatus,
+      })
     }
 
     // 已经向上游发起过请求就一定有消耗，估算值用于上游未回传用量的情况
     if (streamStarted) {
-      await this.recordUsage(identity, data, usage, outputChars)
+      await this.recordUsage(identity, data, usage, outputChars, licenseKey)
     }
 
     // 出错分支可能已经发送并结束响应，这里只在尚未结束时收尾
     if (!res.writableEnded) res.end()
   }
 
+  @ApiOperation({ summary: '上游服务状态与额度（内部探测，非用户余额）' })
+  @Get('service-status')
+  serviceStatus() {
+    return this.statusService.snapshot()
+  }
+
   @ApiOperation({ summary: '查询当前使用者的免费额度消耗' })
   @Get('usage')
   usage(@Req() req: Request) {
-    const identity = this.resolveIdentity(req)
+    const identity = resolveClientIdentity(req)
     return this.usageService.summary(identity.clientKey)
   }
 
@@ -176,33 +206,24 @@ export class LLMController {
     data: Record<string, any>,
     usage: ParsedUsage | null,
     outputChars: number,
+    licenseKey?: string,
   ) {
+    // 记录本次实际使用的上游模型，而不是前端传入的标识
+    const model = this.llmService.resolveModel(data?.model)
+    const settled = this.buildUsage(data, usage, outputChars)
+
     await this.usageService.record({
       clientKey: identity.clientKey,
       ipHash: identity.ipHash,
-      // 记录本次实际使用的上游模型，而不是前端传入的标识
-      model: this.llmService.resolveModel(data?.model),
-      usage: this.buildUsage(data, usage, outputChars),
+      model,
+      usage: settled,
     })
-  }
 
-  /**
-   * 没有账号体系，用 IP 与设备标识推导一个稳定标识。
-   * 后续接入口令或付费卡时，把这里换成卡号即可，调用方无需改动。
-   */
-  private resolveIdentity(req: Request) {
-    // 服务只监听回环地址，真实来源取自 Nginx 写入的转发头
-    const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim()
-    const ip = forwarded || req.ip || ''
-    const ua = String(req.headers['user-agent'] ?? '')
-    const ipHash = this.hash(ip)
-    return {
-      clientKey: this.hash(`${ip}|${ua}`),
-      ipHash,
-    }
-  }
-
-  private hash(value: string) {
-    return createHash('sha256').update(value).digest('hex')
+    // 余额归属于凭证：凭证有效才扣减，缺失或无效继续走免费额度，不阻断对话
+    await this.billingService.settle(licenseKey, {
+      model,
+      promptTokens: settled.promptTokens,
+      completionTokens: settled.completionTokens,
+    })
   }
 }
