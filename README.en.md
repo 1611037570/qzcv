@@ -1,31 +1,60 @@
 # Skiff Resume
 
-[Simplified Chinese](README.md) | [English](README.en.md)
+A free, open-source resume builder: from template to application, all in one place.
 
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) ![Vue](https://img.shields.io/badge/Vue-3.5-42b883) ![Vite](https://img.shields.io/badge/Vite-7.1-646CFF) ![NestJS](https://img.shields.io/badge/NestJS-11-E0234E)
+Skiff Resume is a complete online resume workspace where writing, layout, export, AI refinement, and interview preparation all happen on one page. No sign-up is required, data stays local by default, and the whole project is open source and self-hostable.
 
-## About
+[简体中文](README.md) | [English](README.en.md)
 
-Skiff Resume is a free, open-source online resume builder for writing resumes, improving content, and preparing for a job search. It combines form-based editing, live paginated previews, layout themes, and role-based examples with watermark-free exports.
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) ![Vue](https://img.shields.io/badge/Vue-3.5-42b883) ![Vite](https://img.shields.io/badge/Vite-7.1-646CFF) ![NestJS](https://img.shields.io/badge/NestJS-11-E0234E) ![pnpm](https://img.shields.io/badge/pnpm-workspace-F69220)
 
-Start with an example or import an existing resume, use AI to draft content, improve experience descriptions, and assess job fit, then continue with interview practice and application tracking.
+[Use online](https://qzcv.net) · [Frontend docs](apps/web/README.md) · [Backend docs](apps/server/README.md)
 
-The project began as a dynamic form experiment in 2024 and gradually grew into a complete resume builder. V1 focused on templates, editing, layout, and export. V2 builds on that foundation with AI-assisted resume generation, content refinement, job tailoring, and interview practice. V3 breaks device and language limits, working on both phone and desktop with cross-device resume transfer and Chinese-English interface switching.
+## Product Preview
 
-Built with Vue 3, TypeScript, Vite, and NestJS, the project uses a pnpm workspace for its frontend, backend, and shared packages. Resume data, the layout engine, and agent capabilities are maintained separately by responsibility.
+<p align="center">
+  <img src="apps/web/src/assets/images/resume/editor.webp" alt="Resume editor: form on the left, live A4 paginated preview on the right" width="900" />
+</p>
 
-[Try Skiff Resume online](https://qzcv.net)
+<p align="center">Resume editor: fill in the form on the left while the A4 paginated preview updates on the right, so the export matches what you see</p>
+
+<p align="center">
+  <img src="apps/web/src/assets/images/resume/ai.webp" alt="Xiaozhou AI assistant: conversational generation, refinement, translation, and job tailoring" width="900" />
+</p>
+
+<p align="center">Xiaozhou AI assistant: generate, refine, translate, and tailor resume content through conversation</p>
+
+## Version History
+
+| Version | Theme | Highlights |
+| --- | --- | --- |
+| Beta 0.1 | Getting the editor running | Completed the core flow from resume building to live preview, along with the [first technical article](https://juejin.cn/post/7349433271493034034) |
+| Beta 1.0 | Bringing content to life on paper | Dynamic forms, live preview and a layout engine landed |
+| V1.0 | One-stop resume building | Templates, online editing, layout polish, one-click export, usage statistics |
+| V2.0 | AI job-search assistant | Resume generation, content refinement, job tailoring, interview practice |
+| V3.0 | Beyond devices and languages | Desktop and mobile support, cross-device transfer, multilingual switching |
 
 ## Features
 
-- **Resume editor**: Form-based editing with live paginated previews, section management, drag-and-drop ordering, theme switching, and layout adjustments.
-- **Themes and examples**: Choose a layout theme or role-based content example and keep editing it to fit your experience.
-- **Import and management**: Import existing resumes, manage multiple versions, organize them with tags, and save or back up data locally.
-- **AI resume assistant**: Generate, rewrite, score, optimize, and translate resume content, including through a conversational assistant.
-- **Job matching**: Compare resume evidence against job requirements, preview tailored drafts, and save them as separate versions.
-- **Interview practice**: Prepare for specific topics, practice with your resume and target role, review sessions, and keep training records.
-- **Job-search tools**: Track applications, interviews, and offers, and use job-search guides, resignation decision scoring, offer comparison, and a real hourly wage calculator.
-- **Export and backup**: Export to PDF, images, or Markdown, and create complete JSON backups.
+| Area | Description |
+| --- | --- |
+| Resume editor | Form-based editing with live paginated previews, section management, drag-and-drop ordering, theme switching, and layout adjustments |
+| Themes and examples | Layout themes and role-based content examples you can apply and keep editing |
+| Import and management | Import existing resumes, manage multiple versions with tags, and save or back up data locally |
+| AI resume assistant | Generate, rewrite, score, optimize, and translate content, including through a conversational assistant |
+| Job matching | Compare resume evidence against job requirements, preview tailored drafts, and save them as separate versions |
+| Interview practice | Mock interviews based on your resume and target role, topic-specific preparation, reviews, and training records |
+| Job-search tools | Track applications, interviews, and offers, with guides, resignation decision scoring, offer comparison, and a real hourly wage calculator |
+| Export and backup | PDF (generated locally or in the cloud), images, Markdown, and complete JSON backups |
+
+## Architecture
+
+| Layer | Stack |
+| --- | --- |
+| Web app | Vue 3, TypeScript, Vite, Tailwind CSS |
+| Backend | NestJS and TypeORM for cloud PDF rendering, usage statistics, and AI endpoints |
+| Agents | Resume generation and optimization, interview practice, and related capabilities in dedicated shared packages |
+| Tooling | pnpm workspace and Turbo for unified builds across apps and shared packages |
 
 ## Project Structure
 
