@@ -30,6 +30,9 @@
     "go": "前往"
     },
     "copyright": "版权所有",
-    "allRightsReserved": "保留所有权利"
+    "allRightsReserved": "保留所有权利",
+    "selectPlaceholder": "请选择",
+    "timePlaceholder": "选择时间",
+    "defaultTitle": "标题"
   }
 }

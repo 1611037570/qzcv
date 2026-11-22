@@ -39,8 +39,8 @@ const starting = ref(false);
 const selectedResume = computed(() => resumeStore.resumeList.find((item) => item.id === resumeId.value));
 const selectedMode = computed(() => INTERVIEW_MODES.find((item) => item.value === category.value));
 const preparation = computed(() => isPreparationMode(config.mode));
-// 分类按实际使用方式分组，文案生成不混入逐轮面试。
-const modeGroups = [
+// 分类按实际使用方式分组，文案生成不混入逐轮面试；文案跟随语言切换更新。
+const modeGroups = computed(() => [
   {
     key: "mock", // 分组标识，用于模板中的样式与展示判断。
     name: $t("interview_groupMock"), // 需要逐轮真实作答的功能组。
@@ -53,7 +53,7 @@ const modeGroups = [
     description: $t("interview_groupPrepDesc"), // 本组无需进入作答流程。
     modes: INTERVIEW_MODES.filter((mode) => isPreparationMode(mode.value)), // 押题与自我介绍稿。
   },
-];
+]);
 const textOptions = (values: string[]) => values.map((value) => ({
   value, // 选择后保存的设置值。
   name: value, // 下拉菜单中显示的设置名称。

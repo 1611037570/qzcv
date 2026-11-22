@@ -30,6 +30,9 @@
     "go": "Go"
     },
     "copyright": "Copyright",
-    "allRightsReserved": "All Rights Reserved"
+    "allRightsReserved": "All Rights Reserved",
+    "selectPlaceholder": "Select",
+    "timePlaceholder": "Select time",
+    "defaultTitle": "Title"
   }
 }

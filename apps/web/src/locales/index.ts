@@ -6,6 +6,8 @@ import coreEn from "./lang/en/core.json";
 import coreZh from "./lang/zh/core.json";
 import resumeEn from "./lang/en/resume.json";
 import resumeZh from "./lang/zh/resume.json";
+import resumeEditorEn from "./lang/en/resume-editor.json";
+import resumeEditorZh from "./lang/zh/resume-editor.json";
 import type { LangItem, Translation } from "./types";
 
 export const LANG_LIST: LangItem[] = [
@@ -41,16 +43,18 @@ const getDefaultLocale = () => {
 };
 
 const DEFAULT_LANG_KEY = getDefaultLocale();
-// 仅核心包与默认路由（简历）语言包静态打包，避免首屏下发无关语言包。
-// 其余页面语言包（含编辑器）由路由守卫触发 loadPageLang 按需求请求，载入后才放行路由。
+// 核心包与简历渲染相关的语言包静态打包：任意页面都可能渲染简历预览，
+// 模块标题、字段名与主题文案来自 resume-editor，必须随核心包一起内置。
+// 其余页面语言包（如面试、工具）由路由守卫触发 loadPageLang 按需请求，载入后才放行路由。
 const BUNDLED_LANG: Record<string, Record<string, LocaleMessage>> = {
-  zh: { core: coreZh.core, resume: resumeZh },
-  en: { core: coreEn.core, resume: resumeEn },
+  zh: { core: coreZh.core, resume: resumeZh, "resume-editor": resumeEditorZh },
+  en: { core: coreEn.core, resume: resumeEn, "resume-editor": resumeEditorEn },
 };
-// 构建语言包映射，核心语言包随实例初始化即内置
+// 构建语言包映射：core 保持嵌套命名空间，其余语言包按扁平键合并后随实例内置
 const messages: any = {};
 Object.keys(BUNDLED_LANG).forEach((langKey) => {
-  messages[langKey] = { core: BUNDLED_LANG[langKey].core || {} };
+  const { core, ...packs } = BUNDLED_LANG[langKey];
+  messages[langKey] = { core: core || {}, ...Object.assign({}, ...Object.values(packs)) };
 });
 
 /**
@@ -134,9 +138,11 @@ export const loadPageLang = async (route: LocaleRoute, langKey?: string) => {
     ),
   );
   const pageMessage = Object.assign({}, ...pageMessages);
-  // 每次只保留核心语言和当前页面语言
+  // 内置的简历相关语言包始终保留，页面语言包在其后覆盖补充
+  const { core: bundledCore, ...bundledPacks } = bundledMessage;
   i18n.global.setLocaleMessage(langKey, {
-    core: bundledMessage.core || {},
+    core: bundledCore || {},
+    ...Object.assign({}, ...Object.values(bundledPacks)),
     ...pageMessage,
   });
   // 语言包准备完成后再切换语言，避免业务层先读取到未加载的页面文案

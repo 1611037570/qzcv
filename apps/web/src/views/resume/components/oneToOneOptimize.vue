@@ -1,5 +1,9 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
+
+// 服务广告文案随语言切换实时更新
+const { t } = useI18n();
 
 // 闲鱼 1v1 简历优化下单地址，弹窗内渲染为二维码
 const XIAN_YU_URL = "https://m.tb.cn/h.jlndDta?tk=AOT06UHeWna";
@@ -13,29 +17,32 @@ defineProps({
 // 弹窗状态
 const visible = ref(false);
 
-// 服务清单：对标闲鱼简历优化服务标准配置，图标与文案均为固定卖点
-const services = [
+// 竖排广告位文案：按行拆分，中文逐字竖排、英文按词换行
+const bannerLabel = computed(() => t("resumeOneToOneBannerLabel"));
+
+// 服务清单：对标闲鱼简历优化服务标准配置，图标固定，文案走国际化
+const services = computed(() => [
   {
     icon: "ph:stethoscope-duotone",
-    title: "简历诊断",
-    desc: "逐条指出排版、表达与岗位匹配上的硬伤",
+    title: t("resumeOneToOneServiceDiagnosisTitle"),
+    desc: t("resumeOneToOneServiceDiagnosisDesc"),
   },
   {
     icon: "fa6-solid:pen",
-    title: "经历重写",
-    desc: "STAR 法则重写项目经历，把做过写成做成",
+    title: t("resumeOneToOneServiceRewriteTitle"),
+    desc: t("resumeOneToOneServiceRewriteDesc"),
   },
   {
     icon: "fa6-solid:bullseye",
-    title: "岗位匹配",
-    desc: "对照目标岗位 JD 提炼关键词，提升过筛率",
+    title: t("resumeOneToOneServiceMatchTitle"),
+    desc: t("resumeOneToOneServiceMatchDesc"),
   },
   {
     icon: "lucide:layout-template",
-    title: "排版交付",
-    desc: "一页纸结构统一，导出可直接投递的 PDF",
+    title: t("resumeOneToOneServiceLayoutTitle"),
+    desc: t("resumeOneToOneServiceLayoutDesc"),
   },
-];
+]);
 </script>
 
 <template>
@@ -51,12 +58,7 @@ const services = [
       class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white to-transparent opacity-25 transition-transform duration-700 group-hover:translate-x-full"
     ></span>
     <span class="relative text-base font-extrabold leading-5">1v1</span>
-    <span class="relative flex flex-col items-center text-sm font-semibold leading-5">
-      <span>简</span>
-      <span>历</span>
-      <span>优</span>
-      <span>化</span>
-    </span>
+    <span class="relative whitespace-pre-line text-center text-sm font-semibold leading-5">{{ bannerLabel }}</span>
   </button>
 
   <!-- 横向入口：页面内与按钮同高使用 -->
@@ -71,25 +73,25 @@ const services = [
       class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white to-transparent opacity-25 transition-transform duration-700 group-hover:translate-x-full"
     ></span>
     <span class="relative font-extrabold">1v1</span>
-    <span class="relative font-semibold">简历优化</span>
+    <span class="relative font-semibold">{{ t("resumeOneToOneLabel") }}</span>
   </button>
 
-  <SfModal v-model="visible" title="1v1简历优化" width="380px">
+  <SfModal v-model="visible" :title="t('resumeOneToOneTitle')" width="380px">
     <div class="flex flex-col gap-3">
       <!-- 顶部渐变海报：标题、价格徽章与一句话卖点 -->
       <div
         class="flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-sf-theme to-sf-theme-2 p-3 text-sf-theme-text"
       >
         <div class="flex items-center justify-between gap-3">
-          <span class="text-lg leading-6 font-bold">1v1 简历优化</span>
+          <span class="text-lg leading-6 font-bold">{{ t("resumeOneToOneTitle") }}</span>
           <span class="rounded-full bg-sf-primary px-3 py-0.5 text-xs font-bold text-sf-theme">50R</span>
         </div>
-        <p class="text-xs leading-5 opacity-90">作者本人逐句打磨，把经历讲成招聘方想看的亮点。</p>
+        <p class="text-xs leading-5 opacity-90">{{ t("resumeOneToOnePosterDesc") }}</p>
       </div>
 
       <!-- 服务内容：两列卡片网格，标题加一句具体交付说明 -->
       <div class="flex flex-col gap-3 rounded-2xl border border-sf-b bg-sf-bg p-3">
-        <p class="text-xs font-semibold text-sf-text-3">服务内容</p>
+        <p class="text-xs font-semibold text-sf-text-3">{{ t("resumeOneToOneServicesTitle") }}</p>
         <div class="grid grid-cols-2 gap-3">
           <div
             v-for="item in services"
@@ -104,9 +106,7 @@ const services = [
           </div>
         </div>
         <!-- 服务流程：说明下单后需要提供什么，降低沟通成本 -->
-        <p class="text-xs leading-5 text-sf-text-3">
-          流程：发我简历 + 目标岗位 → 初稿确认 → 定稿交付
-        </p>
+        <p class="text-xs leading-5 text-sf-text-3">{{ t("resumeOneToOneFlow") }}</p>
       </div>
 
       <!-- 扫码下单区：左侧白底二维码，右侧价格与引导文案 -->
@@ -117,10 +117,10 @@ const services = [
           </div>
         </div>
         <div class="flex flex-1 flex-col gap-3">
-          <p class="text-base font-semibold text-sf-text">使用闲鱼扫码</p>
+          <p class="text-base font-semibold text-sf-text">{{ t("resumeOneToOneScan") }}</p>
           <p class="text-sm leading-6 text-sf-text-2">
             <span class="text-xl font-bold text-sf-theme">50R</span>
-            作者对接1v1优化
+            {{ t("resumeOneToOneAuthor") }}
           </p>
         </div>
       </div>

@@ -119,7 +119,7 @@ const showContent = computed(
 const hasThought = computed(() => !!props.msg.thought?.trim());
 const hasContent = computed(() => !!content.value?.trim());
 // 执行过程统一承载思考、任务目标和实际操作结果。
-const processLabel = $t("aiChat_processLabel");
+const processLabel = computed(() => $t("aiChat_processLabel"));
 // 等待态文案：优先展示当前执行动作，其次回退到思考/生成计时
 const statusText = computed(() => {
   if (props.msg.stepLabel) return props.msg.stepLabel;

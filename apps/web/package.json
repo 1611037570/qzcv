@@ -19,6 +19,7 @@
     "type-check": "pnpm --filter @snowflake/ai build && vue-tsc --build",
     "lint:oxlint": "oxlint . --fix -D correctness --ignore-path .gitignore",
     "lint:eslint": "eslint . --fix",
+    "lint:i18n": "node scripts/check-i18n.mjs",
     "lint": "run-s lint:*",
     "lint:lint-staged": "lint-staged",
     "format": "prettier --write src/",

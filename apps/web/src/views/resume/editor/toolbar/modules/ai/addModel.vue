@@ -44,8 +44,8 @@ type ProviderTemplate = {
   };
 };
 
-// 可添加的服务商模板：雪花服务使用内置配置，其余需手动填写表单
-const providerTemplates: ProviderTemplate[] = [
+// 可添加的服务商模板：雪花服务使用内置配置，其余需手动填写表单；文案随语言切换更新
+const providerTemplates = computed<ProviderTemplate[]>(() => [
   {
     id: "snowflake",
     name: $t("aiChat_snowflakeService"),
@@ -92,7 +92,7 @@ const providerTemplates: ProviderTemplate[] = [
     name: PROVIDER_NAMES.moonshot, // 服务商展示名称。
     defaultUrl: "https://api.moonshot.cn/v1/chat/completions", // 月之暗面对话补全接口。
   },
-];
+]);
 // 各服务商获取 Key 的链接
 const keyLinks: Record<string, string> = {
   openai: "https://platform.openai.com/api-keys",
@@ -136,10 +136,10 @@ interface ModelCard {
 }
 
 // 内置雪花服务置顶，用户自行接入的服务商排在其后；内置服务未上线时整项不出现。
-const providerList = [
-  ...providerTemplates.filter((item) => item.builtin && builtinServiceEnabled),
-  ...providerTemplates.filter((item) => !item.builtin),
-];
+const providerList = computed(() => [
+  ...providerTemplates.value.filter((item) => item.builtin && builtinServiceEnabled),
+  ...providerTemplates.value.filter((item) => !item.builtin),
+]);
 
 function getProviderModels(provider: ProviderTemplate) {
   return aiStore.modelList.filter((model) => provider.builtin
@@ -162,8 +162,8 @@ function getCredential(provider: ProviderTemplate): ProviderCredential | undefin
 }
 
 // 默认落在已配置密钥的服务商；都没有配置时取列表第一项，内置服务关闭后不会再指向雪花服务。
-const selectedProvider = ref(providerList.find((provider) => getCredential(provider))?.id || providerList[0].id);
-const currentProvider = computed(() => providerList.find((provider) => provider.id === selectedProvider.value)!);
+const selectedProvider = ref(providerList.value.find((provider) => getCredential(provider))?.id || providerList.value[0].id);
+const currentProvider = computed(() => providerList.value.find((provider) => provider.id === selectedProvider.value)!);
 const keyLink = computed(() => keyLinks[selectedProvider.value] || "");
 const sessions = reactive<Record<string, ProviderSession>>({});
 const testingModel = ref("");

@@ -1,17 +1,20 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useThemeStore } from "@/stores";
 import { $t } from "@/locales";
 import type { InterviewOutput } from "./types";
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   output: InterviewOutput; // 正文及其真实生成状态。
   id: string; // 页面内唯一标识，传给预览组件时补字母前缀，避免数字开头的非法选择器。
   loadingText?: string; // 尚未返回正文时的当前任务说明。
   compact?: boolean; // 父容器已提供留白时，不再添加正文内边距。
 }>(), {
-  loadingText: $t("interview_defaultLoading"), // 默认用于逐题面试。
+  loadingText: "", // 为空时按当前语言取默认文案，避免语言切换后不更新。
   compact: false, // 默认由正文根容器提供统一留白。
 });
+// 默认加载文案随语言切换更新。
+const resolvedLoadingText = computed(() => props.loadingText || $t("interview_defaultLoading"));
 const themeStore = useThemeStore();
 </script>
 
@@ -20,7 +23,7 @@ const themeStore = useThemeStore();
     <!-- 留白只由根容器承担，流式、预览和状态提示不再各自叠加内边距。 -->
     <div v-if="output.status === 'generating'" aria-busy="true" aria-live="polite">
       <p v-if="output.content" class="whitespace-pre-wrap break-words text-sf-text">{{ output.content }}</p>
-      <p v-else class="flex items-center gap-3 text-sf-text-2" role="status"><SfIcon icon="eos-icons:loading" size="5" class="shrink-0 text-sf-theme" />{{ loadingText }}</p>
+      <p v-else class="flex items-center gap-3 text-sf-text-2" role="status"><SfIcon icon="eos-icons:loading" size="5" class="shrink-0 text-sf-theme" />{{ resolvedLoadingText }}</p>
     </div>
     <SfMdPreview v-else-if="output.content" :model-value="output.content" :theme="themeStore.theme" :editor-id="`interview-${id}`" class="min-w-0 bg-transparent! text-sm! text-sf-text!" />
     <p v-if="output.status === 'interrupted'" class="flex items-center gap-3 text-xs text-sf-text-2" :class="{ 'mt-3': output.content }"><SfIcon icon="lucide:pause" size="4" />{{ $t("interview_interrupted") }}{{ output.content ? $t('interview_interruptedSuffix') : $t('interview_interruptedRegenerate') }}</p>

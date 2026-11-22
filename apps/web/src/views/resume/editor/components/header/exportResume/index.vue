@@ -118,7 +118,8 @@ const list = computed(() => [
     fn: () => emitExport("resume-print-html"),
   },
 ]);
-const a = {
+// JSON 导出项文案随语言切换更新
+const a = computed(() => ({
   name: "JSON",
   icon: "mdi:file-code-outline",
   // 文件图标的主题配色
@@ -129,7 +130,7 @@ const a = {
     visible.value = false;
     exportConfig();
   },
-};
+}));
 </script>
 
 <template>
