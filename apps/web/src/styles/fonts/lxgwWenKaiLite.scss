@@ -1,4 +1,9 @@
-@import url("https://cdn.jsdelivr.net/npm/lxgw-wenkai-lite-webfont@1.7.0/lxgwwenkailite-regular.css");
+@font-face {
+  font-family: "LXGW WenKai Lite";
+  /* 字体自托管在前端 public/fonts，避免云端渲染依赖外部 CDN */
+  src: url("/fonts/LXGWWenKaiLite-Regular.ttf") format("truetype");
+  font-display: swap;
+}
 
 .text-lxgw-wenkai-lite {
   font-family: "LXGW WenKai Lite";

@@ -1,4 +1,9 @@
-@import url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.1/latin-400.css");
+@font-face {
+  font-family: "Inter";
+  /* 字体自托管在前端 public/fonts，避免云端渲染依赖外部 CDN */
+  src: url("/fonts/inter-latin-400-normal.woff2") format("woff2");
+  font-display: swap;
+}
 
 .text-inter {
   font-family: "Inter";

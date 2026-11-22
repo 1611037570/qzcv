@@ -618,7 +618,6 @@
   "exportFormatDescription": "Choose a format for applications, sharing, or backup",
   "exportCloudPrivacyTip": "Cloud export temporarily uploads your resume data only to generate the file. We do not store your resume content or exported files on the server.",
   "exportMobileTip": "On phones and tablets, check page breaks and layout in the system print preview before saving your PDF.",
-  "exportCloudUnavailableTip": "Cloud export is temporarily unavailable; local printing produces the same result.",
   "resumeConfig": "Resume Configuration",
   "local": "Local",
   "cloud": "Cloud",

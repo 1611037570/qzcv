@@ -1,6 +1,7 @@
 @font-face {
   font-family: "AlibabaPuHuiTi-3-55-Regular";
-  src: url("https://cdn.jsdelivr.net/npm/alibabapuhuiti-3-55-regular@1.0.0/AlibabaPuHuiTi-3-55-Regular.woff2") format("woff2");
+  /* 字体自托管在前端 public/fonts，避免云端渲染依赖外部 CDN */
+  src: url("/fonts/AlibabaPuHuiTi-3-55-Regular.woff2") format("woff2");
   font-display: swap;
 }
 

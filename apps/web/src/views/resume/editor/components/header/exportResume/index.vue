@@ -21,8 +21,8 @@ const exportScale = 2;
 const resumeStore = useResumeStore();
 const { currentItem, desensitizeMode, isPrinting } = storeToRefs(resumeStore);
 const { getExportFileName, resumeTitle } = useResumeName();
-// PDF 保留本地与云端入口，云端沿用暂不可用状态。
-const pdfExportType = ref("local");
+// PDF 默认使用云端导出，本地导出保留为备选。
+const pdfExportType = ref("server");
 const pdfExportOptions = computed(() => [
   {
     name: $t("local"), // 本地导出选项名称。
@@ -32,7 +32,7 @@ const pdfExportOptions = computed(() => [
   {
     name: $t("cloud"), // 云端导出选项名称。
     value: "server", // 云端导出方式标识。
-    disabled: true, // 云端服务暂不可用。
+    disabled: false, // 云端服务已开放，可正常选择。
   },
 ]);
 const longImageExportType = ref("png");
@@ -224,7 +224,7 @@ const a = {
               </div>
               <p class="text-sm leading-6 text-sf-text-3">{{ $t("pdfDescription") }}</p>
               <p v-if="exportDesensitized" class="text-xs leading-6 text-sf-text-3">{{ $t("editorMisc_desensitizeReflowTip") }}</p>
-              <p class="text-xs leading-6 text-sf-text-3">{{ $t("exportCloudUnavailableTip") }}</p>
+              <p class="text-xs leading-6 text-sf-text-3">{{ $t("exportCloudPrivacyTip") }}</p>
             </div>
             <SfButton
               class="h-9 shrink-0 self-center"
