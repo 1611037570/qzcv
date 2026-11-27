@@ -2913,7 +2913,7 @@ const DEFAULT_JOB_INTENT_FORM: GroupFormField = {
   context: ["jobIntent"], // 字段绑定到求职意向数据。
   drag: true, // 支持调整求职字段顺序。
   dragClass: DEFAULT_DRAG_CLASS, // 模块拖拽手柄。
-  rowClass: "gap-y-3 px-3 pt-3", // 与个人字段共用留白。
+  rowClass: "gap-y-3 px-3 pt-3 pb-3", // 与个人字段共用留白，底部保留间距避免贴边。
   props: { add: false /* 对象模块无需添加记录。 */ }, // 模块操作配置。
   model: createModuleState("求职意向"), // 模块标题、折叠与隐藏状态。
   slot: "default", // 字段内容插槽。

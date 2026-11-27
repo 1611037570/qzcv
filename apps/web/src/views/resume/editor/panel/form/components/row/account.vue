@@ -33,7 +33,6 @@ const removeAccount = () => {
 
 <template>
   <div class="flex w-full items-center gap-1">
-    <Icon icon="icon-park-outline:drag" class="item-drag cursor-move!" />
     <!-- 平台名称支持直接清除。 -->
     <div class="mr-1 w-22 min-w-0">
       <SfInput v-model="name" :placeholder="$t('platform')" clearable />
@@ -42,6 +41,8 @@ const removeAccount = () => {
     <div class="min-w-0 flex-1">
       <UrlInput v-model="url" :placeholder="$t('website')" />
     </div>
+    <!-- 拖拽把手位于右侧操作区第一位 -->
+    <Icon icon="icon-park-outline:drag" class="item-drag cursor-move!" />
     <!-- 隐藏当前社交账号 -->
 
     <SfTooltip :content="hidden ? $t('show') : $t('hide')">

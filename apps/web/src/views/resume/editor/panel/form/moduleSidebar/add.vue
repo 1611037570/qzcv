@@ -128,7 +128,7 @@ const handleConfirm = () => {
     >
       <button
         type="button"
-        class="rail-action flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-3xl border border-transparent bg-sf-bg p-1 text-[12px] font-medium text-sf-text transition-colors select-none hover:bg-sf-bg-2"
+        class="rail-action flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-3xl border border-transparent bg-sf-bg p-1 text-sm font-bold text-sf-text transition-colors select-none hover:bg-sf-bg-2"
       >
         <SfIcon icon="ic:round-add" size="4" />
         <span>{{ $t("addModule") }}</span>

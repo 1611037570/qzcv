@@ -346,6 +346,12 @@ export const jumpToHit = (moduleKey: string, hit?: ResumeSearchHit) => {
 // 预览区定位编辑区：切标签、选中闪烁与滚动定位，不展开折叠，避免点击改变编辑区折叠状态
 export const locateEditor = (key: string, hit?: Pick<ResumeSearchHit, "itemIndex">) => {
   syncSingleModeModule(key);
+  // 切换模块时强制展开模块折叠面板，避免沿用上一次的收起状态
+  const moduleData = currentData.value?.[key];
+  if (moduleData) {
+    moduleData.ui ??= {};
+    moduleData.ui.collapsed = ["1"];
+  }
   pendingEditorLocation = () => {
     // 模块收起时即使子记录节点曾经挂载，也应回退到大模块定位与高亮。
     const moduleCollapsed = currentData.value?.[key]?.ui?.collapsed;

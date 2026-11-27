@@ -25,15 +25,6 @@
               :class="filled ? 'bg-sf-success text-sf-theme-text' : 'bg-sf-warning text-sf-theme-text'"
               aria-hidden="true"
             />
-            <SfIcon
-              v-if="draggable"
-              @click.stop=""
-              icon="icon-park-outline:drag"
-              :class="dragHandleClass"
-              size="4"
-              boxSize="6"
-              class="mr-1 cursor-move! rounded-xl hover:bg-sf-theme hover:text-sf-theme-text"
-            />
             <span class="pr-1 pl-2 text-[15px] text-sf-text">
               {{ currentForm.label }}
             </span>
@@ -41,29 +32,41 @@
             <!-- 设置紧随字段标题，隐藏开关留在标题行最右侧。 -->
             <component v-if="labelActions" :is="labelActions" />
           </div>
-          <!-- 隐藏与删除复用宿主提供的操作图标，统一交互与外观。 -->
-          <SfTooltip
-            v-if="currentForm.ui?.hidden"
-            :content="hidden ? $t('show') : $t('hide')"
-          >
+          <!-- 行尾操作：拖拽把手排在最前，与个人信息字段保持一致 -->
+          <div class="ml-auto flex shrink-0 items-center">
+            <SfIcon
+              v-if="draggable"
+              @click.stop=""
+              icon="icon-park-outline:drag"
+              :class="dragHandleClass"
+              size="4"
+              boxSize="6"
+              class="cursor-move! rounded-xl hover:bg-sf-theme hover:text-sf-theme-text"
+            />
+            <!-- 隐藏与删除复用宿主提供的操作图标，统一交互与外观。 -->
+            <SfTooltip
+              v-if="currentForm.ui?.hidden"
+              :content="hidden ? $t('show') : $t('hide')"
+            >
+              <component
+                :is="actionIcon || SfIcon"
+                @pointerdown.stop.prevent
+                @click.stop.prevent="toggleHidden"
+                :icon="hidden ? 'lucide:eye' : 'lucide:eye-off'"
+                size="4"
+                :class="actionIcon ? undefined : 'shrink-0 cursor-pointer hover:text-sf-theme'"
+              />
+            </SfTooltip>
             <component
               :is="actionIcon || SfIcon"
+              v-if="currentForm.ui?.removable"
               @pointerdown.stop.prevent
-              @click.stop.prevent="toggleHidden"
-              :icon="hidden ? 'lucide:eye' : 'lucide:eye-off'"
+              @click.stop.prevent="removeField"
+              icon="ic:round-delete"
               size="4"
-              :class="actionIcon ? undefined : 'ml-auto shrink-0 cursor-pointer hover:text-sf-theme'"
+              :class="actionIcon ? undefined : 'cursor-pointer hover:text-sf-theme'"
             />
-          </SfTooltip>
-          <component
-            :is="actionIcon || SfIcon"
-            v-if="currentForm.ui?.removable"
-            @pointerdown.stop.prevent
-            @click.stop.prevent="removeField"
-            icon="ic:round-delete"
-            size="4"
-            :class="actionIcon ? undefined : 'cursor-pointer hover:text-sf-theme'"
-          />
+          </div>
         </div>
       </template>
       <slot />

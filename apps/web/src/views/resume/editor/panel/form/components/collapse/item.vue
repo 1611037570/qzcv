@@ -55,14 +55,15 @@ function copyItem(event) {
         >
           <!-- 子记录标题适度加重，操作图标保留清晰度并区分层级。 -->
           <div class="flex min-w-0 flex-1 items-center text-[15px] font-semibold">
-            <Icon
-              icon="icon-park-outline:drag"
-              class="item-drag shrink-0 cursor-move! text-sf-text-2 hover:text-sf-text"
-            />
             <!-- 隐藏状态通过名称删除线表达，操作图标保持统一颜色。 -->
             <span class="truncate" :class="{ 'line-through': hidden }">{{ displayTitle }}</span>
           </div>
           <div class="flex shrink-0 items-center text-sf-text-2">
+            <!-- 拖拽把手位于右侧操作区第一位，与其他卡片保持一致 -->
+            <Icon
+              icon="icon-park-outline:drag"
+              class="item-drag shrink-0 cursor-move! text-sf-text-2 hover:text-sf-text"
+            />
             <SfTooltip :content="$t('copyRecord')">
               <Icon @click.stop="copyItem" icon="ph:copy-duotone" class="hover:text-sf-text" />
             </SfTooltip>

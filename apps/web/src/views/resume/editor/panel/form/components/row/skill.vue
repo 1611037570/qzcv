@@ -50,8 +50,9 @@ const removeSkill = () => {
       <template #title>
         <!-- 标题和操作按钮始终可见，字段随条目独立折叠。 -->
         <div class="flex w-full items-center gap-3">
-          <SfIcon icon="icon-park-outline:drag" size="4" class="item-drag cursor-move!" @click.stop="" />
           <span class="min-w-0 flex-1 truncate font-medium">{{ name || $t('notFilled') }}</span>
+          <!-- 拖拽把手位于右侧操作区第一位 -->
+          <SfIcon icon="icon-park-outline:drag" size="4" class="item-drag shrink-0 cursor-move!" @click.stop="" />
           <SfTooltip :content="hidden ? $t('show') : $t('hide')">
             <Icon
               :icon="hidden ? 'lucide:eye' : 'lucide:eye-off'"

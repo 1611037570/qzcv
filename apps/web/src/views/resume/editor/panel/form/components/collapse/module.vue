@@ -57,11 +57,18 @@ const emptyModule = computed(() =>
   DEFAULT_MODULE_NAMES.find((module) => module.key === currentForm.value?.key),
 );
 const emptyStateKey = computed(() => emptyModule.value?.key ?? "custom");
-// 展开状态：直接绑定激活项 name 数组（["1"] 展开 / [] 收起），随数据双向绑定
+// 展开状态：单模块模式固定展开，任何收起操作都立即恢复
 const collapsed = defineModel("collapsed", {
   type: Array,
   default: () => [],
 });
+watch(
+  () => collapsed.value,
+  (value) => {
+    if (value?.[0] !== "1") collapsed.value = ["1"];
+  },
+  { immediate: true },
+);
 
 // 隐藏状态：控制模块在简历预览中显示/隐藏
 const hidden = defineModel("hidden", {
@@ -109,6 +116,7 @@ function handleAdd() {
 </script>
 
 <template>
+  <!-- 单模块模式固定展开，不再提供折叠交互 -->
   <SfCollapse v-model="collapsed" :border="false" class="bg-sf-primary!">
     <SfCollapseItem
       name="1"
@@ -120,12 +128,7 @@ function handleAdd() {
           <div
             class="flex flex-1 items-center truncate text-base font-bold text-sf-text transition-colors group-hover:text-sf-theme"
           >
-            <Icon
-              v-if="currentForm.key !== 'user'"
-              icon="icon-park-outline:drag"
-              class="container-drag cursor-move!"
-            />
-            <!-- 隐藏模块时为标题添加删除线标识 -->
+            <!-- 隐藏模块标题前的拖拽把手：单模块模式下不再支持模块间拖拽排序 -->
             <EditableTitle v-model="title" :strike-through="hidden">
               <template v-if="currentForm.key === 'skill'" #actions>
                 <SkillDropdown />
@@ -227,5 +230,9 @@ function handleAdd() {
 /* 展开时在底边添加分隔线 */
 .resume-module-box > :deep(.el-collapse-item__header.is-active) {
   @apply border-b!  border-sf-b!;
+}
+/* 单模块模式固定展开，隐藏折叠箭头 */
+.resume-module-box > :deep(.el-collapse-item__header .el-collapse-item__arrow) {
+  display: none;
 }
 </style>
