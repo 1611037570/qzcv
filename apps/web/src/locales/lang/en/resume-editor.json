@@ -838,6 +838,7 @@
   "resumeModuleTitle": "Resume sections",
   "dragSortHint": "Drag to sort",
   "toBeFilled": "Pending",
+  "moduleRecordCount": "{count} record(s)",
   "moduleProgressTip": "Completion {progress}%, {count} required item(s) to fill",
   "collapseModuleTree": "Collapse navigation",
   "expandModuleTree": "Expand navigation",

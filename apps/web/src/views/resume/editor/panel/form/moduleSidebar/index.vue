@@ -13,6 +13,10 @@ import { useDraggable } from "vue-draggable-plus";
 import { useResumeStore } from "@/stores";
 import { moveFieldByKey } from "@/components/business/dynamicForm/api";
 import {
+  CUSTOM_MODULE_ICON,
+  DEFAULT_MODULE_NAMES,
+} from "@/stores/modules/resume/config/defaultConfig";
+import {
   editorProgress,
   editorViewMode,
   jumpEditor,
@@ -47,6 +51,8 @@ const VIEW_MODES = [
 
 // 模块名称最多显示的字数，超出截断，保证模块树宽度稳定
 const NAME_MAX = 8;
+// 模块图标映射：默认模块取登记表，自定义模块统一使用拼图图标
+const MODULE_ICON_MAP = new Map(DEFAULT_MODULE_NAMES.map(({ key, icon }) => [key, icon]));
 // 模块树当前高亮项：进入时默认个人信息，之后只由点击决定
 const activeKey = ref("user");
 
@@ -89,6 +95,10 @@ const moduleItems = computed(() =>
     return {
       key: field.key,
       name: resumeStore.getModel(field.key)?.name || field.key,
+      // 图标随模块登记表展示，自定义模块沿用拼图图标
+      icon:
+        MODULE_ICON_MAP.get(field.key) ||
+        (field.key.startsWith("custom") ? CUSTOM_MODULE_ICON : "mdi:puzzle-outline"),
       fixed: field.fixed,
       // 隐藏模块在模块树中降为灰阶并显示圆点
       hidden: resumeStore.currentData?.[field.key]?.ui?.hidden === true,
@@ -98,7 +108,7 @@ const moduleItems = computed(() =>
   }),
 );
 
-// 各模块必填项是否全部填写：与完成度详情同一口径，勾选圈与行尾文案按此区分
+// 各模块必填项是否全部填写：与完成度详情同一口径，图标角标与状态文案按此区分
 const moduleDoneMap = computed(() => {
   // Map 的键为模块标识，值为该模块必填项是否全部完成
   const map = new Map();
@@ -108,17 +118,32 @@ const moduleDoneMap = computed(() => {
   return map;
 });
 
-// 模块行状态样式：选中用浅背景加粗，隐藏降灰，其余默认悬停反馈
+// 模块卡片状态样式：选中与悬停只做边框反馈，隐藏模块整体降灰
 const rowClass = (item) => {
-  if (item.key === activeKey.value) return "bg-sf-bg font-medium text-sf-text";
-  if (item.hidden) return "text-sf-text-3";
-  return "text-sf-text hover:bg-sf-bg";
+  if (item.key === activeKey.value) return "border-sf-theme font-medium text-sf-text";
+  if (item.hidden) return "border-sf-b text-sf-text-3 opacity-70";
+  return "border-sf-b text-sf-text hover:border-sf-theme";
 };
 
-// 勾选圈状态样式：隐藏降灰，完成用成功色，未完成用警示色
-const checkClass = (item) => {
-  if (item.hidden) return "text-sf-text-3";
-  return moduleDoneMap.value.get(item.key) ? "text-sf-success" : "text-sf-warning";
+// 图标底板：选中填充主题色，隐藏降为灰底，其余使用主题浅色底
+const iconBoxClass = (item) => {
+  if (item.hidden) return "bg-sf-bg text-sf-text-3";
+  if (item.key === activeKey.value) return "bg-sf-theme text-sf-theme-text";
+  return "bg-sf-theme-3 text-sf-theme";
+};
+
+// 右下角状态角标：隐藏显示灰底，必填完成显示成功色，未完成显示警示色
+const badgeClass = (item) => {
+  if (item.hidden) return "bg-sf-bg-2 text-sf-text-3";
+  return moduleDoneMap.value.get(item.key)
+    ? "bg-sf-success text-sf-theme-text"
+    : "bg-sf-warning text-sf-theme-text";
+};
+
+// 角标图标：隐藏为闭眼，完成为对勾，未完成为警示提示
+const badgeIcon = (item) => {
+  if (item.hidden) return "lucide:eye-off";
+  return moduleDoneMap.value.get(item.key) ? "lucide:check" : "lucide:circle-alert";
 };
 
 // 待补充文案样式：随模块行一起降灰
@@ -283,55 +308,75 @@ onUnmounted(() => {
             <span class="truncate">{{ $t(mode.label) }}</span>
           </button>
         </div>
-        <SfScrollbar class="module-list-scroll mt-1.5 min-h-0 min-w-0 flex-1">
-          <!-- 模块列表：行高固定，名称超长截断，保证窄栏宽度稳定 -->
-          <div ref="listRef" class="flex min-h-full shrink-0 flex-col gap-1.5">
-            <!-- 模块行固定高度，名称最多显示八个字，正常状态使用主文字色 -->
+        <SfScrollbar class="module-list-scroll mt-3 min-h-0 min-w-0 flex-1">
+          <!-- 模块列表：卡片式模块行，名称超长截断，保证窄栏宽度稳定 -->
+          <div ref="listRef" class="flex min-h-full shrink-0 flex-col gap-3">
+            <!-- 模块卡片：最左侧拖拽把手，其次为带状态角标的模块图标，右侧为名称与状态文案 -->
             <div
               v-for="item in draggableItems"
               :key="item.key"
               :data-fixed="item.fixed ? 'true' : undefined"
-              class="rail-row group/rail flex h-8 min-w-0 cursor-pointer items-center gap-1 rounded-3xl p-1 transition-colors select-none"
+              class="rail-row group/rail flex min-w-0 cursor-pointer items-center gap-1.5 rounded-2xl border bg-sf-primary p-2 transition-colors select-none"
               :class="rowClass(item)"
               @click="handleModuleJump(item.key)"
             >
-              <!-- 左侧完成状态勾选圈：必填项填完显示成功色对勾，未填完显示警示色空心圈 -->
-              <SfIcon
-                :icon="moduleDoneMap.get(item.key) ? 'mdi:check-circle' : 'mdi:circle-outline'"
-                size="4"
-                class="shrink-0 transition-colors"
-                :class="checkClass(item)"
-              />
-              <!-- 名称可收缩：行宽固定，长名称必须让位给行尾的拖拽把手，否则把手会被挤出可视区 -->
-              <span class="module-name min-w-0 flex-1 truncate text-[12px]">{{
-                shortName(item.name)
-              }}</span>
-              <!-- 右侧为完成状态与拖拽把手：未完成显示待补充，完成后显示数量徽标，两者互斥 -->
-              <span class="rail-meta ml-auto flex shrink-0 items-center gap-1">
+              <!-- 最左侧拖拽把手：固定模块保留同宽占位，保证图标列对齐 -->
+              <span
+                v-if="!item.fixed"
+                class="module-sidebar-drag flex shrink-0 cursor-grab! items-center opacity-60 transition-opacity group-hover/rail:opacity-100 active:cursor-grabbing!"
+                @click.stop
+              >
+                <!-- 图标组件自身带 cursor-pointer，抓手光标必须加感叹号才生效 -->
+                <SfIcon
+                  icon="icon-park-outline:drag"
+                  size="4"
+                  class="cursor-grab! text-sf-text-3 transition-colors group-hover/rail:text-sf-text-2 active:cursor-grabbing!"
+                />
+              </span>
+              <span v-else class="w-4 shrink-0" aria-hidden="true" />
+              <!-- 模块图标与右下角状态角标：角标外圈用卡片底色，与图标底板分隔 -->
+              <span
+                class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl transition-colors"
+                :class="iconBoxClass(item)"
+              >
+                <SfIcon :icon="item.icon" size="5" />
+                <span
+                  class="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-sf-primary"
+                  :class="badgeClass(item)"
+                  aria-hidden="true"
+                >
+                  <SfIcon :icon="badgeIcon(item)" size="3" />
+                </span>
+              </span>
+              <!-- 名称与状态文案：未完成显示待补充，完成后显示记录数量，两者互斥 -->
+              <span class="ml-1.5 flex min-w-0 flex-1 flex-col justify-center">
+                <span class="truncate text-[13px] leading-4">{{ shortName(item.name) }}</span>
                 <!-- 待补充仅未完成时渲染（SfTooltip 默认插槽为空会兜底出问号图标，故完成态不包 tooltip）；
                      悬停可看到还差几处必填项，点击直接定位到第一个缺失字段 -->
                 <SfTooltip
                   v-if="!moduleDoneMap.get(item.key)"
                   :content="pendingModuleMap.get(item.key)?.tip"
                   placement="top"
-                  class="flex min-w-0 items-center"
+                  class="mt-1 flex min-w-0 items-center"
                 >
                   <button
                     type="button"
-                    class="flex h-6 cursor-pointer items-center rounded-3xl px-1 text-[11px] leading-none transition-colors hover:underline"
+                    class="flex cursor-pointer items-center text-[11px] leading-3 transition-colors hover:underline"
                     :class="pendingClass(item)"
                     @click.stop="goFillMissing(item.key)"
                   >
                     {{ $t("toBeFilled") }}
                   </button>
                 </SfTooltip>
-                <!-- 完成后的记录数量徽标，不加悬停提示；不铺底色，只留数字 -->
+                <!-- 完成后的记录数量，跟随名称下方展示 -->
                 <span
                   v-else-if="item.count !== null"
-                  class="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] leading-none text-sf-text-2 tabular-nums"
-                  >{{ item.count }}</span
+                  class="mt-1 truncate text-[11px] leading-3 text-sf-text-2"
+                  >{{ $t("moduleRecordCount", { count: item.count }) }}</span
                 >
-                <!-- 隐藏/显示模块：与模块折叠面板同款眼睛图标，点击切换预览显隐 -->
+              </span>
+              <!-- 行尾操作：隐藏/显示与删除，与模块折叠面板同款图标 -->
+              <span class="ml-1.5 flex shrink-0 items-center gap-1">
                 <SfTooltip :content="item.hidden ? $t('show') : $t('hide')" placement="top">
                   <button
                     type="button"
@@ -359,18 +404,6 @@ onUnmounted(() => {
                     />
                   </button>
                 </SfTooltip>
-                <span
-                  v-if="!item.fixed"
-                  class="module-sidebar-drag flex cursor-grab! items-center active:cursor-grabbing!"
-                  @click.stop
-                >
-                  <!-- 图标组件自身带 cursor-pointer，抓手光标必须加感叹号才生效 -->
-                  <SfIcon
-                    icon="icon-park-outline:drag"
-                    size="4"
-                    class="cursor-grab! text-sf-text-3 transition-colors group-hover/rail:text-sf-text-2 active:cursor-grabbing!"
-                  />
-                </span>
               </span>
             </div>
           </div>
@@ -462,7 +495,7 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 /* 抽屉容器：移动端与桌面端固定同一宽度，宽度全部由变量统一管理 */
 .module-tree-root {
-  --module-tree-width: 200px; /* 模块树固定宽度 */
+  --module-tree-width: 248px; /* 模块树固定宽度，容纳卡片式图标与两行文案 */
 
   width: var(--module-tree-width);
   transition: width 0.3s ease-out;
@@ -482,7 +515,7 @@ onUnmounted(() => {
   transform: translateX(-100%);
 }
 
-/* 模块树为勾选圈 + 名称列表，拖拽把手固定在行尾 */
+/* 模块树为卡片式模块行，拖拽把手固定在行首 */
 .module-tree {
   width: var(--module-tree-width);
 }
@@ -498,10 +531,10 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* 跟手拖拽的克隆体：圆角与模块行一致 */
+/* 跟手拖拽的克隆体：圆角与模块卡片一致 */
 .module-sidebar-drag-fallback {
   transform: scale(1.03);
-  border-radius: 24px;
+  border-radius: 16px;
   opacity: 1 !important;
   box-shadow: 0 14px 30px rgba(17, 24, 39, 0.18);
 }

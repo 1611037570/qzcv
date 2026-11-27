@@ -838,6 +838,7 @@
   "resumeModuleTitle": "简历模块",
   "dragSortHint": "拖动排序",
   "toBeFilled": "待补充",
+  "moduleRecordCount": "{count} 条记录",
   "moduleProgressTip": "完成度 {progress}%，还有 {count} 处必填项未填写",
   "collapseModuleTree": "收起导航",
   "expandModuleTree": "展开导航",
