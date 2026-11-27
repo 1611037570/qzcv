@@ -503,7 +503,6 @@ const confirmLink = async () => {
   fill: none;
   stroke: currentColor;
 }
-:deep(.w-e-bar-item button.sf-wang-icon-ready:hover .sf-wang-toolbar-icon),
 :deep(.w-e-bar-item button.sf-wang-icon-ready.active .sf-wang-toolbar-icon) {
   color: var(--color-sf-theme);
 }
@@ -514,11 +513,20 @@ const confirmLink = async () => {
     fill: var(--color-sf-theme);
   }
 }
-// 悬停时只改变图标颜色，避免不等宽按钮出现椭圆背景。
+// 触屏点按后 hover 状态会一直停留，这里统一去掉底色，避免出现卡住的高亮
 :deep(.w-e-bar-item button:hover) {
   background-color: transparent;
-  svg {
-    fill: var(--color-sf-theme);
+}
+// 悬停只在支持悬停的设备生效，避免触屏点按后图标一直变色
+@media (hover: hover) {
+  :deep(.w-e-bar-item button.sf-wang-icon-ready:hover .sf-wang-toolbar-icon) {
+    color: var(--color-sf-theme);
+  }
+  // 悬停时只改变图标颜色，避免不等宽按钮出现椭圆背景。
+  :deep(.w-e-bar-item button:hover) {
+    svg {
+      fill: var(--color-sf-theme);
+    }
   }
 }
 // 修改工具栏按钮下拉菜单hover样式
