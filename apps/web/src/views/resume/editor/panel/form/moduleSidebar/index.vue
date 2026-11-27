@@ -49,8 +49,6 @@ const VIEW_MODES = [
   { value: "single", label: "singleModuleMode", icon: "lucide:layout-template" },
 ];
 
-// 模块名称最多显示的字数，超出截断，保证模块树宽度稳定
-const NAME_MAX = 8;
 // 模块图标映射：默认模块取登记表，自定义模块统一使用拼图图标
 const MODULE_ICON_MAP = new Map(DEFAULT_MODULE_NAMES.map(({ key, icon }) => [key, icon]));
 // 模块树当前高亮项：进入时默认个人信息，之后只由点击决定
@@ -64,9 +62,6 @@ const listRef = ref(null);
 const draggableItems = ref([]);
 let draggedKeys = [];
 let draggable = null;
-
-// 名称超过上限时截断并补省略号，让「还有内容」看得出来
-const shortName = (name) => (name.length > NAME_MAX ? `${name.slice(0, NAME_MAX)}…` : name);
 
 // 点击模块树同步定位编辑区与预览区；抽屉形态下选中后收起，并通知工作区切回编辑面板
 function handleModuleJump(key) {
@@ -336,7 +331,7 @@ onUnmounted(() => {
               </span>
               <!-- 名称与状态文案：未完成显示待补充，完成后显示记录数量，两者互斥 -->
               <span class="flex min-w-0 flex-1 flex-col justify-center">
-                <span class="truncate text-[13px] leading-4">{{ shortName(item.name) }}</span>
+                <span class="truncate text-[13px] leading-4">{{ item.name }}</span>
                 <!-- 待补充仅未完成时渲染（SfTooltip 默认插槽为空会兜底出问号图标，故完成态不包 tooltip）；
                      悬停可看到还差几处必填项，点击直接定位到第一个缺失字段 -->
                 <SfTooltip

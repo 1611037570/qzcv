@@ -2898,7 +2898,7 @@ const jobIntentFields = jobIntentSource.fields
     delete field.addable;
     delete field.defaultAdded;
     field.colClass = DEFAULT_COL_CLASS + " py-1 px-3!"; // 独立字段沿用个人信息的卡片外观。
-    field.props = { ...field.props, removable: false, draggable: true }; // 显示字段拖拽手柄，不提供删除与置顶操作。
+    field.props = { ...field.props, removable: true, draggable: true }; // 提供单个字段清除与拖拽手柄，不提供置顶操作。
     field.fields.forEach((child) => {
       delete child.addable;
       delete child.defaultAdded;
