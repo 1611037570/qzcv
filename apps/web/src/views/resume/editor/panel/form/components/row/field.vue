@@ -57,6 +57,10 @@ const renderable = computed(() => !field.value?.addable || hasFieldData(field.va
 // 简历运行时配置与数据：副标题标记、自定义字段的重命名与删除都落在配置与数据上
 const resumeStore = useResumeStore();
 const { runtimeConfig, currentData } = storeToRefs(resumeStore);
+// 字段是否已填写：用于图标右下角展示填写状态
+const filled = computed(() => hasUserFieldContent(currentData.value, fieldKey.value));
+// 必填字段：未填写时角标提示待补充
+const requiredField = computed(() => field.value?.required === true);
 const localizedIconCategories = computed(() => {
   (i18n.global.locale as any).value;
   return getLocalizedIconCategories();
@@ -123,69 +127,90 @@ const clearField = () => {
 </script>
 
 <template>
-  <div v-if="renderable" class="flex w-full flex-col gap-1">
-    <div class="flex w-full items-center gap-1">
-      <!-- 保留图标选择等子控件的默认点击行为，移动端无需再次点击。 -->
-      <div v-if="label" class="flex shrink-0 items-center" @click.stop="">
-        <Icon v-if="draggable" icon="icon-park-outline:drag" class="item-drag cursor-move!" />
+  <div v-if="renderable" class="flex w-full items-center gap-1.5">
+    <!-- 左侧固定列：字段图标独立展示，不参与右侧文案与输入的上下排列 -->
+    <div v-if="label" class="flex shrink-0 items-center" @click.stop="">
+      <!-- 字段图标底板：有图标绑定时点击图标可切换，右下角展示填写状态 -->
+      <span
+        class="field-icon-tile relative flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-sf-theme-3 text-sf-theme"
+      >
         <SfIconPicker
           v-if="icon !== undefined"
           :categories="localizedIconCategories"
           :all-category-name="$t('allIcons')"
           :modelValue="icon"
           @update:modelValue="updateIcon"
-          :size="4"
-          class="mr-1"
+          :size="5"
+          class="field-icon-picker"
         />
-        <span class="truncate pr-1 text-sm text-sf-text">
+        <!-- 无图标绑定的固定字段使用个人图标，保持与可换图标字段同款底板 -->
+        <SfIcon v-else icon="mdi:account" size="5" />
+        <!-- 填写状态角标：已填为成功色对勾，必填未填为警示色提示 -->
+        <span
+          v-if="filled || requiredField"
+          class="absolute -right-1 -bottom-1 flex h-3 w-3 items-center justify-center rounded-full ring-1 ring-sf-primary"
+          :class="filled ? 'bg-sf-success text-sf-theme-text' : 'bg-sf-warning text-sf-theme-text'"
+          aria-hidden="true"
+        >
+          <SfIcon :icon="filled ? 'lucide:check' : 'lucide:circle-alert'" size="2" />
+        </span>
+      </span>
+    </div>
+    <!-- 右侧：名称在上、输入在下，操作区固定在名称行尾 -->
+    <div class="flex min-w-0 flex-1 flex-col">
+      <div class="flex w-full items-center">
+        <span v-if="label" class="truncate pr-1 text-sm text-sf-text" @click.stop="">
           {{ label }}
         </span>
         <sf-tooltip :content="tip" v-if="tip" class="text-sf-text" />
+        <!-- 行尾操作：拖拽把手排在最前，后接重命名、置顶、隐藏与删除 -->
+        <div
+          v-if="draggable || hidden !== undefined || removable || subtitleCapable"
+          class="ml-auto flex shrink-0 items-center"
+        >
+          <!-- 拖拽把手：位于右侧操作区的第一个位置，无拖拽字段不渲染 -->
+          <Icon v-if="draggable" icon="icon-park-outline:drag" class="item-drag cursor-move!" />
+          <!-- 重命名仅对自定义字段开放：预设字段标题来自模板配置，不会持久化 -->
+          <Icon
+            v-if="isCustomField"
+            @pointerdown.stop.prevent
+            @click="openRenameModal"
+            icon="lucide:pencil"
+          />
+          <!-- 副标题开关：不支持置顶的字段整块不渲染，避免触发 tooltip 兜底内容 -->
+          <SfTooltip v-if="subtitleCapable" :content="subtitleTip">
+            <Icon
+              @pointerdown.stop.prevent
+              @click="toggleSubtitle"
+              icon="lucide:heading-2"
+              :class="[isSubtitle ? 'text-sf-theme' : '', subtitleFull ? 'opacity-50' : '']"
+            />
+          </SfTooltip>
+          <SfTooltip v-if="hidden !== undefined" :content="hidden ? $t('show') : $t('hide')">
+            <Icon
+              @pointerdown.stop.prevent
+              @click="toggleHidden"
+              :icon="hidden ? 'lucide:eye' : 'lucide:eye-off'"
+              :class="hidden ? 'text-sf-theme' : ''"
+            />
+          </SfTooltip>
+
+          <Icon
+            v-if="removable"
+            @pointerdown.stop.prevent
+            @click="clearField"
+            icon="ic:round-delete"
+          />
+        </div>
       </div>
-      <div class="min-w-0 flex-1">
+      <!-- 输入区：统一收敛控件高度，保持个人信息卡片紧凑 -->
+      <div class="field-content min-w-0 w-full">
         <slot />
       </div>
-      <!-- 操作区固定在右侧，避免字段宽度变化导致按钮位移 -->
-      <div
-        v-if="hidden !== undefined || removable || subtitleCapable"
-        class="flex shrink-0 items-center"
-      >
-        <!-- 重命名仅对自定义字段开放：预设字段标题来自模板配置，不会持久化 -->
-        <Icon
-          v-if="isCustomField"
-          @pointerdown.stop.prevent
-          @click="openRenameModal"
-          icon="lucide:pencil"
-        />
-        <!-- 副标题开关：不支持置顶的字段整块不渲染，避免触发 tooltip 兜底内容 -->
-        <SfTooltip v-if="subtitleCapable" :content="subtitleTip">
-          <Icon
-            @pointerdown.stop.prevent
-            @click="toggleSubtitle"
-            icon="lucide:heading-2"
-            :class="[isSubtitle ? 'text-sf-theme' : '', subtitleFull ? 'opacity-50' : '']"
-          />
-        </SfTooltip>
-        <SfTooltip v-if="hidden !== undefined" :content="hidden ? $t('show') : $t('hide')">
-          <Icon
-            @pointerdown.stop.prevent
-            @click="toggleHidden"
-            :icon="hidden ? 'lucide:eye' : 'lucide:eye-off'"
-            :class="hidden ? 'text-sf-theme' : ''"
-          />
-        </SfTooltip>
-
-        <Icon
-          v-if="removable"
-          @pointerdown.stop.prevent
-          @click="clearField"
-          icon="ic:round-delete"
-        />
+      <!-- 展示形态切换使用中性色，仅声明了展示选项的字段渲染。 -->
+      <div v-if="displayOptions?.length" class="mt-1.5 w-full max-w-60">
+        <SfTab v-model="display" :list="displayList" class="display-tabs h-8!" />
       </div>
-    </div>
-    <!-- 展示形态切换使用中性色，仅声明了展示选项的字段渲染。 -->
-    <div v-if="displayOptions?.length" class="w-full max-w-60">
-      <SfTab v-model="display" :list="displayList" class="display-tabs h-8!" />
     </div>
   </div>
   <!-- 重命名弹窗：仅自定义字段需要 -->
@@ -201,6 +226,33 @@ const clearField = () => {
 </template>
 
 <style lang="scss" scoped>
+/* 个人信息字段卡片内的输入控件：统一收敛高度，保持卡片紧凑 */
+.field-content {
+  --el-component-size: 28px;
+
+  :deep(.el-input__wrapper),
+  :deep(.el-select__wrapper) {
+    min-height: 28px;
+  }
+
+  :deep(.el-input__inner),
+  :deep(.el-select__placeholder) {
+    height: 28px;
+    line-height: 28px;
+  }
+}
+
+/* 图标底板内的图标选择触发器：底色由底板统一提供，悬停不再叠加圆形底色 */
+.field-icon-tile :deep(.field-icon-picker),
+.field-icon-tile :deep(.field-icon-picker [data-sf-icon-state]) {
+  color: var(--color-sf-theme) !important;
+  border-radius: 16px;
+}
+
+.field-icon-tile :deep(.field-icon-picker [data-sf-icon-state]:hover) {
+  background-color: transparent !important;
+}
+
 /* 字段展示形态的选中与悬停反馈使用中性色。 */
 .display-tabs {
   :deep(.bg-sf-theme) {

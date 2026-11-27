@@ -320,20 +320,6 @@ onUnmounted(() => {
               :class="rowClass(item)"
               @click="handleModuleJump(item.key)"
             >
-              <!-- 最左侧拖拽把手：固定模块保留同宽占位，保证图标列对齐 -->
-              <span
-                v-if="!item.fixed"
-                class="module-sidebar-drag flex shrink-0 cursor-grab! items-center opacity-60 transition-opacity group-hover/rail:opacity-100 active:cursor-grabbing!"
-                @click.stop
-              >
-                <!-- 图标组件自身带 cursor-pointer，抓手光标必须加感叹号才生效 -->
-                <SfIcon
-                  icon="icon-park-outline:drag"
-                  size="4"
-                  class="cursor-grab! text-sf-text-3 transition-colors group-hover/rail:text-sf-text-2 active:cursor-grabbing!"
-                />
-              </span>
-              <span v-else class="w-4 shrink-0" aria-hidden="true" />
               <!-- 模块图标与右下角状态角标：角标外圈用卡片底色，与图标底板分隔 -->
               <span
                 class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl transition-colors"
@@ -349,7 +335,7 @@ onUnmounted(() => {
                 </span>
               </span>
               <!-- 名称与状态文案：未完成显示待补充，完成后显示记录数量，两者互斥 -->
-              <span class="ml-1.5 flex min-w-0 flex-1 flex-col justify-center">
+              <span class="flex min-w-0 flex-1 flex-col justify-center">
                 <span class="truncate text-[13px] leading-4">{{ shortName(item.name) }}</span>
                 <!-- 待补充仅未完成时渲染（SfTooltip 默认插槽为空会兜底出问号图标，故完成态不包 tooltip）；
                      悬停可看到还差几处必填项，点击直接定位到第一个缺失字段 -->
@@ -375,8 +361,21 @@ onUnmounted(() => {
                   >{{ $t("moduleRecordCount", { count: item.count }) }}</span
                 >
               </span>
-              <!-- 行尾操作：隐藏/显示与删除，与模块折叠面板同款图标 -->
+              <!-- 行尾操作：拖拽把手排在最前，后接隐藏/显示与删除 -->
               <span class="ml-1.5 flex shrink-0 items-center gap-1">
+                <!-- 拖拽把手：位于右侧操作区的第一个位置，图标样式与显隐、删除保持一致 -->
+                <span
+                  v-if="!item.fixed"
+                  class="module-sidebar-drag flex cursor-grab! items-center active:cursor-grabbing!"
+                  @click.stop
+                >
+                  <!-- 图标组件自身带 cursor-pointer，抓手光标必须加感叹号才生效 -->
+                  <SfIcon
+                    icon="icon-park-outline:drag"
+                    size="4"
+                    class="cursor-grab! text-sf-text-3 transition-colors hover:text-sf-text active:cursor-grabbing!"
+                  />
+                </span>
                 <SfTooltip :content="item.hidden ? $t('show') : $t('hide')" placement="top">
                   <button
                     type="button"
