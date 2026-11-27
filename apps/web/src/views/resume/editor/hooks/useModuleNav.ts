@@ -140,8 +140,8 @@ const resumeStore = useResumeStore();
 const { currentData, runtimeFields, currentUI } = storeToRefs(resumeStore);
 const { searchIndex } = useResumeSearch();
 
-// 编辑区展示模式：page 为整页编辑（全部模块连续展示），single 为单个模块（只展示当前点击的模块）
-export const editorViewMode = ref<"page" | "single">("page");
+// 编辑区展示模式：固定为单模块编辑（只展示当前点击的模块）
+export const editorViewMode = ref<"page" | "single">("single");
 
 // 编辑器共享的完成度结果：模块树勾选与完成度入口消费同一份数据，内容变化只计算一次
 export const editorProgress = computed(() =>

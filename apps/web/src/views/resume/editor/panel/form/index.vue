@@ -135,14 +135,14 @@ const localizedResumeOptions = computed(() => {
   i18n.global.locale.value;
   return localizeResumeOptions(RESUME_OPTIONS);
 });
-// 编辑区展示配置：单个模块模式只渲染当前定位的模块，整页模式与未选中模块时回退完整表单。
+// 编辑区展示配置：固定单模块模式，只渲染当前定位的模块，未定位时回退首个模块。
 // 字段对象与原始配置共享引用，记录增删等嵌套操作仍直接作用于真实数据。
 const displayConfig = computed({
   get: () => {
     if (editorViewMode.value !== "single" || !runtimeConfig.value) return runtimeConfig.value;
-    const field = (runtimeConfig.value.fields || []).find(
-      (item) => item.key === resumeStore.editingModuleKey,
-    );
+    const fields = runtimeConfig.value.fields || [];
+    const field =
+      fields.find((item) => item.key === resumeStore.editingModuleKey) ?? fields[0];
     return field ? { ...runtimeConfig.value, fields: [field] } : runtimeConfig.value;
   },
   // 表单配置整体替换时写回运行时配置，保持双向绑定语义

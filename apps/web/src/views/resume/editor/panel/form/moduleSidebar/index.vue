@@ -10,7 +10,6 @@ import {
 } from "@/stores/modules/resume/config/defaultConfig";
 import {
   editorProgress,
-  editorViewMode,
   jumpEditor,
   jumpPreview,
   jumpToCheckTarget,
@@ -35,12 +34,7 @@ const emit = defineEmits(["navigate"]);
 // 抽屉收起状态：收起后整棵树滑出，布局宽度归零，由屏幕左缘浮层把手恢复
 const collapsed = ref(props.floating);
 
-// 编辑区展示模式：整页编辑在前且默认选中，单个模块只渲染当前点击的模块
-const VIEW_MODES = [
-  { value: "page", label: "pageEditMode", icon: "mdi:file-document-outline" },
-  { value: "single", label: "singleModuleMode", icon: "lucide:layout-template" },
-];
-
+// 编辑区展示模式固定为单模块编辑，不再提供整页/单页切换入口
 // 模块图标映射：默认模块取登记表，自定义模块统一使用拼图图标
 const MODULE_ICON_MAP = new Map(DEFAULT_MODULE_NAMES.map(({ key, icon }) => [key, icon]));
 // 模块树当前高亮项：进入时默认个人信息，之后只由点击决定
@@ -271,33 +265,10 @@ onUnmounted(() => {
             </button>
           </SfTooltip>
         </div>
-        <!-- 编辑区展示切换：轨道固定边框，悬停与选中都不引入主题色 -->
-        <div
-          class="flex h-8 shrink-0 items-center rounded-3xl border border-sf-b bg-sf-bg p-1"
-          role="tablist"
-          :aria-label="$t('moduleNavigation')"
-        >
-          <button
-            v-for="mode in VIEW_MODES"
-            :key="mode.value"
-            type="button"
-            role="tab"
-            class="flex h-6 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-2xl px-1 text-[12px] transition-all duration-100 select-none"
-            :class="
-              editorViewMode === mode.value
-                ? 'bg-sf-primary font-medium text-sf-text'
-                : 'text-sf-text hover:bg-sf-bg-2'
-            "
-            :aria-selected="editorViewMode === mode.value"
-            @click="editorViewMode = mode.value"
-          >
-            <SfIcon :icon="mode.icon" size="4" class="shrink-0" />
-            <span class="truncate">{{ $t(mode.label) }}</span>
-          </button>
-        </div>
-        <SfScrollbar class="module-list-scroll mt-3 min-h-0 min-w-0 flex-1">
+        <!-- 负右边距抵消外层内边距，让滚动条贴住面板右边缘 -->
+        <SfScrollbar class="module-list-scroll -mr-1.5 min-h-0 min-w-0 flex-1">
           <!-- 模块列表：卡片式模块行，名称超长截断，保证窄栏宽度稳定 -->
-          <div ref="listRef" class="flex min-h-full shrink-0 flex-col gap-3">
+          <div ref="listRef" class="flex min-h-full shrink-0 flex-col gap-3 pr-1.5 pb-3">
             <!-- 模块卡片：最左侧拖拽把手，其次为带状态角标的模块图标，右侧为名称与状态文案 -->
             <div
               v-for="item in draggableItems"
