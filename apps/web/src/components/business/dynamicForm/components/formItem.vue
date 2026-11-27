@@ -15,6 +15,16 @@
         <!-- 只隔离点击冒泡，避免移动端首次点击的默认行为被取消。 -->
         <div class="mb-1 flex h-5 w-full items-center text-sf-base" @click.stop="">
           <div class="flex flex-1 items-center">
+            <!-- 填写状态角标：与个人信息字段一致，已填显示对勾，必填未填显示提示 -->
+            <SfIcon
+              v-if="showStatus"
+              :icon="filled ? 'lucide:check' : 'lucide:circle-alert'"
+              size="3.5"
+              box-size="3"
+              class="rounded-full ring-2 ring-sf-primary"
+              :class="filled ? 'bg-sf-success text-sf-theme-text' : 'bg-sf-warning text-sf-theme-text'"
+              aria-hidden="true"
+            />
             <SfIcon
               v-if="draggable"
               @click.stop=""
@@ -99,6 +109,24 @@ const dragHandleClass = computed(() => {
   const value = dragClass?.trim();
   return value?.startsWith(".") ? value.slice(1) : value || "item-drag";
 });
+// 空值判定：空字符串、空数组与空对象都视为未填写
+const isEmptyValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return !value.trim();
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "object") return Object.keys(value as object).length === 0;
+  return false;
+};
+// 当前字段值：按完整数据路径从表单数据中读取
+const fieldValue = computed(() => {
+  const path = getFieldDataPath(currentForm, pathContext);
+  if (!path) return undefined;
+  return path.reduce<any>((data, key) => (data == null ? undefined : data[key]), rootData.data);
+});
+// 是否已填写：用于状态角标判断
+const filled = computed(() => !isEmptyValue(fieldValue.value));
+// 角标展示条件：已填写或必填未填，非必填且为空时不显示
+const showStatus = computed(() => filled.value || currentForm.required === true);
 const DEFAULT_SPAN = 24;
 // 切换表单项隐藏状态并写回数据
 const toggleHidden = () => {

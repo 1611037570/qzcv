@@ -215,9 +215,9 @@ function handleAdd() {
 :global(.resume-module-box .el-collapse-item__content) {
   padding-bottom: 0 !important;
 }
-/* 模块内部字段保持紧凑，顶层模块之间仍由表单容器保留 gap-3。 */
+/* 模块内部字段与记录保持统一纵向间距，与 gap-3 对齐。 */
 .resume-module-box :deep(.el-collapse-item__content .el-row) {
-  row-gap: 0.25rem;
+  row-gap: 0.75rem;
 }
 /* 模块头部背景跟随明暗主题，并覆盖全局透明背景 */
 .resume-module-box > :deep(.el-collapse-item__header) {
