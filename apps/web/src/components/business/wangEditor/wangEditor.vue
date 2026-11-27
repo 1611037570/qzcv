@@ -533,6 +533,13 @@ const confirmLink = async () => {
     border: none !important;
   }
 }
+// 触屏设备没有真正的悬停，点按按钮会先触发文字提示并吞掉首次点击，这里直接关闭提示
+@media (hover: none) {
+  :deep(.w-e-menu-tooltip-v5)::before,
+  :deep(.w-e-menu-tooltip-v5)::after {
+    display: none !important;
+  }
+}
 // ——————工具栏样式结束——————
 
 // ——————编辑器样式开始——————
