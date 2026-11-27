@@ -1,13 +1,5 @@
 <script setup>
-import {
-  computed,
-  getCurrentInstance,
-  nextTick,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-} from "vue";
+import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useDraggable } from "vue-draggable-plus";
 import { useResumeStore } from "@/stores";
@@ -321,13 +313,15 @@ onUnmounted(() => {
                 :class="iconBoxClass(item)"
               >
                 <SfIcon :icon="item.icon" size="5" />
-                <span
-                  class="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-sf-primary"
+                <!-- 状态角标直接用图标盒子承载外圈，避免额外包裹层 -->
+                <SfIcon
+                  :icon="badgeIcon(item)"
+                  size="3.5"
+                  box-size="3"
+                  class="absolute! -right-0.5 -bottom-0.5 rounded-full ring-1 ring-sf-primary"
                   :class="badgeClass(item)"
                   aria-hidden="true"
-                >
-                  <SfIcon :icon="badgeIcon(item)" size="3" />
-                </span>
+                />
               </span>
               <!-- 名称与状态文案：未完成显示待补充，完成后显示记录数量，两者互斥 -->
               <span class="flex min-w-0 flex-1 flex-col justify-center">

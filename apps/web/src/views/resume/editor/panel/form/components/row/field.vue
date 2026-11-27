@@ -145,15 +145,16 @@ const clearField = () => {
         />
         <!-- 无图标绑定的固定字段使用个人图标，保持与可换图标字段同款底板 -->
         <SfIcon v-else icon="mdi:account" size="5" />
-        <!-- 填写状态角标：已填为成功色对勾，必填未填为警示色提示 -->
-        <span
+        <!-- 填写状态角标：外圈由图标盒子承载，尺寸与模块树角标一致 -->
+        <SfIcon
           v-if="filled || requiredField"
-          class="absolute -right-1 -bottom-1 flex h-3 w-3 items-center justify-center rounded-full ring-1 ring-sf-primary"
+          :icon="filled ? 'lucide:check' : 'lucide:circle-alert'"
+          size="3.5"
+          box-size="3"
+          class="absolute! -right-0.5 -bottom-0.5 rounded-full ring-1 ring-sf-primary"
           :class="filled ? 'bg-sf-success text-sf-theme-text' : 'bg-sf-warning text-sf-theme-text'"
           aria-hidden="true"
-        >
-          <SfIcon :icon="filled ? 'lucide:check' : 'lucide:circle-alert'" size="2" />
-        </span>
+        />
       </span>
     </div>
     <!-- 右侧：名称在上、输入在下，操作区固定在名称行尾 -->
@@ -204,7 +205,7 @@ const clearField = () => {
         </div>
       </div>
       <!-- 输入区：统一收敛控件高度，保持个人信息卡片紧凑 -->
-      <div class="field-content min-w-0 w-full">
+      <div class="field-content w-full min-w-0">
         <slot />
       </div>
       <!-- 展示形态切换使用中性色，仅声明了展示选项的字段渲染。 -->
