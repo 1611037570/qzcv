@@ -35,7 +35,7 @@ import RowSkill from "./components/row/skill.vue";
 import FormActionIcon from "./components/icon.vue";
 import { localizeResumeOptions } from "@/stores/modules/resume/hooks/useResumeEditorLocale";
 import i18n from "@/locales";
-import { editorViewMode, flushPendingEditorLocation } from "../../hooks/useModuleNav";
+import { flushPendingEditorLocation } from "../../hooks/useModuleNav";
 
 const loadDynamicForm = () => import("@/components/business/dynamicForm/index");
 // 动态表单加载期间立即显示骨架，避免编辑区只剩增加模块
@@ -135,11 +135,11 @@ const localizedResumeOptions = computed(() => {
   i18n.global.locale.value;
   return localizeResumeOptions(RESUME_OPTIONS);
 });
-// 编辑区展示配置：固定单模块模式，只渲染当前定位的模块，未定位时回退首个模块。
+// 编辑区只渲染当前定位的模块，未定位时回退首个模块。
 // 字段对象与原始配置共享引用，记录增删等嵌套操作仍直接作用于真实数据。
 const displayConfig = computed({
   get: () => {
-    if (editorViewMode.value !== "single" || !runtimeConfig.value) return runtimeConfig.value;
+    if (!runtimeConfig.value) return runtimeConfig.value;
     const fields = runtimeConfig.value.fields || [];
     const field =
       fields.find((item) => item.key === resumeStore.editingModuleKey) ?? fields[0];

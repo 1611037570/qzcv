@@ -34,7 +34,6 @@ const emit = defineEmits(["navigate"]);
 // 抽屉收起状态：收起后整棵树滑出，布局宽度归零，由屏幕左缘浮层把手恢复
 const collapsed = ref(props.floating);
 
-// 编辑区展示模式固定为单模块编辑，不再提供整页/单页切换入口
 // 模块图标映射：默认模块取登记表，自定义模块统一使用拼图图标
 const MODULE_ICON_MAP = new Map(DEFAULT_MODULE_NAMES.map(({ key, icon }) => [key, icon]));
 // 模块树当前高亮项：进入时默认个人信息，之后只由点击决定

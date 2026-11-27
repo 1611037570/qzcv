@@ -1,5 +1,7 @@
 import { moveFieldToContainer } from "@/components/business/dynamicForm/api";
 
+import { isEmptyValue } from "@/utils/modules/base/is";
+
 // 副标题标记上限
 export const MAX_USER_SUBTITLE = 5;
 
@@ -17,13 +19,7 @@ export function setUserSubtitleOrder(data: any, keys: string[]) {
 }
 
 // 字段值是否有内容：空字符串、空数组、空对象都视为无内容
-export function isEmptyFieldValue(value: any): boolean {
-  if (value == null) return true;
-  if (typeof value === "string") return value.trim() === "";
-  if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === "object") return Object.values(value).every(isEmptyFieldValue);
-  return false;
-}
+export const isEmptyFieldValue = isEmptyValue;
 
 // 个人信息字段是否有可展示内容：置顶校验、回收清理与分区渲染共用同一判据
 export function hasUserFieldContent(data: any, key?: string): boolean {

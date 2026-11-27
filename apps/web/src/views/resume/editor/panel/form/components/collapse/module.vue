@@ -8,6 +8,7 @@ import {
   CUSTOM_MODULE_ICON,
   DEFAULT_MODULE_NAMES,
 } from "@/stores/modules/resume/config/defaultConfig";
+import { EXPANDED } from "@/stores/modules/resume/config/formConfig";
 import Icon from "../icon.vue";
 import EditableTitle from "./editableTitle.vue";
 import SkillDropdown from "./skillDropdown.vue";
@@ -60,12 +61,12 @@ const emptyStateKey = computed(() => emptyModule.value?.key ?? "custom");
 // 展开状态：单模块模式固定展开，任何收起操作都立即恢复
 const collapsed = defineModel("collapsed", {
   type: Array,
-  default: () => [],
+  default: () => [...EXPANDED],
 });
 watch(
   () => collapsed.value,
   (value) => {
-    if (value?.[0] !== "1") collapsed.value = ["1"];
+    if (value?.[0] !== "1") collapsed.value = [...EXPANDED];
   },
   { immediate: true },
 );

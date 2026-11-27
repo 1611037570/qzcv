@@ -76,6 +76,7 @@
 
 <script setup lang="ts">
 import { computed, inject } from "vue";
+import { isEmptyValue } from "@/utils/modules/base/is";
 import SfIcon from "@/components/base/icon";
 import { getFieldDataPath } from "../code/fieldData";
 import { getComponent } from "../code/getComponent";
@@ -112,14 +113,6 @@ const dragHandleClass = computed(() => {
   const value = dragClass?.trim();
   return value?.startsWith(".") ? value.slice(1) : value || "item-drag";
 });
-// 空值判定：空字符串、空数组与空对象都视为未填写
-const isEmptyValue = (value: unknown): boolean => {
-  if (value === null || value === undefined) return true;
-  if (typeof value === "string") return !value.trim();
-  if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === "object") return Object.keys(value as object).length === 0;
-  return false;
-};
 // 当前字段值：按完整数据路径从表单数据中读取
 const fieldValue = computed(() => {
   const path = getFieldDataPath(currentForm, pathContext);

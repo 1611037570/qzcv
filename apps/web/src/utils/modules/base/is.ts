@@ -56,3 +56,14 @@ export const isEmptyObject = (obj: any) => {
 export const isNull = (value: any) => {
   return value === null || value === undefined || value === "" || isEmptyObject(value);
 };
+
+/**
+ * 判断值是否为空内容：空字符串、空数组与空对象（递归）都视为空
+ */
+export const isEmptyValue = (value: any): boolean => {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim() === "";
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "object") return Object.values(value).every(isEmptyValue);
+  return false;
+};
